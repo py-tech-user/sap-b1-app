@@ -1,0 +1,2157 @@
+2026-02-23 09:43:47.995 +00:00 [DBG] An 'IServiceProvider' was created for internal use by Entity Framework.
+2026-02-23 09:43:49.606 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:43:49.945 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:43:50.021 +00:00 [DBG] Created DbConnection. (69ms).
+2026-02-23 09:43:50.036 +00:00 [DBG] Migrating using database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.051 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.385 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.402 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:43:50.418 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (12ms).
+2026-02-23 09:43:50.426 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (27ms).
+2026-02-23 09:43:50.445 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:43:50.497 +00:00 [INF] Executed DbCommand (56ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:43:50.507 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.531 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (14ms).
+2026-02-23 09:43:50.539 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.546 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.552 +00:00 [INF] Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+2026-02-23 09:43:50.558 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:43:50.561 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (2ms).
+2026-02-23 09:43:50.564 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (5ms).
+2026-02-23 09:43:50.568 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:43:50.596 +00:00 [INF] Executed DbCommand (28ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:43:50.740 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:43:50.756 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:43:50.763 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:43:50.767 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (3ms).
+2026-02-23 09:43:50.774 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (10ms).
+2026-02-23 09:43:50.778 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:43:50.786 +00:00 [INF] Executed DbCommand (8ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:43:50.796 +00:00 [DBG] Committing transaction.
+2026-02-23 09:43:50.805 +00:00 [DBG] Committed transaction.
+2026-02-23 09:43:50.812 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:43:50.819 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:43:50.824 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:43:50.830 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:43:50.833 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (2ms).
+2026-02-23 09:43:50.836 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (6ms).
+2026-02-23 09:43:50.841 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:43:50.845 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:43:50.850 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:43:50.853 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (2ms).
+2026-02-23 09:43:50.856 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (5ms).
+2026-02-23 09:43:50.860 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:43:50.864 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:43:50.872 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:43:50.875 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (3ms).
+2026-02-23 09:43:50.878 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:43:50.882 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:43:50.887 +00:00 [INF] Executed DbCommand (5ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:43:50.894 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.899 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 6ms reading results.
+2026-02-23 09:43:50.906 +00:00 [INF] No migrations were applied. The database is already up to date.
+2026-02-23 09:43:50.908 +00:00 [DBG] Committing transaction.
+2026-02-23 09:43:50.910 +00:00 [DBG] Committed transaction.
+2026-02-23 09:43:50.912 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:43:50.914 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (1ms).
+2026-02-23 09:43:50.916 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (4ms).
+2026-02-23 09:43:50.918 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:43:50.922 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:43:50.925 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:43:50.928 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:50.931 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:43:50.964 +00:00 [DBG] Compiling query expression: 
+'DbSet<AppUser>()
+    .Any()'
+2026-02-23 09:43:51.402 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:43:51.465 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.472 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.478 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:43:51.483 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:43:51.489 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (10ms).
+2026-02-23 09:43:51.496 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.503 +00:00 [INF] Executed DbCommand (7ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.512 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.515 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 6ms reading results.
+2026-02-23 09:43:51.518 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.521 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:43:51.524 +00:00 [DBG] Compiling query expression: 
+'DbSet<Product>()
+    .Any()'
+2026-02-23 09:43:51.530 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:43:51.534 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.537 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.539 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:43:51.541 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (1ms).
+2026-02-23 09:43:51.543 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (4ms).
+2026-02-23 09:43:51.546 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.549 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.553 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.556 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 3ms reading results.
+2026-02-23 09:43:51.558 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.561 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:43:51.564 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Any()'
+2026-02-23 09:43:51.570 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:43:51.574 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.578 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.581 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:43:51.583 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:43:51.586 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:43:51.588 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.592 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:43:51.596 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.598 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 2ms reading results.
+2026-02-23 09:43:51.600 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.603 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:43:51.607 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:43:51.611 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:43:51.614 +00:00 [DBG] Disposed connection to database '' on server '' (3ms).
+2026-02-23 09:43:51.666 +00:00 [DBG] Registered model binder providers, in the following order: ["Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BinderTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ServicesModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BodyModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.HeaderModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FloatingPointTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.EnumTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DateTimeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.SimpleTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.TryParseModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CancellationTokenModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ByteArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormFileModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormCollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.KeyValuePairModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DictionaryModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ComplexObjectModelBinderProvider"]
+2026-02-23 09:43:51.796 +00:00 [DBG] Hosting starting
+2026-02-23 09:43:51.816 +00:00 [INF] User profile is available. Using 'C:\Users\kelba\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-02-23 09:43:51.832 +00:00 [DBG] Reading data from file 'C:\Users\kelba\AppData\Local\ASP.NET\DataProtection-Keys\key-ac942251-fc66-4d34-b749-db1f97cb1968.xml'.
+2026-02-23 09:43:51.846 +00:00 [DBG] Found key {ac942251-fc66-4d34-b749-db1f97cb1968}.
+2026-02-23 09:43:51.871 +00:00 [DBG] Considering key {ac942251-fc66-4d34-b749-db1f97cb1968} with expiration date 2026-05-18 15:27:01Z as default key.
+2026-02-23 09:43:51.883 +00:00 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+2026-02-23 09:43:51.890 +00:00 [DBG] Decrypting secret element using Windows DPAPI.
+2026-02-23 09:43:51.898 +00:00 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+2026-02-23 09:43:51.905 +00:00 [DBG] Opening CNG algorithm 'AES' from provider 'null' with chaining mode CBC.
+2026-02-23 09:43:51.914 +00:00 [DBG] Opening CNG algorithm 'SHA256' from provider 'null' with HMAC.
+2026-02-23 09:43:51.923 +00:00 [DBG] Using key {ac942251-fc66-4d34-b749-db1f97cb1968} as the default key.
+2026-02-23 09:43:51.929 +00:00 [DBG] Key ring with default key {ac942251-fc66-4d34-b749-db1f97cb1968} was loaded during application startup.
+2026-02-23 09:43:52.011 +00:00 [DBG] Middleware configuration started with options: {AllowedHosts = *, AllowEmptyHosts = True, IncludeFailureMessage = True}
+2026-02-23 09:43:52.018 +00:00 [DBG] Wildcard detected, all requests with hosts will be allowed.
+2026-02-23 09:43:52.028 +00:00 [WRN] Overriding address(es) 'http://localhost:5000, http://127.0.0.1:5000, http://[::1]:5000'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+2026-02-23 09:43:52.059 +00:00 [ERR] Hosting failed to start
+System.IO.IOException: Failed to bind to address http://127.0.0.1:5000: address already in use.
+ ---> Microsoft.AspNetCore.Connections.AddressInUseException: Une seule utilisation de chaque adresse de socket (protocole/adresse réseau/port) est habituellement autorisée.
+ ---> System.Net.Sockets.SocketException (10048): Une seule utilisation de chaque adresse de socket (protocole/adresse réseau/port) est habituellement autorisée.
+   at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
+   at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+   at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportOptions.CreateDefaultBoundListenSocket(EndPoint endpoint)
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+   --- End of inner exception stack trace ---
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportFactory.BindAsync(EndPoint endpoint, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.TransportManager.BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig endpointConfig, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.<>c__DisplayClass28_0`1.<<StartAsync>g__OnBind|0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.LocalhostListenOptions.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.EndpointsStrategy.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.BindAsync(CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.StartAsync[TContext](IHttpApplication`1 application, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Hosting.GenericWebHostService.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.Internal.Host.<StartAsync>b__14_1(IHostedService service, CancellationToken token)
+   at Microsoft.Extensions.Hosting.Internal.Host.ForeachService[T](IEnumerable`1 services, CancellationToken token, Boolean concurrent, Boolean abortOnFirstException, List`1 exceptions, Func`3 operation)
+2026-02-23 09:44:19.648 +00:00 [DBG] An 'IServiceProvider' was created for internal use by Entity Framework.
+2026-02-23 09:44:21.241 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:44:21.566 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:44:21.638 +00:00 [DBG] Created DbConnection. (65ms).
+2026-02-23 09:44:21.654 +00:00 [DBG] Migrating using database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:21.674 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.015 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.034 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:44:22.051 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (13ms).
+2026-02-23 09:44:22.061 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (30ms).
+2026-02-23 09:44:22.081 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:44:22.140 +00:00 [INF] Executed DbCommand (61ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:44:22.154 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.184 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (18ms).
+2026-02-23 09:44:22.211 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.224 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.231 +00:00 [INF] Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+2026-02-23 09:44:22.239 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:44:22.243 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (4ms).
+2026-02-23 09:44:22.248 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (9ms).
+2026-02-23 09:44:22.255 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:44:22.302 +00:00 [INF] Executed DbCommand (47ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:44:22.480 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:44:22.497 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:44:22.504 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:44:22.509 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (5ms).
+2026-02-23 09:44:22.515 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (11ms).
+2026-02-23 09:44:22.519 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:44:22.528 +00:00 [INF] Executed DbCommand (9ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:44:22.538 +00:00 [DBG] Committing transaction.
+2026-02-23 09:44:22.547 +00:00 [DBG] Committed transaction.
+2026-02-23 09:44:22.552 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:44:22.560 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:44:22.564 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:44:22.572 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:44:22.575 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (3ms).
+2026-02-23 09:44:22.580 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (8ms).
+2026-02-23 09:44:22.586 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:44:22.594 +00:00 [INF] Executed DbCommand (8ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:44:22.601 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:44:22.605 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (4ms).
+2026-02-23 09:44:22.610 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (8ms).
+2026-02-23 09:44:22.614 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:44:22.621 +00:00 [INF] Executed DbCommand (7ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:44:22.631 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:44:22.634 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:44:22.639 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 09:44:22.645 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:44:22.654 +00:00 [INF] Executed DbCommand (10ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:44:22.663 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.667 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 6ms reading results.
+2026-02-23 09:44:22.677 +00:00 [INF] No migrations were applied. The database is already up to date.
+2026-02-23 09:44:22.679 +00:00 [DBG] Committing transaction.
+2026-02-23 09:44:22.681 +00:00 [DBG] Committed transaction.
+2026-02-23 09:44:22.682 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:44:22.684 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (2ms).
+2026-02-23 09:44:22.687 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (4ms).
+2026-02-23 09:44:22.690 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:44:22.694 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:44:22.697 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:44:22.699 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:22.701 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:44:22.736 +00:00 [DBG] Compiling query expression: 
+'DbSet<AppUser>()
+    .Any()'
+2026-02-23 09:44:23.143 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:44:23.215 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.222 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.229 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:44:23.237 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 09:44:23.249 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (20ms).
+2026-02-23 09:44:23.260 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.269 +00:00 [INF] Executed DbCommand (9ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.276 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.279 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 6ms reading results.
+2026-02-23 09:44:23.283 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.286 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:44:23.290 +00:00 [DBG] Compiling query expression: 
+'DbSet<Product>()
+    .Any()'
+2026-02-23 09:44:23.296 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:44:23.301 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.304 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.307 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:44:23.310 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:44:23.312 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (4ms).
+2026-02-23 09:44:23.315 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.319 +00:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.324 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.326 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 2ms reading results.
+2026-02-23 09:44:23.330 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.332 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (2ms).
+2026-02-23 09:44:23.336 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Any()'
+2026-02-23 09:44:23.342 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:44:23.346 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.349 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.352 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:44:23.354 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:44:23.357 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (4ms).
+2026-02-23 09:44:23.360 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.362 +00:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:44:23.364 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.366 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 1ms reading results.
+2026-02-23 09:44:23.368 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.369 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (1ms).
+2026-02-23 09:44:23.372 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:44:23.376 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:44:23.378 +00:00 [DBG] Disposed connection to database '' on server '' (2ms).
+2026-02-23 09:44:23.424 +00:00 [DBG] Registered model binder providers, in the following order: ["Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BinderTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ServicesModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BodyModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.HeaderModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FloatingPointTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.EnumTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DateTimeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.SimpleTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.TryParseModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CancellationTokenModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ByteArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormFileModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormCollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.KeyValuePairModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DictionaryModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ComplexObjectModelBinderProvider"]
+2026-02-23 09:44:23.534 +00:00 [DBG] Hosting starting
+2026-02-23 09:44:23.553 +00:00 [INF] User profile is available. Using 'C:\Users\kelba\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-02-23 09:44:23.569 +00:00 [DBG] Reading data from file 'C:\Users\kelba\AppData\Local\ASP.NET\DataProtection-Keys\key-ac942251-fc66-4d34-b749-db1f97cb1968.xml'.
+2026-02-23 09:44:23.581 +00:00 [DBG] Found key {ac942251-fc66-4d34-b749-db1f97cb1968}.
+2026-02-23 09:44:23.605 +00:00 [DBG] Considering key {ac942251-fc66-4d34-b749-db1f97cb1968} with expiration date 2026-05-18 15:27:01Z as default key.
+2026-02-23 09:44:23.613 +00:00 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+2026-02-23 09:44:23.619 +00:00 [DBG] Decrypting secret element using Windows DPAPI.
+2026-02-23 09:44:23.625 +00:00 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Version=10.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+2026-02-23 09:44:23.632 +00:00 [DBG] Opening CNG algorithm 'AES' from provider 'null' with chaining mode CBC.
+2026-02-23 09:44:23.637 +00:00 [DBG] Opening CNG algorithm 'SHA256' from provider 'null' with HMAC.
+2026-02-23 09:44:23.643 +00:00 [DBG] Using key {ac942251-fc66-4d34-b749-db1f97cb1968} as the default key.
+2026-02-23 09:44:23.649 +00:00 [DBG] Key ring with default key {ac942251-fc66-4d34-b749-db1f97cb1968} was loaded during application startup.
+2026-02-23 09:44:23.719 +00:00 [DBG] Middleware configuration started with options: {AllowedHosts = *, AllowEmptyHosts = True, IncludeFailureMessage = True}
+2026-02-23 09:44:23.726 +00:00 [DBG] Wildcard detected, all requests with hosts will be allowed.
+2026-02-23 09:44:23.735 +00:00 [WRN] Overriding address(es) 'http://localhost:5000, http://127.0.0.1:5000, http://[::1]:5000'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+2026-02-23 09:44:23.756 +00:00 [ERR] Hosting failed to start
+System.IO.IOException: Failed to bind to address http://127.0.0.1:5000: address already in use.
+ ---> Microsoft.AspNetCore.Connections.AddressInUseException: Une seule utilisation de chaque adresse de socket (protocole/adresse réseau/port) est habituellement autorisée.
+ ---> System.Net.Sockets.SocketException (10048): Une seule utilisation de chaque adresse de socket (protocole/adresse réseau/port) est habituellement autorisée.
+   at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
+   at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+   at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportOptions.CreateDefaultBoundListenSocket(EndPoint endpoint)
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+   --- End of inner exception stack trace ---
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+   at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportFactory.BindAsync(EndPoint endpoint, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.TransportManager.BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig endpointConfig, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.<>c__DisplayClass28_0`1.<<StartAsync>g__OnBind|0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.LocalhostListenOptions.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.EndpointsStrategy.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.BindAsync(CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.StartAsync[TContext](IHttpApplication`1 application, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Hosting.GenericWebHostService.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.Internal.Host.<StartAsync>b__14_1(IHostedService service, CancellationToken token)
+   at Microsoft.Extensions.Hosting.Internal.Host.ForeachService[T](IEnumerable`1 services, CancellationToken token, Boolean concurrent, Boolean abortOnFirstException, List`1 exceptions, Func`3 operation)
+2026-02-23 09:56:25.203 +00:00 [DBG] An 'IServiceProvider' was created for internal use by Entity Framework.
+2026-02-23 09:56:27.289 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:56:27.726 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:56:27.827 +00:00 [DBG] Created DbConnection. (95ms).
+2026-02-23 09:56:27.849 +00:00 [DBG] Migrating using database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:27.869 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:28.352 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:28.375 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:56:28.397 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (20ms).
+2026-02-23 09:56:28.406 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (38ms).
+2026-02-23 09:56:28.422 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:56:28.465 +00:00 [INF] Executed DbCommand (48ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:56:28.473 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:28.491 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (11ms).
+2026-02-23 09:56:28.496 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:28.502 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:28.507 +00:00 [INF] Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+2026-02-23 09:56:28.514 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:56:28.519 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (5ms).
+2026-02-23 09:56:28.525 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (10ms).
+2026-02-23 09:56:28.532 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:56:28.573 +00:00 [INF] Executed DbCommand (42ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_getapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session', @LockMode = 'Exclusive';
+SELECT @result
+2026-02-23 09:56:28.741 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:56:28.763 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:56:28.775 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:56:28.782 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (7ms).
+2026-02-23 09:56:28.797 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (22ms).
+2026-02-23 09:56:28.807 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:56:28.828 +00:00 [INF] Executed DbCommand (22ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+BEGIN
+    CREATE TABLE [__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
+END;
+2026-02-23 09:56:28.840 +00:00 [DBG] Committing transaction.
+2026-02-23 09:56:28.850 +00:00 [DBG] Committed transaction.
+2026-02-23 09:56:28.858 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:56:28.864 +00:00 [DBG] Beginning transaction with isolation level 'Unspecified'.
+2026-02-23 09:56:28.870 +00:00 [DBG] Began transaction with isolation level 'ReadCommitted'.
+2026-02-23 09:56:28.877 +00:00 [DBG] Creating DbCommand for 'ExecuteNonQuery'.
+2026-02-23 09:56:28.883 +00:00 [DBG] Created DbCommand for 'ExecuteNonQuery' (5ms).
+2026-02-23 09:56:28.889 +00:00 [DBG] Initialized DbCommand for 'ExecuteNonQuery' (11ms).
+2026-02-23 09:56:28.895 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:56:28.903 +00:00 [INF] Executed DbCommand (8ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT 1
+2026-02-23 09:56:28.911 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:56:28.917 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (5ms).
+2026-02-23 09:56:28.922 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (10ms).
+2026-02-23 09:56:28.927 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:56:28.933 +00:00 [INF] Executed DbCommand (6ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT OBJECT_ID(N'[__EFMigrationsHistory]');
+2026-02-23 09:56:28.941 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:28.945 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (3ms).
+2026-02-23 09:56:28.948 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (6ms).
+2026-02-23 09:56:28.953 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:56:28.972 +00:00 [INF] Executed DbCommand (20ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT [MigrationId], [ProductVersion]
+FROM [__EFMigrationsHistory]
+ORDER BY [MigrationId];
+2026-02-23 09:56:28.996 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.007 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 16ms reading results.
+2026-02-23 09:56:29.025 +00:00 [INF] No migrations were applied. The database is already up to date.
+2026-02-23 09:56:29.029 +00:00 [DBG] Committing transaction.
+2026-02-23 09:56:29.035 +00:00 [DBG] Committed transaction.
+2026-02-23 09:56:29.040 +00:00 [DBG] Creating DbCommand for 'ExecuteScalar'.
+2026-02-23 09:56:29.046 +00:00 [DBG] Created DbCommand for 'ExecuteScalar' (5ms).
+2026-02-23 09:56:29.055 +00:00 [DBG] Initialized DbCommand for 'ExecuteScalar' (14ms).
+2026-02-23 09:56:29.062 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:56:29.074 +00:00 [INF] Executed DbCommand (12ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DECLARE @result int;
+EXEC @result = sp_releaseapplock @Resource = '__EFMigrationsLock', @LockOwner = 'Session';
+SELECT @result
+2026-02-23 09:56:29.081 +00:00 [DBG] Disposing transaction.
+2026-02-23 09:56:29.085 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.090 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (4ms).
+2026-02-23 09:56:29.153 +00:00 [DBG] Compiling query expression: 
+'DbSet<AppUser>()
+    .Any()'
+2026-02-23 09:56:29.681 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Users AS u), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:56:29.776 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.786 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.794 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:29.802 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 09:56:29.811 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (16ms).
+2026-02-23 09:56:29.821 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:29.853 +00:00 [INF] Executed DbCommand (33ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Users] AS [u]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:29.869 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.877 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 13ms reading results.
+2026-02-23 09:56:29.885 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.890 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (6ms).
+2026-02-23 09:56:29.900 +00:00 [DBG] Compiling query expression: 
+'DbSet<Product>()
+    .Any()'
+2026-02-23 09:56:29.908 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Products AS p), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:56:29.913 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.918 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.922 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:29.925 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (3ms).
+2026-02-23 09:56:29.930 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (7ms).
+2026-02-23 09:56:29.935 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:29.956 +00:00 [INF] Executed DbCommand (20ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Products] AS [p]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:29.964 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.967 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 3ms reading results.
+2026-02-23 09:56:29.972 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.976 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (4ms).
+2026-02-23 09:56:29.981 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Any()'
+2026-02-23 09:56:29.989 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<bool>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c)) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Projection Mapping:
+            EmptyProjectionMember -> 0
+        SELECT EXISTS (
+            SELECT 1
+            FROM Customers AS c), 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        bool? value1;
+        value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+        return (bool)value1;
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)
+    .Single()'
+2026-02-23 09:56:29.995 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:29.997 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:30.000 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:30.001 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (1ms).
+2026-02-23 09:56:30.003 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:56:30.004 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:30.010 +00:00 [INF] Executed DbCommand (6ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:56:30.014 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:30.017 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 3ms reading results.
+2026-02-23 09:56:30.019 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:30.020 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (1ms).
+2026-02-23 09:56:30.024 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:56:30.028 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:30.030 +00:00 [DBG] Disposed connection to database '' on server '' (2ms).
+2026-02-23 09:56:30.075 +00:00 [DBG] Registered model binder providers, in the following order: ["Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BinderTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ServicesModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BodyModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.HeaderModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FloatingPointTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.EnumTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DateTimeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.SimpleTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.TryParseModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CancellationTokenModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ByteArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormFileModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormCollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.KeyValuePairModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DictionaryModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ComplexObjectModelBinderProvider"]
+2026-02-23 09:56:30.199 +00:00 [DBG] Hosting starting
+2026-02-23 09:56:30.384 +00:00 [DBG] Middleware configuration started with options: {AllowedHosts = *, AllowEmptyHosts = True, IncludeFailureMessage = True}
+2026-02-23 09:56:30.404 +00:00 [DBG] Wildcard detected, all requests with hosts will be allowed.
+2026-02-23 09:56:30.425 +00:00 [WRN] Overriding address(es) 'http://localhost:5000, http://127.0.0.1:5000, http://[::1]:5000'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+2026-02-23 09:56:30.563 +00:00 [INF] Now listening on: http://localhost:5000
+2026-02-23 09:56:30.579 +00:00 [INF] Now listening on: https://localhost:5001
+2026-02-23 09:56:30.600 +00:00 [DBG] Loaded hosting startup assembly SapB1App
+2026-02-23 09:56:30.612 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-02-23 09:56:30.629 +00:00 [INF] Hosting environment: Development
+2026-02-23 09:56:30.647 +00:00 [INF] Content root path: C:\Users\kelba\Desktop\sap-b1-app\backend\SapB1App
+2026-02-23 09:56:30.679 +00:00 [DBG] Connection id "0HNJIO78S90T7" accepted.
+2026-02-23 09:56:30.679 +00:00 [DBG] Hosting started
+2026-02-23 09:56:30.683 +00:00 [DBG] Connection id "0HNJIO78S90T7" started.
+2026-02-23 09:56:30.734 +00:00 [INF] Request starting HTTP/1.1 GET http://127.0.0.1:5000/api/customers - null null
+2026-02-23 09:56:30.801 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:56:30.810 +00:00 [DBG] Endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)' with route pattern 'api/Customers' is valid for the request path '/api/customers'
+2026-02-23 09:56:30.815 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:56:30.891 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:56:30.945 +00:00 [INF] Route matched with {action = "GetAll", controller = "Customers"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.PagedResult`1[SapB1App.DTOs.CustomerDto]]]] GetAll(Int32, Int32, System.String, System.Nullable`1[System.Boolean]) on controller SapB1App.Controllers.CustomersController (SapB1App).
+2026-02-23 09:56:30.961 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 09:56:30.969 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 09:56:30.979 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 09:56:30.991 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 09:56:31.000 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 09:56:31.012 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:56:31.034 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:56:31.051 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:56:31.063 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:56:31.076 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'page' of type 'System.Int32'.
+2026-02-23 09:56:31.087 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:56:31.097 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:56:31.105 +00:00 [DBG] Attempting to validate the bound parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:56:31.116 +00:00 [DBG] Done attempting to validate the bound parameter 'page' of type 'System.Int32'.
+2026-02-23 09:56:31.124 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:56:31.127 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:56:31.134 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:56:31.144 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:56:31.152 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:56:31.162 +00:00 [DBG] Attempting to validate the bound parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:56:31.169 +00:00 [DBG] Done attempting to validate the bound parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:56:31.175 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' ...
+2026-02-23 09:56:31.180 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' using the name '' in request data ...
+2026-02-23 09:56:31.184 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'search' of type 'System.String'.
+2026-02-23 09:56:31.189 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:56:31.193 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:56:31.197 +00:00 [DBG] Attempting to validate the bound parameter 'search' of type 'System.String' ...
+2026-02-23 09:56:31.201 +00:00 [DBG] Done attempting to validate the bound parameter 'search' of type 'System.String'.
+2026-02-23 09:56:31.204 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:56:31.209 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' using the name '' in request data ...
+2026-02-23 09:56:31.213 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:56:31.218 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:56:31.223 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:56:31.227 +00:00 [DBG] Attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:56:31.231 +00:00 [DBG] Done attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:56:31.289 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:56:31.320 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Include(c => c.Orders)
+    .Count()'
+2026-02-23 09:56:31.413 +00:00 [DBG] Generated query execution expression: 
+'queryContext => ShapedQueryCompilingExpressionVisitor.SingleAsync<int>(
+    asyncEnumerable: SingleQueryingEnumerable.Create<int>(
+        relationalQueryContext: (RelationalQueryContext)queryContext, 
+        relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+            Projection Mapping:
+                EmptyProjectionMember -> 0
+            SELECT COUNT(*)
+            FROM Customers AS c) | Resolver: c => new RelationalCommandCache(
+            c.Dependencies.MemoryCache, 
+            c.RelationalDependencies.QuerySqlGeneratorFactory, 
+            c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+            Projection Mapping:
+                EmptyProjectionMember -> 0
+            SELECT COUNT(*)
+            FROM Customers AS c, 
+            False, 
+            MultipleParameters
+        )].GetRelationalCommandTemplate(parameters), 
+        readerColumns: null, 
+        shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+        {
+            int? value1;
+            value1 = dataReader.IsDBNull(0) ? default(int?) : (int?)dataReader.GetInt32(0);
+            return (int)value1;
+        }, 
+        contextType: SapB1App.Data.AppDbContext, 
+        standAloneStateManager: False, 
+        detailedErrorsEnabled: False, 
+        threadSafetyChecksEnabled: True), 
+    cancellationToken: queryContext.CancellationToken)'
+2026-02-23 09:56:31.459 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:56:31.465 +00:00 [DBG] Created DbConnection. (5ms).
+2026-02-23 09:56:31.476 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:31.488 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:31.497 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:31.503 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (6ms).
+2026-02-23 09:56:31.512 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (14ms).
+2026-02-23 09:56:31.520 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:56:31.563 +00:00 [INF] Executed DbCommand (43ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:56:31.606 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:31.615 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 40ms reading results.
+2026-02-23 09:56:31.631 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:31.641 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (10ms).
+2026-02-23 09:56:31.670 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Include(c => c.Orders)
+    .OrderBy(c => c.CardName)
+    .Skip(@p)
+    .Take(@p1)'
+2026-02-23 09:56:31.716 +00:00 [DBG] Including navigation: 'Customer.Orders'.
+2026-02-23 09:56:32.023 +00:00 [DBG] Generated query execution expression: 
+'queryContext => SingleQueryingEnumerable.Create<Customer>(
+    relationalQueryContext: (RelationalQueryContext)queryContext, 
+    relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+        Client Projections:
+            0 -> Dictionary<IPropertyBase, int> { [Property: Customer.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 0], [Property: Customer.Address (string), 1], [Property: Customer.CardCode (string) Required Index MaxLength(15), 2], [Property: Customer.CardName (string) Required MaxLength(100), 3], [Property: Customer.City (string), 4], [Property: Customer.Country (string), 5], [Property: Customer.CreatedAt (DateTime) Required, 6], [Property: Customer.CreditLimit (decimal?), 7], [Property: Customer.Currency (string) Required ValueGenerated.OnAdd MaxLength(5), 8], [Property: Customer.Email (string) MaxLength(100), 9], [Property: Customer.IsActive (bool) Required, 10], [Property: Customer.Phone (string) MaxLength(20), 11], [Property: Customer.SapDocNum (int?), 12], [Property: Customer.UpdatedAt (DateTime?), 13] }
+            1 -> 0
+            2 -> Dictionary<IPropertyBase, int> { [Property: Order.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 14], [Property: Order.Comments (string), 15], [Property: Order.CreatedAt (DateTime) Required, 16], [Property: Order.Currency (string) Required ValueGenerated.OnAdd MaxLength(5), 17], [Property: Order.CustomerId (int) Required FK Index, 18], [Property: Order.DeliveryDate (DateTime?), 19], [Property: Order.DocDate (DateTime) Required, 20], [Property: Order.DocNum (string) Required MaxLength(30), 21], [Property: Order.DocTotal (decimal) Required, 22], [Property: Order.SapDocNum (int?), 23], [Property: Order.Status (OrderStatus) Required, 24], [Property: Order.SyncedToSap (bool) Required, 25], [Property: Order.UpdatedAt (DateTime?), 26], [Property: Order.VatTotal (decimal) Required, 27] }
+            3 -> 14
+        SELECT c0.Id, c0.Address, c0.CardCode, c0.CardName, c0.City, c0.Country, c0.CreatedAt, c0.CreditLimit, c0.Currency, c0.Email, c0.IsActive, c0.Phone, c0.SapDocNum, c0.UpdatedAt, o.Id, o.Comments, o.CreatedAt, o.Currency, o.CustomerId, o.DeliveryDate, o.DocDate, o.DocNum, o.DocTotal, o.SapDocNum, o.Status, o.SyncedToSap, o.UpdatedAt, o.VatTotal
+        FROM 
+        (
+            SELECT c.Id, c.Address, c.CardCode, c.CardName, c.City, c.Country, c.CreatedAt, c.CreditLimit, c.Currency, c.Email, c.IsActive, c.Phone, c.SapDocNum, c.UpdatedAt
+            FROM Customers AS c
+            ORDER BY c.CardName ASC
+            OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+        ) AS c0
+        LEFT JOIN Orders AS o ON c0.Id == o.CustomerId
+        ORDER BY c0.CardName ASC, c0.Id ASC) | Resolver: c => new RelationalCommandCache(
+        c.Dependencies.MemoryCache, 
+        c.RelationalDependencies.QuerySqlGeneratorFactory, 
+        c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+        Client Projections:
+            0 -> Dictionary<IPropertyBase, int> { [Property: Customer.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 0], [Property: Customer.Address (string), 1], [Property: Customer.CardCode (string) Required Index MaxLength(15), 2], [Property: Customer.CardName (string) Required MaxLength(100), 3], [Property: Customer.City (string), 4], [Property: Customer.Country (string), 5], [Property: Customer.CreatedAt (DateTime) Required, 6], [Property: Customer.CreditLimit (decimal?), 7], [Property: Customer.Currency (string) Required ValueGenerated.OnAdd MaxLength(5), 8], [Property: Customer.Email (string) MaxLength(100), 9], [Property: Customer.IsActive (bool) Required, 10], [Property: Customer.Phone (string) MaxLength(20), 11], [Property: Customer.SapDocNum (int?), 12], [Property: Customer.UpdatedAt (DateTime?), 13] }
+            1 -> 0
+            2 -> Dictionary<IPropertyBase, int> { [Property: Order.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 14], [Property: Order.Comments (string), 15], [Property: Order.CreatedAt (DateTime) Required, 16], [Property: Order.Currency (string) Required ValueGenerated.OnAdd MaxLength(5), 17], [Property: Order.CustomerId (int) Required FK Index, 18], [Property: Order.DeliveryDate (DateTime?), 19], [Property: Order.DocDate (DateTime) Required, 20], [Property: Order.DocNum (string) Required MaxLength(30), 21], [Property: Order.DocTotal (decimal) Required, 22], [Property: Order.SapDocNum (int?), 23], [Property: Order.Status (OrderStatus) Required, 24], [Property: Order.SyncedToSap (bool) Required, 25], [Property: Order.UpdatedAt (DateTime?), 26], [Property: Order.VatTotal (decimal) Required, 27] }
+            3 -> 14
+        SELECT c0.Id, c0.Address, c0.CardCode, c0.CardName, c0.City, c0.Country, c0.CreatedAt, c0.CreditLimit, c0.Currency, c0.Email, c0.IsActive, c0.Phone, c0.SapDocNum, c0.UpdatedAt, o.Id, o.Comments, o.CreatedAt, o.Currency, o.CustomerId, o.DeliveryDate, o.DocDate, o.DocNum, o.DocTotal, o.SapDocNum, o.Status, o.SyncedToSap, o.UpdatedAt, o.VatTotal
+        FROM 
+        (
+            SELECT c.Id, c.Address, c.CardCode, c.CardName, c.City, c.Country, c.CreatedAt, c.CreditLimit, c.Currency, c.Email, c.IsActive, c.Phone, c.SapDocNum, c.UpdatedAt
+            FROM Customers AS c
+            ORDER BY c.CardName ASC
+            OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+        ) AS c0
+        LEFT JOIN Orders AS o ON c0.Id == o.CustomerId
+        ORDER BY c0.CardName ASC, c0.Id ASC, 
+        False, 
+        MultipleParameters
+    )].GetRelationalCommandTemplate(parameters), 
+    readerColumns: null, 
+    shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+    {
+        resultContext.Values == null ? 
+        {
+            Customer entity;
+            entity = 
+            {
+                MaterializationContext materializationContext1;
+                IEntityType entityType1;
+                Customer instance1;
+                InternalEntityEntry entry1;
+                bool hasNullKey1;
+                materializationContext1 = new MaterializationContext(
+                    [LIFTABLE Constant: ValueBuffer | Resolver: _ => (object)ValueBuffer.Empty], 
+                    queryContext.Context
+                );
+                instance1 = default(Customer);
+                entry1 = queryContext.TryGetEntry(
+                    key: [LIFTABLE Constant: Key: Customer.Id PK | Resolver: c => c.Dependencies.Model.FindEntityType("SapB1App.Models.Customer").FindPrimaryKey()], 
+                    keyValues: new object[]{ (object)dataReader.GetInt32(0) }, 
+                    throwOnNullKey: True, 
+                    hasNullKey: hasNullKey1);
+                !(hasNullKey1) ? entry1 != default(InternalEntityEntry) ? 
+                {
+                    entityType1 = entry1.EntityType;
+                    return instance1 = (Customer)entry1.Entity;
+                } : 
+                {
+                    ISnapshot shadowSnapshot1;
+                    shadowSnapshot1 = [LIFTABLE Constant: Snapshot | Resolver: _ => Snapshot.Empty];
+                    entityType1 = [LIFTABLE Constant: EntityType: Customer | Resolver: namelessParameter{0} => namelessParameter{0}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer")];
+                    instance1 = switch (entityType1)
+                    {
+                        case [LIFTABLE Constant: EntityType: Customer | Resolver: namelessParameter{1} => namelessParameter{1}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer")]: 
+                            {
+                                return 
+                                {
+                                    Customer instance;
+                                    instance = new Customer();
+                                    instance.<Id>k__BackingField = dataReader.GetInt32(0);
+                                    instance.<Address>k__BackingField = dataReader.IsDBNull(1) ? default(string) : dataReader.GetString(1);
+                                    instance.<CardCode>k__BackingField = dataReader.GetString(2);
+                                    instance.<CardName>k__BackingField = dataReader.GetString(3);
+                                    instance.<City>k__BackingField = dataReader.IsDBNull(4) ? default(string) : dataReader.GetString(4);
+                                    instance.<Country>k__BackingField = dataReader.IsDBNull(5) ? default(string) : dataReader.GetString(5);
+                                    instance.<CreatedAt>k__BackingField = dataReader.GetDateTime(6);
+                                    instance.<CreditLimit>k__BackingField = dataReader.IsDBNull(7) ? default(decimal?) : (decimal?)dataReader.GetDecimal(7);
+                                    instance.<Currency>k__BackingField = dataReader.GetString(8);
+                                    instance.<Email>k__BackingField = dataReader.IsDBNull(9) ? default(string) : dataReader.GetString(9);
+                                    instance.<IsActive>k__BackingField = dataReader.GetBoolean(10);
+                                    instance.<Phone>k__BackingField = dataReader.IsDBNull(11) ? default(string) : dataReader.GetString(11);
+                                    instance.<SapDocNum>k__BackingField = dataReader.IsDBNull(12) ? default(int?) : (int?)dataReader.GetInt32(12);
+                                    instance.<UpdatedAt>k__BackingField = dataReader.IsDBNull(13) ? default(DateTime?) : (DateTime?)dataReader.GetDateTime(13);
+                                    (instance is IInjectableService) ? ((IInjectableService)instance).Injected(
+                                        context: materializationContext1.Context, 
+                                        entity: instance, 
+                                        queryTrackingBehavior: TrackAll, 
+                                        structuralType: [LIFTABLE Constant: EntityType: Customer | Resolver: namelessParameter{2} => namelessParameter{2}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer")]) : default(void);
+                                    return instance;
+                                }}
+                        default: 
+                            default(Customer)
+                    }
+                    ;
+                    entry1 = entityType1 == default(IEntityType) ? default(InternalEntityEntry) : queryContext.StartTracking(
+                        entityType: entityType1, 
+                        entity: instance1, 
+                        snapshot: shadowSnapshot1);
+                    return instance1;
+                } : default(void);
+                return instance1;
+            };
+            resultContext.Values = new object[]{ entity };
+            ShaperProcessingExpressionVisitor.InitializeIncludeCollection<Customer, Customer>(
+                collectionId: 0, 
+                queryContext: queryContext, 
+                dbDataReader: dataReader, 
+                resultCoordinator: resultCoordinator, 
+                entity: (Customer)(resultContext.Values[0]), 
+                parentIdentifier: [LIFTABLE Constant: Func<QueryContext, DbDataReader, object[]> | Resolver: _ => (queryContext, dataReader) => new object[]{ (object)(int?)dataReader.GetInt32(0) }], 
+                outerIdentifier: [LIFTABLE Constant: Func<QueryContext, DbDataReader, object[]> | Resolver: _ => (queryContext, dataReader) => new object[]{ (object)(int?)dataReader.GetInt32(0) }], 
+                navigation: [LIFTABLE Constant: Navigation: Customer.Orders (ICollection<Order>) Collection ToDependent Order Inverse: Customer | Resolver: namelessParameter{3} => namelessParameter{3}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer").FindNavigation("Orders")], 
+                clrCollectionAccessor: [LIFTABLE Constant: ClrCollectionAccessor<Customer, ICollection<Order>, Order> | Resolver: namelessParameter{4} => namelessParameter{4}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer").FindNavigation("Orders").GetCollectionAccessor()], 
+                trackingQuery: True, 
+                setLoaded: True);
+        } : default(void);
+        ShaperProcessingExpressionVisitor.PopulateIncludeCollection<Customer, Order>(
+            collectionId: 0, 
+            queryContext: queryContext, 
+            dbDataReader: dataReader, 
+            resultCoordinator: resultCoordinator, 
+            parentIdentifier: [LIFTABLE Constant: Func<QueryContext, DbDataReader, object[]> | Resolver: _ => (queryContext, dataReader) => new object[]{ (object)(int?)dataReader.GetInt32(0) }], 
+            outerIdentifier: [LIFTABLE Constant: Func<QueryContext, DbDataReader, object[]> | Resolver: _ => (queryContext, dataReader) => new object[]{ (object)(int?)dataReader.GetInt32(0) }], 
+            selfIdentifier: [LIFTABLE Constant: Func<QueryContext, DbDataReader, object[]> | Resolver: _ => (queryContext, dataReader) => new object[]{ (object)dataReader.IsDBNull(14) ? default(int?) : (int?)dataReader.GetInt32(14) }], 
+            parentIdentifierValueComparers: [LIFTABLE Constant: Func<object, object, bool>[] { Func<object, object, bool> } | Resolver: _ => new Func<object, object, bool>[]{ (left, right) => left == null ? right == null : right != null && (int)left == (int)right }], 
+            outerIdentifierValueComparers: [LIFTABLE Constant: Func<object, object, bool>[] { Func<object, object, bool> } | Resolver: _ => new Func<object, object, bool>[]{ (left, right) => left == null ? right == null : right != null && (int)left == (int)right }], 
+            selfIdentifierValueComparers: [LIFTABLE Constant: Func<object, object, bool>[] { Func<object, object, bool> } | Resolver: _ => new Func<object, object, bool>[]{ (left, right) => left == null ? right == null : right != null && (int)left == (int)right }], 
+            innerShaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+            {
+                Order entity;
+                entity = 
+                {
+                    MaterializationContext materializationContext2;
+                    IEntityType entityType2;
+                    Order instance2;
+                    InternalEntityEntry entry2;
+                    bool hasNullKey2;
+                    materializationContext2 = new MaterializationContext(
+                        [LIFTABLE Constant: ValueBuffer | Resolver: _ => (object)ValueBuffer.Empty], 
+                        queryContext.Context
+                    );
+                    instance2 = default(Order);
+                    entry2 = queryContext.TryGetEntry(
+                        key: [LIFTABLE Constant: Key: Order.Id PK | Resolver: c => c.Dependencies.Model.FindEntityType("SapB1App.Models.Order").FindPrimaryKey()], 
+                        keyValues: new object[]{ dataReader.IsDBNull(14) ? default(object) : (object)dataReader.GetInt32(14) }, 
+                        throwOnNullKey: False, 
+                        hasNullKey: hasNullKey2);
+                    !(hasNullKey2) ? entry2 != default(InternalEntityEntry) ? 
+                    {
+                        entityType2 = entry2.EntityType;
+                        return instance2 = (Order)entry2.Entity;
+                    } : 
+                    {
+                        ISnapshot shadowSnapshot2;
+                        shadowSnapshot2 = [LIFTABLE Constant: Snapshot | Resolver: _ => Snapshot.Empty];
+                        entityType2 = [LIFTABLE Constant: EntityType: Order | Resolver: namelessParameter{5} => namelessParameter{5}.Dependencies.Model.FindEntityType("SapB1App.Models.Order")];
+                        instance2 = switch (entityType2)
+                        {
+                            case [LIFTABLE Constant: EntityType: Order | Resolver: namelessParameter{6} => namelessParameter{6}.Dependencies.Model.FindEntityType("SapB1App.Models.Order")]: 
+                                {
+                                    return 
+                                    {
+                                        Order instance;
+                                        instance = new Order();
+                                        instance.<Id>k__BackingField = dataReader.IsDBNull(14) ? default(int) : dataReader.GetInt32(14);
+                                        instance.<Comments>k__BackingField = dataReader.IsDBNull(15) ? default(string) : dataReader.GetString(15);
+                                        instance.<CreatedAt>k__BackingField = dataReader.IsDBNull(16) ? default(DateTime) : dataReader.GetDateTime(16);
+                                        instance.<Currency>k__BackingField = dataReader.IsDBNull(17) ? default(string) : dataReader.GetString(17);
+                                        instance.<CustomerId>k__BackingField = dataReader.IsDBNull(18) ? default(int) : dataReader.GetInt32(18);
+                                        instance.<DeliveryDate>k__BackingField = dataReader.IsDBNull(19) ? default(DateTime?) : (DateTime?)dataReader.GetDateTime(19);
+                                        instance.<DocDate>k__BackingField = dataReader.IsDBNull(20) ? default(DateTime) : dataReader.GetDateTime(20);
+                                        instance.<DocNum>k__BackingField = dataReader.IsDBNull(21) ? default(string) : dataReader.GetString(21);
+                                        instance.<DocTotal>k__BackingField = dataReader.IsDBNull(22) ? default(decimal) : dataReader.GetDecimal(22);
+                                        instance.<SapDocNum>k__BackingField = dataReader.IsDBNull(23) ? default(int?) : (int?)dataReader.GetInt32(23);
+                                        instance.<Status>k__BackingField = dataReader.IsDBNull(24) ? default(OrderStatus) : Invoke(((EnumToStringConverter<OrderStatus>)((IReadOnlyProperty)[LIFTABLE Constant: Property: Order.Status (OrderStatus) Required | Resolver: namelessParameter{7} => namelessParameter{7}.Dependencies.Model.FindEntityType("SapB1App.Models.Order").FindProperty("Status")]).GetTypeMapping().Converter).ConvertFromProviderTyped, dataReader.GetString(24));
+                                        instance.<SyncedToSap>k__BackingField = dataReader.IsDBNull(25) ? default(bool) : dataReader.GetBoolean(25);
+                                        instance.<UpdatedAt>k__BackingField = dataReader.IsDBNull(26) ? default(DateTime?) : (DateTime?)dataReader.GetDateTime(26);
+                                        instance.<VatTotal>k__BackingField = dataReader.IsDBNull(27) ? default(decimal) : dataReader.GetDecimal(27);
+                                        (instance is IInjectableService) ? ((IInjectableService)instance).Injected(
+                                            context: materializationContext2.Context, 
+                                            entity: instance, 
+                                            queryTrackingBehavior: TrackAll, 
+                                            structuralType: [LIFTABLE Constant: EntityType: Order | Resolver: namelessParameter{8} => namelessParameter{8}.Dependencies.Model.FindEntityType("SapB1App.Models.Order")]) : default(void);
+                                        return instance;
+                                    }}
+                            default: 
+                                default(Order)
+                        }
+                        ;
+                        entry2 = entityType2 == default(IEntityType) ? default(InternalEntityEntry) : queryContext.StartTracking(
+                            entityType: entityType2, 
+                            entity: instance2, 
+                            snapshot: shadowSnapshot2);
+                        return instance2;
+                    } : default(void);
+                    return instance2;
+                };
+                return entity;
+            }, 
+            inverseNavigation: [LIFTABLE Constant: Navigation: Order.Customer (Customer) Required ToPrincipal Customer Inverse: Orders | Resolver: namelessParameter{9} => namelessParameter{9}.Dependencies.Model.FindEntityType("SapB1App.Models.Order").FindNavigation("Customer")], 
+            fixup: (namelessParameter{10}, namelessParameter{11}) => 
+            {
+                [LIFTABLE Constant: ClrCollectionAccessor<Customer, ICollection<Order>, Order> | Resolver: namelessParameter{12} => namelessParameter{12}.Dependencies.Model.FindEntityType("SapB1App.Models.Customer").FindNavigation("Orders").GetCollectionAccessor()].Add(
+                    entity: namelessParameter{10}, 
+                    value: namelessParameter{11}, 
+                    forMaterialization: True);
+                return namelessParameter{11}.<Customer>k__BackingField = namelessParameter{10};
+            }, 
+            trackingQuery: True);
+        return IsTrue(resultCoordinator.ResultReady)
+         ? (Customer)(resultContext.Values[0]) : default(Customer);
+    }, 
+    contextType: SapB1App.Data.AppDbContext, 
+    standAloneStateManager: False, 
+    detailedErrorsEnabled: False, 
+    threadSafetyChecksEnabled: True)'
+2026-02-23 09:56:32.094 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:32.102 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:32.110 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:56:32.115 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:56:32.128 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (17ms).
+2026-02-23 09:56:32.141 +00:00 [DBG] Executing DbCommand [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:56:32.199 +00:00 [INF] Executed DbCommand (64ms) [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:56:32.307 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:56:32.423 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:56:32.434 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:32.444 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 229ms reading results.
+2026-02-23 09:56:32.454 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:32.463 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (9ms).
+2026-02-23 09:56:32.484 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 09:56:32.502 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 09:56:32.508 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 09:56:32.516 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 09:56:32.527 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 09:56:32.535 +00:00 [INF] Executing OkObjectResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.PagedResult`1[[SapB1App.DTOs.CustomerDto, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 09:56:32.651 +00:00 [INF] Executed action SapB1App.Controllers.CustomersController.GetAll (SapB1App) in 1635.6977ms
+2026-02-23 09:56:32.661 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:56:32.676 +00:00 [INF] HTTP GET /api/customers responded 200 in 1785.6990 ms
+2026-02-23 09:56:32.700 +00:00 [DBG] Connection id "0HNJIO78S90T7" completed keep alive response.
+2026-02-23 09:56:32.718 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:56:32.738 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:56:32.747 +00:00 [DBG] Disposed connection to database '' on server '' (8ms).
+2026-02-23 09:56:32.757 +00:00 [INF] Request finished HTTP/1.1 GET http://127.0.0.1:5000/api/customers - 200 null application/json; charset=utf-8 2026.2179ms
+2026-02-23 09:57:24.295 +00:00 [DBG] Connection id "0HNJIO78S90T8" accepted.
+2026-02-23 09:57:24.301 +00:00 [DBG] Connection id "0HNJIO78S90T8" started.
+2026-02-23 09:57:24.311 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/index.html - null null
+2026-02-23 09:57:24.321 +00:00 [DBG] No candidates found for the request path '/swagger/index.html'
+2026-02-23 09:57:24.325 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.341 +00:00 [DBG] Connection id "0HNJIO78S90T9" accepted.
+2026-02-23 09:57:24.347 +00:00 [DBG] Connection id "0HNJIO78S90T9" started.
+2026-02-23 09:57:24.505 +00:00 [DBG] Connection id "0HNJIO78S90T8" completed keep alive response.
+2026-02-23 09:57:24.513 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/index.html - 304 null null 202.0273ms
+2026-02-23 09:57:24.536 +00:00 [DBG] Connection id "0HNJIO78S90TA" accepted.
+2026-02-23 09:57:24.537 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/index.css - null null
+2026-02-23 09:57:24.560 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui.css - null null
+2026-02-23 09:57:24.561 +00:00 [DBG] Connection id "0HNJIO78S90TB" accepted.
+2026-02-23 09:57:24.561 +00:00 [DBG] Connection id "0HNJIO78S90TA" started.
+2026-02-23 09:57:24.568 +00:00 [DBG] No candidates found for the request path '/swagger/index.css'
+2026-02-23 09:57:24.573 +00:00 [DBG] No candidates found for the request path '/swagger/swagger-ui.css'
+2026-02-23 09:57:24.576 +00:00 [DBG] Connection id "0HNJIO78S90TC" accepted.
+2026-02-23 09:57:24.579 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui-bundle.js - null null
+2026-02-23 09:57:24.581 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.584 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.587 +00:00 [DBG] Connection id "0HNJIO78S90TB" started.
+2026-02-23 09:57:24.592 +00:00 [DBG] No candidates found for the request path '/swagger/swagger-ui-bundle.js'
+2026-02-23 09:57:24.598 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui-standalone-preset.js - null null
+2026-02-23 09:57:24.602 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.605 +00:00 [DBG] Connection id "0HNJIO78S90T9" completed keep alive response.
+2026-02-23 09:57:24.612 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/index.css - 304 null null 75.6787ms
+2026-02-23 09:57:24.609 +00:00 [DBG] No candidates found for the request path '/swagger/swagger-ui-standalone-preset.js'
+2026-02-23 09:57:24.621 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.620 +00:00 [DBG] Connection id "0HNJIO78S90TC" started.
+2026-02-23 09:57:24.624 +00:00 [DBG] Connection id "0HNJIO78S90TB" completed keep alive response.
+2026-02-23 09:57:24.623 +00:00 [DBG] Connection id "0HNJIO78S90TA" completed keep alive response.
+2026-02-23 09:57:24.605 +00:00 [DBG] Connection id "0HNJIO78S90T8" completed keep alive response.
+2026-02-23 09:57:24.624 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/index.js - null null
+2026-02-23 09:57:24.627 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui-standalone-preset.js - 304 null null 29.4424ms
+2026-02-23 09:57:24.630 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui-bundle.js - 304 null null 51.0931ms
+2026-02-23 09:57:24.635 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/swagger-ui.css - 304 null null 74.7704ms
+2026-02-23 09:57:24.641 +00:00 [DBG] No candidates found for the request path '/swagger/index.js'
+2026-02-23 09:57:24.672 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.676 +00:00 [DBG] Connection id "0HNJIO78S90TC" completed keep alive response.
+2026-02-23 09:57:24.679 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/index.js - 304 null null 54.8232ms
+2026-02-23 09:57:24.941 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/swagger/v1/swagger.json - null null
+2026-02-23 09:57:24.964 +00:00 [DBG] No candidates found for the request path '/swagger/v1/swagger.json'
+2026-02-23 09:57:24.973 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:57:24.996 +00:00 [DBG] Executing API description provider 'EndpointMetadataApiDescriptionProvider' from assembly Microsoft.AspNetCore.Mvc.ApiExplorer v10.0.0.0.
+2026-02-23 09:57:25.013 +00:00 [DBG] Executing API description provider 'DefaultApiDescriptionProvider' from assembly Microsoft.AspNetCore.Mvc.ApiExplorer v10.0.0.0.
+2026-02-23 09:57:25.453 +00:00 [DBG] Connection id "0HNJIO78S90TC" completed keep alive response.
+2026-02-23 09:57:25.463 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 521.0275ms
+2026-02-23 09:58:12.720 +00:00 [DBG] Connection id "0HNJIO78S90T7" received FIN.
+2026-02-23 09:58:12.747 +00:00 [DBG] Connection id "0HNJIO78S90T7" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:58:12.766 +00:00 [DBG] Connection id "0HNJIO78S90T7" disconnecting.
+2026-02-23 09:58:12.784 +00:00 [DBG] Connection id "0HNJIO78S90T7" stopped.
+2026-02-23 09:58:31.052 +00:00 [DBG] HttpMessageHandler expired after 120000ms for client 'ISapB1Service'
+2026-02-23 09:58:41.079 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:58:41.105 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.1157ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:58:51.136 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:58:51.216 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0169ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:01.271 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:01.293 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.009ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:10.807 +00:00 [DBG] Connection id "0HNJIO78S90TD" accepted.
+2026-02-23 09:59:10.814 +00:00 [DBG] Connection id "0HNJIO78S90TD" started.
+2026-02-23 09:59:10.823 +00:00 [INF] Request starting HTTP/1.1 OPTIONS http://localhost:5000/api/auth/login - null null
+2026-02-23 09:59:10.835 +00:00 [DBG] 1 candidate(s) found for the request path '/api/auth/login'
+2026-02-23 09:59:10.841 +00:00 [DBG] Request matched endpoint '405 HTTP Method Not Supported'
+2026-02-23 09:59:10.849 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:10.856 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:10.863 +00:00 [DBG] The request is a preflight request.
+2026-02-23 09:59:10.869 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:10.878 +00:00 [INF] Request finished HTTP/1.1 OPTIONS http://localhost:5000/api/auth/login - 204 null null 55.5303ms
+2026-02-23 09:59:10.902 +00:00 [INF] Request starting HTTP/1.1 POST http://localhost:5000/api/auth/login - application/json 43
+2026-02-23 09:59:10.912 +00:00 [DBG] 1 candidate(s) found for the request path '/api/auth/login'
+2026-02-23 09:59:10.918 +00:00 [DBG] Endpoint 'SapB1App.Controllers.AuthController.Login (SapB1App)' with route pattern 'api/Auth/login' is valid for the request path '/api/auth/login'
+2026-02-23 09:59:10.928 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.AuthController.Login (SapB1App)'
+2026-02-23 09:59:10.935 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:10.942 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:10.948 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.AuthController.Login (SapB1App)'
+2026-02-23 09:59:10.972 +00:00 [INF] Route matched with {action = "Login", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.LoginResponse]]] Login(SapB1App.DTOs.LoginRequest) on controller SapB1App.Controllers.AuthController (SapB1App).
+2026-02-23 09:59:10.983 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 09:59:10.992 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 09:59:10.999 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 09:59:11.010 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 09:59:11.017 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 09:59:11.028 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.AuthController (SapB1App)
+2026-02-23 09:59:11.041 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.AuthController (SapB1App)
+2026-02-23 09:59:11.050 +00:00 [DBG] Attempting to bind parameter 'request' of type 'SapB1App.DTOs.LoginRequest' ...
+2026-02-23 09:59:11.062 +00:00 [DBG] Attempting to bind parameter 'request' of type 'SapB1App.DTOs.LoginRequest' using the name '' in request data ...
+2026-02-23 09:59:11.073 +00:00 [DBG] Selected input formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonInputFormatter' for content type 'application/json'.
+2026-02-23 09:59:11.089 +00:00 [DBG] Connection id "0HNJIO78S90TD", Request id "0HNJIO78S90TD:00000002": started reading request body.
+2026-02-23 09:59:11.094 +00:00 [DBG] Connection id "0HNJIO78S90TD", Request id "0HNJIO78S90TD:00000002": done reading request body.
+2026-02-23 09:59:11.115 +00:00 [DBG] JSON input formatter succeeded, deserializing to type 'SapB1App.DTOs.LoginRequest'
+2026-02-23 09:59:11.120 +00:00 [DBG] Done attempting to bind parameter 'request' of type 'SapB1App.DTOs.LoginRequest'.
+2026-02-23 09:59:11.129 +00:00 [DBG] Done attempting to bind parameter 'request' of type 'SapB1App.DTOs.LoginRequest'.
+2026-02-23 09:59:11.135 +00:00 [DBG] Attempting to validate the bound parameter 'request' of type 'SapB1App.DTOs.LoginRequest' ...
+2026-02-23 09:59:11.152 +00:00 [DBG] Done attempting to validate the bound parameter 'request' of type 'SapB1App.DTOs.LoginRequest'.
+2026-02-23 09:59:11.308 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:59:11.323 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:11.331 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0071ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:11.343 +00:00 [DBG] Compiling query expression: 
+'DbSet<AppUser>()
+    .FirstOrDefault(u => u.Username == @request_Username && u.IsActive)'
+2026-02-23 09:59:11.375 +00:00 [DBG] Generated query execution expression: 
+'queryContext => ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync<AppUser>(
+    asyncEnumerable: SingleQueryingEnumerable.Create<AppUser>(
+        relationalQueryContext: (RelationalQueryContext)queryContext, 
+        relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+            Projection Mapping:
+                EmptyProjectionMember -> Dictionary<IPropertyBase, int> { [Property: AppUser.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 0], [Property: AppUser.CreatedAt (DateTime) Required, 1], [Property: AppUser.Email (string) Required Index MaxLength(100), 2], [Property: AppUser.FullName (string) Required, 3], [Property: AppUser.IsActive (bool) Required, 4], [Property: AppUser.LastLogin (DateTime?), 5], [Property: AppUser.PasswordHash (string) Required, 6], [Property: AppUser.PasswordSalt (string) Required, 7], [Property: AppUser.Role (string) Required ValueGenerated.OnAdd MaxLength(20), 8], [Property: AppUser.Username (string) Required Index MaxLength(50), 9] }
+            SELECT TOP(1) u.Id, u.CreatedAt, u.Email, u.FullName, u.IsActive, u.LastLogin, u.PasswordHash, u.PasswordSalt, u.Role, u.Username
+            FROM Users AS u
+            WHERE (u.Username == @request_Username) && u.IsActive) | Resolver: c => new RelationalCommandCache(
+            c.Dependencies.MemoryCache, 
+            c.RelationalDependencies.QuerySqlGeneratorFactory, 
+            c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+            Projection Mapping:
+                EmptyProjectionMember -> Dictionary<IPropertyBase, int> { [Property: AppUser.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd, 0], [Property: AppUser.CreatedAt (DateTime) Required, 1], [Property: AppUser.Email (string) Required Index MaxLength(100), 2], [Property: AppUser.FullName (string) Required, 3], [Property: AppUser.IsActive (bool) Required, 4], [Property: AppUser.LastLogin (DateTime?), 5], [Property: AppUser.PasswordHash (string) Required, 6], [Property: AppUser.PasswordSalt (string) Required, 7], [Property: AppUser.Role (string) Required ValueGenerated.OnAdd MaxLength(20), 8], [Property: AppUser.Username (string) Required Index MaxLength(50), 9] }
+            SELECT TOP(1) u.Id, u.CreatedAt, u.Email, u.FullName, u.IsActive, u.LastLogin, u.PasswordHash, u.PasswordSalt, u.Role, u.Username
+            FROM Users AS u
+            WHERE (u.Username == @request_Username) && u.IsActive, 
+            False, 
+            MultipleParameters
+        )].GetRelationalCommandTemplate(parameters), 
+        readerColumns: null, 
+        shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+        {
+            AppUser entity;
+            entity = 
+            {
+                MaterializationContext materializationContext1;
+                IEntityType entityType1;
+                AppUser instance1;
+                InternalEntityEntry entry1;
+                bool hasNullKey1;
+                materializationContext1 = new MaterializationContext(
+                    [LIFTABLE Constant: ValueBuffer | Resolver: _ => (object)ValueBuffer.Empty], 
+                    queryContext.Context
+                );
+                instance1 = default(AppUser);
+                entry1 = queryContext.TryGetEntry(
+                    key: [LIFTABLE Constant: Key: AppUser.Id PK | Resolver: c => c.Dependencies.Model.FindEntityType("SapB1App.Models.AppUser").FindPrimaryKey()], 
+                    keyValues: new object[]{ (object)dataReader.GetInt32(0) }, 
+                    throwOnNullKey: True, 
+                    hasNullKey: hasNullKey1);
+                !(hasNullKey1) ? entry1 != default(InternalEntityEntry) ? 
+                {
+                    entityType1 = entry1.EntityType;
+                    return instance1 = (AppUser)entry1.Entity;
+                } : 
+                {
+                    ISnapshot shadowSnapshot1;
+                    shadowSnapshot1 = [LIFTABLE Constant: Snapshot | Resolver: _ => Snapshot.Empty];
+                    entityType1 = [LIFTABLE Constant: EntityType: AppUser | Resolver: namelessParameter{0} => namelessParameter{0}.Dependencies.Model.FindEntityType("SapB1App.Models.AppUser")];
+                    instance1 = switch (entityType1)
+                    {
+                        case [LIFTABLE Constant: EntityType: AppUser | Resolver: namelessParameter{1} => namelessParameter{1}.Dependencies.Model.FindEntityType("SapB1App.Models.AppUser")]: 
+                            {
+                                return 
+                                {
+                                    AppUser instance;
+                                    instance = new AppUser();
+                                    instance.<Id>k__BackingField = dataReader.GetInt32(0);
+                                    instance.<CreatedAt>k__BackingField = dataReader.GetDateTime(1);
+                                    instance.<Email>k__BackingField = dataReader.GetString(2);
+                                    instance.<FullName>k__BackingField = dataReader.GetString(3);
+                                    instance.<IsActive>k__BackingField = dataReader.GetBoolean(4);
+                                    instance.<LastLogin>k__BackingField = dataReader.IsDBNull(5) ? default(DateTime?) : (DateTime?)dataReader.GetDateTime(5);
+                                    instance.<PasswordHash>k__BackingField = dataReader.GetString(6);
+                                    instance.<PasswordSalt>k__BackingField = dataReader.GetString(7);
+                                    instance.<Role>k__BackingField = dataReader.GetString(8);
+                                    instance.<Username>k__BackingField = dataReader.GetString(9);
+                                    (instance is IInjectableService) ? ((IInjectableService)instance).Injected(
+                                        context: materializationContext1.Context, 
+                                        entity: instance, 
+                                        queryTrackingBehavior: TrackAll, 
+                                        structuralType: [LIFTABLE Constant: EntityType: AppUser | Resolver: namelessParameter{2} => namelessParameter{2}.Dependencies.Model.FindEntityType("SapB1App.Models.AppUser")]) : default(void);
+                                    return instance;
+                                }}
+                        default: 
+                            default(AppUser)
+                    }
+                    ;
+                    entry1 = entityType1 == default(IEntityType) ? default(InternalEntityEntry) : queryContext.StartTracking(
+                        entityType: entityType1, 
+                        entity: instance1, 
+                        snapshot: shadowSnapshot1);
+                    return instance1;
+                } : default(void);
+                return instance1;
+            };
+            return entity;
+        }, 
+        contextType: SapB1App.Data.AppDbContext, 
+        standAloneStateManager: False, 
+        detailedErrorsEnabled: False, 
+        threadSafetyChecksEnabled: True), 
+    cancellationToken: queryContext.CancellationToken)'
+2026-02-23 09:59:11.414 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:59:11.431 +00:00 [DBG] Created DbConnection. (16ms).
+2026-02-23 09:59:11.442 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.449 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.461 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:11.467 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:59:11.476 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (15ms).
+2026-02-23 09:59:11.483 +00:00 [DBG] Executing DbCommand [Parameters=[@request_Username='?' (Size = 50)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [u].[Id], [u].[CreatedAt], [u].[Email], [u].[FullName], [u].[IsActive], [u].[LastLogin], [u].[PasswordHash], [u].[PasswordSalt], [u].[Role], [u].[Username]
+FROM [Users] AS [u]
+WHERE [u].[Username] = @request_Username AND [u].[IsActive] = CAST(1 AS bit)
+2026-02-23 09:59:11.513 +00:00 [INF] Executed DbCommand (30ms) [Parameters=[@request_Username='?' (Size = 50)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [u].[Id], [u].[CreatedAt], [u].[Email], [u].[FullName], [u].[IsActive], [u].[LastLogin], [u].[PasswordHash], [u].[PasswordSalt], [u].[Role], [u].[Username]
+FROM [Users] AS [u]
+WHERE [u].[Username] = @request_Username AND [u].[IsActive] = CAST(1 AS bit)
+2026-02-23 09:59:11.534 +00:00 [DBG] Context 'AppDbContext' started tracking 'AppUser' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:11.576 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.583 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 54ms reading results.
+2026-02-23 09:59:11.593 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.602 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (8ms).
+2026-02-23 09:59:11.625 +00:00 [DBG] SaveChanges starting for 'AppDbContext'.
+2026-02-23 09:59:11.639 +00:00 [DBG] DetectChanges starting for 'AppDbContext'.
+2026-02-23 09:59:11.696 +00:00 [DBG] The unchanged property 'AppUser.LastLogin' was detected as changed and will be marked as modified. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see property values.
+2026-02-23 09:59:11.721 +00:00 [DBG] An entity of type 'AppUser' tracked by 'AppDbContext' changed state from '"Unchanged"' to '"Modified"'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:11.742 +00:00 [DBG] DetectChanges completed for 'AppDbContext'.
+2026-02-23 09:59:11.847 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.856 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.873 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:11.880 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (7ms).
+2026-02-23 09:59:11.890 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (17ms).
+2026-02-23 09:59:11.897 +00:00 [DBG] Executing DbCommand [Parameters=[@p1='?' (DbType = Int32), @p0='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+UPDATE [Users] SET [LastLogin] = @p0
+OUTPUT 1
+WHERE [Id] = @p1;
+2026-02-23 09:59:11.923 +00:00 [INF] Executed DbCommand (25ms) [Parameters=[@p1='?' (DbType = Int32), @p0='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+UPDATE [Users] SET [LastLogin] = @p0
+OUTPUT 1
+WHERE [Id] = @p1;
+2026-02-23 09:59:11.946 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.957 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 23ms reading results.
+2026-02-23 09:59:11.975 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:11.984 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (8ms).
+2026-02-23 09:59:12.008 +00:00 [DBG] An entity of type 'AppUser' tracked by 'AppDbContext' changed state from '"Modified"' to '"Unchanged"'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:12.022 +00:00 [DBG] SaveChanges completed for 'AppDbContext' with 1 entities written to the database.
+2026-02-23 09:59:12.084 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 09:59:12.102 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 09:59:12.107 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 09:59:12.112 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 09:59:12.118 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 09:59:12.126 +00:00 [INF] Executing OkObjectResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.LoginResponse, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 09:59:12.142 +00:00 [INF] Executed action SapB1App.Controllers.AuthController.Login (SapB1App) in 1114.0503ms
+2026-02-23 09:59:12.148 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.AuthController.Login (SapB1App)'
+2026-02-23 09:59:12.155 +00:00 [INF] HTTP POST /api/auth/login responded 200 in 1208.2985 ms
+2026-02-23 09:59:12.164 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:12.175 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:59:12.182 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:12.197 +00:00 [DBG] Disposed connection to database '' on server '' (15ms).
+2026-02-23 09:59:12.208 +00:00 [INF] Request finished HTTP/1.1 POST http://localhost:5000/api/auth/login - 200 null application/json; charset=utf-8 1306.2169ms
+2026-02-23 09:59:12.235 +00:00 [INF] Request starting HTTP/1.1 OPTIONS http://localhost:5000/api/dashboard/stats - null null
+2026-02-23 09:59:12.251 +00:00 [DBG] No candidates found for the request path '/api/dashboard/stats'
+2026-02-23 09:59:12.256 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:59:12.260 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:12.264 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:12.269 +00:00 [DBG] The request is a preflight request.
+2026-02-23 09:59:12.275 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:12.282 +00:00 [INF] Request finished HTTP/1.1 OPTIONS http://localhost:5000/api/dashboard/stats - 204 null null 46.6985ms
+2026-02-23 09:59:12.295 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/dashboard/stats - null null
+2026-02-23 09:59:12.306 +00:00 [DBG] No candidates found for the request path '/api/dashboard/stats'
+2026-02-23 09:59:12.309 +00:00 [DBG] Request did not match any endpoints
+2026-02-23 09:59:12.313 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:12.316 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:12.323 +00:00 [INF] HTTP GET /api/dashboard/stats responded 404 in 1.4048 ms
+2026-02-23 09:59:12.331 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:12.338 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/api/dashboard/stats - 404 0 null 43.1197ms
+2026-02-23 09:59:12.347 +00:00 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/api/dashboard/stats, Response status code: 404
+2026-02-23 09:59:13.943 +00:00 [INF] Request starting HTTP/1.1 OPTIONS http://localhost:5000/api/customers - null null
+2026-02-23 09:59:14.031 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:59:14.066 +00:00 [DBG] Request matched endpoint '405 HTTP Method Not Supported'
+2026-02-23 09:59:14.080 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:14.094 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:14.101 +00:00 [DBG] The request is a preflight request.
+2026-02-23 09:59:14.315 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:14.325 +00:00 [INF] Request finished HTTP/1.1 OPTIONS http://localhost:5000/api/customers - 204 null null 381.6128ms
+2026-02-23 09:59:14.372 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/customers - null null
+2026-02-23 09:59:14.382 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:59:14.392 +00:00 [DBG] Endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)' with route pattern 'api/Customers' is valid for the request path '/api/customers'
+2026-02-23 09:59:14.403 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:14.409 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:14.413 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:14.420 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:14.426 +00:00 [INF] Route matched with {action = "GetAll", controller = "Customers"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.PagedResult`1[SapB1App.DTOs.CustomerDto]]]] GetAll(Int32, Int32, System.String, System.Nullable`1[System.Boolean]) on controller SapB1App.Controllers.CustomersController (SapB1App).
+2026-02-23 09:59:14.439 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 09:59:14.446 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 09:59:14.455 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 09:59:14.465 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 09:59:14.474 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 09:59:14.482 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:14.494 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:14.501 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:59:14.510 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:59:14.519 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:14.526 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:14.532 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:14.538 +00:00 [DBG] Attempting to validate the bound parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:59:14.544 +00:00 [DBG] Done attempting to validate the bound parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:14.553 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:59:14.561 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:59:14.572 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:14.580 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:14.591 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:14.599 +00:00 [DBG] Attempting to validate the bound parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:59:14.608 +00:00 [DBG] Done attempting to validate the bound parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:14.614 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' ...
+2026-02-23 09:59:14.622 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' using the name '' in request data ...
+2026-02-23 09:59:14.632 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'search' of type 'System.String'.
+2026-02-23 09:59:14.640 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:59:14.649 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:59:14.656 +00:00 [DBG] Attempting to validate the bound parameter 'search' of type 'System.String' ...
+2026-02-23 09:59:14.664 +00:00 [DBG] Done attempting to validate the bound parameter 'search' of type 'System.String'.
+2026-02-23 09:59:14.673 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:59:14.679 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' using the name '' in request data ...
+2026-02-23 09:59:14.688 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:14.696 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:14.703 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:14.710 +00:00 [DBG] Attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:59:14.717 +00:00 [DBG] Done attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:14.727 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:59:14.750 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:59:14.754 +00:00 [DBG] Created DbConnection. (4ms).
+2026-02-23 09:59:14.756 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.758 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.761 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:14.763 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (2ms).
+2026-02-23 09:59:14.767 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (6ms).
+2026-02-23 09:59:14.774 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:59:14.782 +00:00 [INF] Executed DbCommand (7ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:59:14.788 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.791 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 3ms reading results.
+2026-02-23 09:59:14.794 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.800 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (5ms).
+2026-02-23 09:59:14.806 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.809 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.812 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:14.827 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (15ms).
+2026-02-23 09:59:14.844 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (31ms).
+2026-02-23 09:59:14.850 +00:00 [DBG] Executing DbCommand [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:59:14.863 +00:00 [INF] Executed DbCommand (13ms) [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:59:14.876 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:14.886 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:14.893 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.900 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 24ms reading results.
+2026-02-23 09:59:14.908 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:14.920 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (11ms).
+2026-02-23 09:59:14.929 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 09:59:14.943 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 09:59:14.946 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 09:59:14.954 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 09:59:14.960 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 09:59:14.971 +00:00 [INF] Executing OkObjectResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.PagedResult`1[[SapB1App.DTOs.CustomerDto, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 09:59:14.983 +00:00 [INF] Executed action SapB1App.Controllers.CustomersController.GetAll (SapB1App) in 501.2727ms
+2026-02-23 09:59:14.994 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:15.002 +00:00 [INF] HTTP GET /api/customers responded 200 in 582.0751 ms
+2026-02-23 09:59:15.010 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:15.019 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:59:15.024 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:15.032 +00:00 [DBG] Disposed connection to database '' on server '' (7ms).
+2026-02-23 09:59:15.040 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/api/customers - 200 null application/json; charset=utf-8 668.4495ms
+2026-02-23 09:59:21.350 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:21.367 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0089ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:29.784 +00:00 [INF] Request starting HTTP/1.1 OPTIONS http://localhost:5000/api/customers - null null
+2026-02-23 09:59:29.831 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:59:29.858 +00:00 [DBG] Request matched endpoint '405 HTTP Method Not Supported'
+2026-02-23 09:59:29.884 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:29.912 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:29.915 +00:00 [DBG] The request is a preflight request.
+2026-02-23 09:59:29.919 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:29.942 +00:00 [INF] Request finished HTTP/1.1 OPTIONS http://localhost:5000/api/customers - 204 null null 157.963ms
+2026-02-23 09:59:29.962 +00:00 [INF] Request starting HTTP/1.1 POST http://localhost:5000/api/customers - application/json 127
+2026-02-23 09:59:29.975 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:59:29.981 +00:00 [DBG] Endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)' with route pattern 'api/Customers' is valid for the request path '/api/customers'
+2026-02-23 09:59:29.991 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 09:59:29.997 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:30.002 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:30.008 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 09:59:30.029 +00:00 [INF] Route matched with {action = "Create", controller = "Customers"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.CustomerDto]]] Create(SapB1App.DTOs.CreateCustomerDto) on controller SapB1App.Controllers.CustomersController (SapB1App).
+2026-02-23 09:59:30.041 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 09:59:30.048 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 09:59:30.058 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 09:59:30.067 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 09:59:30.079 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 09:59:30.092 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:30.110 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:30.117 +00:00 [DBG] Attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' ...
+2026-02-23 09:59:30.127 +00:00 [DBG] Attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' using the name '' in request data ...
+2026-02-23 09:59:30.138 +00:00 [DBG] Selected input formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonInputFormatter' for content type 'application/json'.
+2026-02-23 09:59:30.150 +00:00 [DBG] Connection id "0HNJIO78S90TD", Request id "0HNJIO78S90TD:00000008": started reading request body.
+2026-02-23 09:59:30.160 +00:00 [DBG] Connection id "0HNJIO78S90TD", Request id "0HNJIO78S90TD:00000008": done reading request body.
+2026-02-23 09:59:30.176 +00:00 [DBG] JSON input formatter succeeded, deserializing to type 'SapB1App.DTOs.CreateCustomerDto'
+2026-02-23 09:59:30.182 +00:00 [DBG] Done attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 09:59:30.192 +00:00 [DBG] Done attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 09:59:30.201 +00:00 [DBG] Attempting to validate the bound parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' ...
+2026-02-23 09:59:30.217 +00:00 [DBG] Done attempting to validate the bound parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 09:59:30.240 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:59:30.255 +00:00 [DBG] Compiling query expression: 
+'DbSet<Customer>()
+    .Any(c => c.CardCode == @code)'
+2026-02-23 09:59:30.274 +00:00 [DBG] Generated query execution expression: 
+'queryContext => ShapedQueryCompilingExpressionVisitor.SingleAsync<bool>(
+    asyncEnumerable: SingleQueryingEnumerable.Create<bool>(
+        relationalQueryContext: (RelationalQueryContext)queryContext, 
+        relationalCommandResolver: parameters => [LIFTABLE Constant: RelationalCommandCache.QueryExpression(
+            Projection Mapping:
+                EmptyProjectionMember -> 0
+            SELECT EXISTS (
+                SELECT 1
+                FROM Customers AS c
+                WHERE c.CardCode == @code)) | Resolver: c => new RelationalCommandCache(
+            c.Dependencies.MemoryCache, 
+            c.RelationalDependencies.QuerySqlGeneratorFactory, 
+            c.RelationalDependencies.RelationalParameterBasedSqlProcessorFactory, 
+            Projection Mapping:
+                EmptyProjectionMember -> 0
+            SELECT EXISTS (
+                SELECT 1
+                FROM Customers AS c
+                WHERE c.CardCode == @code), 
+            False, 
+            MultipleParameters
+        )].GetRelationalCommandTemplate(parameters), 
+        readerColumns: null, 
+        shaper: (queryContext, dataReader, resultContext, resultCoordinator) => 
+        {
+            bool? value1;
+            value1 = dataReader.IsDBNull(0) ? default(bool?) : (bool?)dataReader.GetBoolean(0);
+            return (bool)value1;
+        }, 
+        contextType: SapB1App.Data.AppDbContext, 
+        standAloneStateManager: False, 
+        detailedErrorsEnabled: False, 
+        threadSafetyChecksEnabled: True), 
+    cancellationToken: queryContext.CancellationToken)'
+2026-02-23 09:59:30.300 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:59:30.305 +00:00 [DBG] Created DbConnection. (5ms).
+2026-02-23 09:59:30.310 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.317 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.324 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:30.330 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:59:30.337 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (12ms).
+2026-02-23 09:59:30.344 +00:00 [DBG] Executing DbCommand [Parameters=[@code='?' (Size = 15)], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]
+        WHERE [c].[CardCode] = @code) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:59:30.359 +00:00 [INF] Executed DbCommand (15ms) [Parameters=[@code='?' (Size = 15)], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]
+        WHERE [c].[CardCode] = @code) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 09:59:30.374 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.380 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 10ms reading results.
+2026-02-23 09:59:30.391 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.399 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (8ms).
+2026-02-23 09:59:30.447 +00:00 [DBG] 'AppDbContext' generated a temporary value for the property 'Customer.Id'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:30.479 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:30.485 +00:00 [DBG] SaveChanges starting for 'AppDbContext'.
+2026-02-23 09:59:30.493 +00:00 [DBG] DetectChanges starting for 'AppDbContext'.
+2026-02-23 09:59:30.534 +00:00 [DBG] DetectChanges completed for 'AppDbContext'.
+2026-02-23 09:59:30.576 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.582 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.590 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:30.596 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (5ms).
+2026-02-23 09:59:30.606 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (15ms).
+2026-02-23 09:59:30.613 +00:00 [DBG] Executing DbCommand [Parameters=[@p0='?' (Size = 4000), @p1='?' (Size = 15), @p2='?' (Size = 100), @p3='?' (Size = 4000), @p4='?' (Size = 4000), @p5='?' (DbType = DateTime2), @p6='?' (Precision = 18) (Scale = 4) (DbType = Decimal), @p7='?' (Size = 5), @p8='?' (Size = 100), @p9='?' (DbType = Boolean), @p10='?' (Size = 20), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [Customers] ([Address], [CardCode], [CardName], [City], [Country], [CreatedAt], [CreditLimit], [Currency], [Email], [IsActive], [Phone], [SapDocNum], [UpdatedAt])
+OUTPUT INSERTED.[Id]
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2026-02-23 09:59:30.638 +00:00 [INF] Executed DbCommand (25ms) [Parameters=[@p0='?' (Size = 4000), @p1='?' (Size = 15), @p2='?' (Size = 100), @p3='?' (Size = 4000), @p4='?' (Size = 4000), @p5='?' (DbType = DateTime2), @p6='?' (Precision = 18) (Scale = 4) (DbType = Decimal), @p7='?' (Size = 5), @p8='?' (Size = 100), @p9='?' (DbType = Boolean), @p10='?' (Size = 20), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [Customers] ([Address], [CardCode], [CardName], [City], [Country], [CreatedAt], [CreditLimit], [Currency], [Email], [IsActive], [Phone], [SapDocNum], [UpdatedAt])
+OUTPUT INSERTED.[Id]
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2026-02-23 09:59:30.672 +00:00 [DBG] The foreign key property 'Customer.Id' was detected as changed. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see property values.
+2026-02-23 09:59:30.685 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.694 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 42ms reading results.
+2026-02-23 09:59:30.701 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.710 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (8ms).
+2026-02-23 09:59:30.727 +00:00 [DBG] An entity of type 'Customer' tracked by 'AppDbContext' changed state from '"Added"' to '"Unchanged"'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:30.735 +00:00 [DBG] SaveChanges completed for 'AppDbContext' with 1 entities written to the database.
+2026-02-23 09:59:30.747 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 09:59:30.762 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 09:59:30.767 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 09:59:30.775 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 09:59:30.780 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 09:59:30.791 +00:00 [INF] Executing CreatedAtActionResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.CustomerDto, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 09:59:30.839 +00:00 [DBG] Found the endpoints ["SapB1App.Controllers.CustomersController.GetById (SapB1App)"] for address (id=[3],action=[GetById],controller=[Customers])
+2026-02-23 09:59:30.849 +00:00 [DBG] Successfully processed template api/Customers/{id:int} for SapB1App.Controllers.CustomersController.GetById (SapB1App) resulting in /api/Customers/3 and 
+2026-02-23 09:59:30.861 +00:00 [DBG] Link generation succeeded for endpoints ["SapB1App.Controllers.CustomersController.GetById (SapB1App)"] with result /api/Customers/3
+2026-02-23 09:59:30.874 +00:00 [INF] Executed action SapB1App.Controllers.CustomersController.Create (SapB1App) in 781.9618ms
+2026-02-23 09:59:30.880 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 09:59:30.887 +00:00 [INF] HTTP POST /api/customers responded 201 in 878.8677 ms
+2026-02-23 09:59:30.895 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:30.901 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:59:30.909 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:30.916 +00:00 [DBG] Disposed connection to database '' on server '' (7ms).
+2026-02-23 09:59:30.928 +00:00 [INF] Request finished HTTP/1.1 POST http://localhost:5000/api/customers - 201 null application/json; charset=utf-8 966.2647ms
+2026-02-23 09:59:31.405 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:31.417 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0163ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:32.163 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/customers - null null
+2026-02-23 09:59:32.221 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 09:59:32.238 +00:00 [DBG] Endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)' with route pattern 'api/Customers' is valid for the request path '/api/customers'
+2026-02-23 09:59:32.257 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:32.273 +00:00 [DBG] The request has an origin header: 'http://localhost:4200'.
+2026-02-23 09:59:32.282 +00:00 [INF] CORS policy execution successful.
+2026-02-23 09:59:32.291 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:32.297 +00:00 [INF] Route matched with {action = "GetAll", controller = "Customers"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.PagedResult`1[SapB1App.DTOs.CustomerDto]]]] GetAll(Int32, Int32, System.String, System.Nullable`1[System.Boolean]) on controller SapB1App.Controllers.CustomersController (SapB1App).
+2026-02-23 09:59:32.307 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 09:59:32.315 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 09:59:32.324 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 09:59:32.333 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 09:59:32.344 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 09:59:32.353 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:32.360 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 09:59:32.369 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:59:32.375 +00:00 [DBG] Attempting to bind parameter 'page' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:59:32.382 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:32.391 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:32.397 +00:00 [DBG] Done attempting to bind parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:32.404 +00:00 [DBG] Attempting to validate the bound parameter 'page' of type 'System.Int32' ...
+2026-02-23 09:59:32.410 +00:00 [DBG] Done attempting to validate the bound parameter 'page' of type 'System.Int32'.
+2026-02-23 09:59:32.417 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:59:32.425 +00:00 [DBG] Attempting to bind parameter 'pageSize' of type 'System.Int32' using the name '' in request data ...
+2026-02-23 09:59:32.432 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:32.440 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:32.447 +00:00 [DBG] Done attempting to bind parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:32.455 +00:00 [DBG] Attempting to validate the bound parameter 'pageSize' of type 'System.Int32' ...
+2026-02-23 09:59:32.461 +00:00 [DBG] Done attempting to validate the bound parameter 'pageSize' of type 'System.Int32'.
+2026-02-23 09:59:32.469 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' ...
+2026-02-23 09:59:32.476 +00:00 [DBG] Attempting to bind parameter 'search' of type 'System.String' using the name '' in request data ...
+2026-02-23 09:59:32.483 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'search' of type 'System.String'.
+2026-02-23 09:59:32.492 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:59:32.498 +00:00 [DBG] Done attempting to bind parameter 'search' of type 'System.String'.
+2026-02-23 09:59:32.506 +00:00 [DBG] Attempting to validate the bound parameter 'search' of type 'System.String' ...
+2026-02-23 09:59:32.513 +00:00 [DBG] Done attempting to validate the bound parameter 'search' of type 'System.String'.
+2026-02-23 09:59:32.521 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:59:32.524 +00:00 [DBG] Attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' using the name '' in request data ...
+2026-02-23 09:59:32.530 +00:00 [DBG] Could not find a value in the request with name '' for binding parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:32.540 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:32.548 +00:00 [DBG] Done attempting to bind parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:32.557 +00:00 [DBG] Attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]' ...
+2026-02-23 09:59:32.563 +00:00 [DBG] Done attempting to validate the bound parameter 'isActive' of type 'System.Nullable`1[System.Boolean]'.
+2026-02-23 09:59:32.572 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 09:59:32.589 +00:00 [DBG] Creating DbConnection.
+2026-02-23 09:59:32.593 +00:00 [DBG] Created DbConnection. (4ms).
+2026-02-23 09:59:32.598 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.607 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.616 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:32.625 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 09:59:32.633 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (16ms).
+2026-02-23 09:59:32.641 +00:00 [DBG] Executing DbCommand [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:59:32.654 +00:00 [INF] Executed DbCommand (13ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*)
+FROM [Customers] AS [c]
+2026-02-23 09:59:32.665 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.674 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 9ms reading results.
+2026-02-23 09:59:32.682 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.689 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (7ms).
+2026-02-23 09:59:32.698 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.706 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.713 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 09:59:32.720 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (6ms).
+2026-02-23 09:59:32.726 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (12ms).
+2026-02-23 09:59:32.733 +00:00 [DBG] Executing DbCommand [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:59:32.746 +00:00 [INF] Executed DbCommand (13ms) [Parameters=[@p='?' (DbType = Int32), @p1='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT [c0].[Id], [c0].[Address], [c0].[CardCode], [c0].[CardName], [c0].[City], [c0].[Country], [c0].[CreatedAt], [c0].[CreditLimit], [c0].[Currency], [c0].[Email], [c0].[IsActive], [c0].[Phone], [c0].[SapDocNum], [c0].[UpdatedAt], [o].[Id], [o].[Comments], [o].[CreatedAt], [o].[Currency], [o].[CustomerId], [o].[DeliveryDate], [o].[DocDate], [o].[DocNum], [o].[DocTotal], [o].[SapDocNum], [o].[Status], [o].[SyncedToSap], [o].[UpdatedAt], [o].[VatTotal]
+FROM (
+    SELECT [c].[Id], [c].[Address], [c].[CardCode], [c].[CardName], [c].[City], [c].[Country], [c].[CreatedAt], [c].[CreditLimit], [c].[Currency], [c].[Email], [c].[IsActive], [c].[Phone], [c].[SapDocNum], [c].[UpdatedAt]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[CardName]
+    OFFSET @p ROWS FETCH NEXT @p1 ROWS ONLY
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[Id] = [o].[CustomerId]
+ORDER BY [c0].[CardName], [c0].[Id]
+2026-02-23 09:59:32.759 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:32.767 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:32.777 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 09:59:32.783 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.792 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 32ms reading results.
+2026-02-23 09:59:32.799 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.808 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (8ms).
+2026-02-23 09:59:32.816 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 09:59:32.828 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 09:59:32.833 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 09:59:32.840 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 09:59:32.844 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 09:59:32.853 +00:00 [INF] Executing OkObjectResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.PagedResult`1[[SapB1App.DTOs.CustomerDto, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 09:59:32.865 +00:00 [INF] Executed action SapB1App.Controllers.CustomersController.GetAll (SapB1App) in 511.9973ms
+2026-02-23 09:59:32.875 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.CustomersController.GetAll (SapB1App)'
+2026-02-23 09:59:32.881 +00:00 [INF] HTTP GET /api/customers responded 200 in 589.2903 ms
+2026-02-23 09:59:32.892 +00:00 [DBG] Connection id "0HNJIO78S90TD" completed keep alive response.
+2026-02-23 09:59:32.899 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 09:59:32.906 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 09:59:32.914 +00:00 [DBG] Disposed connection to database '' on server '' (7ms).
+2026-02-23 09:59:32.922 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5000/api/customers - 200 null application/json; charset=utf-8 759.5554ms
+2026-02-23 09:59:35.801 +00:00 [DBG] Connection id "0HNJIO78S90T8" disconnecting.
+2026-02-23 09:59:35.802 +00:00 [DBG] Connection id "0HNJIO78S90T9" disconnecting.
+2026-02-23 09:59:35.803 +00:00 [DBG] Connection id "0HNJIO78S90TA" disconnecting.
+2026-02-23 09:59:35.805 +00:00 [DBG] Connection id "0HNJIO78S90TB" disconnecting.
+2026-02-23 09:59:35.814 +00:00 [DBG] Connection id "0HNJIO78S90T8" stopped.
+2026-02-23 09:59:35.826 +00:00 [DBG] Connection id "0HNJIO78S90T9" stopped.
+2026-02-23 09:59:35.840 +00:00 [DBG] Connection id "0HNJIO78S90TA" stopped.
+2026-02-23 09:59:35.854 +00:00 [DBG] Connection id "0HNJIO78S90TB" stopped.
+2026-02-23 09:59:35.910 +00:00 [DBG] Connection id "0HNJIO78S90TB" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:35.879 +00:00 [DBG] Connection id "0HNJIO78S90T9" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:35.905 +00:00 [DBG] Connection id "0HNJIO78S90TA" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:35.872 +00:00 [DBG] Connection id "0HNJIO78S90T8" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:36.810 +00:00 [DBG] Connection id "0HNJIO78S90TC" disconnecting.
+2026-02-23 09:59:36.824 +00:00 [DBG] Connection id "0HNJIO78S90TC" stopped.
+2026-02-23 09:59:36.839 +00:00 [DBG] Connection id "0HNJIO78S90TC" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:38.704 +00:00 [DBG] Connection id "0HNJIO78S90TD" received FIN.
+2026-02-23 09:59:38.722 +00:00 [DBG] Connection id "0HNJIO78S90TD" disconnecting.
+2026-02-23 09:59:38.734 +00:00 [DBG] Connection id "0HNJIO78S90TD" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 09:59:38.748 +00:00 [DBG] Connection id "0HNJIO78S90TD" stopped.
+2026-02-23 09:59:41.502 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:41.518 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.006ms - processed: 0 items - remaining: 1 items
+2026-02-23 09:59:51.535 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 09:59:51.547 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.008ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:01.571 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:01.583 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0111ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:11.615 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:11.627 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0085ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:21.649 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:21.656 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0303ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:31.680 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:31.702 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0095ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:41.731 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:41.738 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0063ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:00:51.760 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:00:51.773 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0095ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:01:01.802 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:01:01.825 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.024ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:01:11.861 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 1 items
+2026-02-23 10:01:11.899 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0108ms - processed: 0 items - remaining: 1 items
+2026-02-23 10:01:14.495 +00:00 [DBG] HttpMessageHandler expired after 120000ms for client 'ISapB1Service'
+2026-02-23 10:01:21.920 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:01:21.950 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0135ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:01:31.991 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:01:31.995 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0056ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:01:42.129 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:01:42.137 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.007ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:01:52.157 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:01:52.177 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0109ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:01:56.819 +00:00 [DBG] Connection id "0HNJIO78S90TE" accepted.
+2026-02-23 10:01:56.822 +00:00 [DBG] Connection id "0HNJIO78S90TE" started.
+2026-02-23 10:01:56.827 +00:00 [INF] Request starting HTTP/1.1 POST http://127.0.0.1:5000/api/customers - application/json 180
+2026-02-23 10:01:56.834 +00:00 [DBG] 1 candidate(s) found for the request path '/api/customers'
+2026-02-23 10:01:56.838 +00:00 [DBG] Endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)' with route pattern 'api/Customers' is valid for the request path '/api/customers'
+2026-02-23 10:01:56.845 +00:00 [DBG] Request matched endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 10:01:56.848 +00:00 [INF] Executing endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 10:01:56.852 +00:00 [INF] Route matched with {action = "Create", controller = "Customers"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[SapB1App.DTOs.ApiResponse`1[SapB1App.DTOs.CustomerDto]]] Create(SapB1App.DTOs.CreateCustomerDto) on controller SapB1App.Controllers.CustomersController (SapB1App).
+2026-02-23 10:01:56.858 +00:00 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+2026-02-23 10:01:56.865 +00:00 [DBG] Execution plan of resource filters (in the following order): ["None"]
+2026-02-23 10:01:56.871 +00:00 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+2026-02-23 10:01:56.879 +00:00 [DBG] Execution plan of exception filters (in the following order): ["None"]
+2026-02-23 10:01:56.884 +00:00 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+2026-02-23 10:01:56.889 +00:00 [DBG] Executing controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 10:01:56.897 +00:00 [DBG] Executed controller factory for controller SapB1App.Controllers.CustomersController (SapB1App)
+2026-02-23 10:01:56.901 +00:00 [DBG] Attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' ...
+2026-02-23 10:01:56.906 +00:00 [DBG] Attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' using the name '' in request data ...
+2026-02-23 10:01:56.912 +00:00 [DBG] Selected input formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonInputFormatter' for content type 'application/json'.
+2026-02-23 10:01:56.917 +00:00 [DBG] Connection id "0HNJIO78S90TE", Request id "0HNJIO78S90TE:00000001": started reading request body.
+2026-02-23 10:01:56.921 +00:00 [DBG] Connection id "0HNJIO78S90TE", Request id "0HNJIO78S90TE:00000001": done reading request body.
+2026-02-23 10:01:56.925 +00:00 [DBG] JSON input formatter succeeded, deserializing to type 'SapB1App.DTOs.CreateCustomerDto'
+2026-02-23 10:01:56.931 +00:00 [DBG] Done attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 10:01:56.936 +00:00 [DBG] Done attempting to bind parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 10:01:56.940 +00:00 [DBG] Attempting to validate the bound parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto' ...
+2026-02-23 10:01:56.947 +00:00 [DBG] Done attempting to validate the bound parameter 'dto' of type 'SapB1App.DTOs.CreateCustomerDto'.
+2026-02-23 10:01:56.953 +00:00 [DBG] Entity Framework Core 10.0.3 initialized 'AppDbContext' using provider 'Microsoft.EntityFrameworkCore.SqlServer:10.0.3' with options: EngineType=SqlServer 
+2026-02-23 10:01:56.961 +00:00 [DBG] Creating DbConnection.
+2026-02-23 10:01:56.964 +00:00 [DBG] Created DbConnection. (2ms).
+2026-02-23 10:01:56.968 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:56.972 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:56.978 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 10:01:56.983 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (4ms).
+2026-02-23 10:01:56.987 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 10:01:56.993 +00:00 [DBG] Executing DbCommand [Parameters=[@code='?' (Size = 15)], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]
+        WHERE [c].[CardCode] = @code) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 10:01:57.001 +00:00 [INF] Executed DbCommand (8ms) [Parameters=[@code='?' (Size = 15)], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE
+    WHEN EXISTS (
+        SELECT 1
+        FROM [Customers] AS [c]
+        WHERE [c].[CardCode] = @code) THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END
+2026-02-23 10:01:57.007 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.012 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 5ms reading results.
+2026-02-23 10:01:57.016 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.020 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (3ms).
+2026-02-23 10:01:57.028 +00:00 [DBG] 'AppDbContext' generated a temporary value for the property 'Customer.Id'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 10:01:57.032 +00:00 [DBG] Context 'AppDbContext' started tracking 'Customer' entity. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 10:01:57.036 +00:00 [DBG] SaveChanges starting for 'AppDbContext'.
+2026-02-23 10:01:57.039 +00:00 [DBG] DetectChanges starting for 'AppDbContext'.
+2026-02-23 10:01:57.044 +00:00 [DBG] DetectChanges completed for 'AppDbContext'.
+2026-02-23 10:01:57.048 +00:00 [DBG] Opening connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.051 +00:00 [DBG] Opened connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.055 +00:00 [DBG] Creating DbCommand for 'ExecuteReader'.
+2026-02-23 10:01:57.058 +00:00 [DBG] Created DbCommand for 'ExecuteReader' (3ms).
+2026-02-23 10:01:57.064 +00:00 [DBG] Initialized DbCommand for 'ExecuteReader' (8ms).
+2026-02-23 10:01:57.070 +00:00 [DBG] Executing DbCommand [Parameters=[@p0='?' (Size = 4000), @p1='?' (Size = 15), @p2='?' (Size = 100), @p3='?' (Size = 4000), @p4='?' (Size = 4000), @p5='?' (DbType = DateTime2), @p6='?' (Precision = 18) (Scale = 4) (DbType = Decimal), @p7='?' (Size = 5), @p8='?' (Size = 100), @p9='?' (DbType = Boolean), @p10='?' (Size = 20), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [Customers] ([Address], [CardCode], [CardName], [City], [Country], [CreatedAt], [CreditLimit], [Currency], [Email], [IsActive], [Phone], [SapDocNum], [UpdatedAt])
+OUTPUT INSERTED.[Id]
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2026-02-23 10:01:57.086 +00:00 [INF] Executed DbCommand (16ms) [Parameters=[@p0='?' (Size = 4000), @p1='?' (Size = 15), @p2='?' (Size = 100), @p3='?' (Size = 4000), @p4='?' (Size = 4000), @p5='?' (DbType = DateTime2), @p6='?' (Precision = 18) (Scale = 4) (DbType = Decimal), @p7='?' (Size = 5), @p8='?' (Size = 100), @p9='?' (DbType = Boolean), @p10='?' (Size = 20), @p11='?' (DbType = Int32), @p12='?' (DbType = DateTime2)], CommandType='"Text"', CommandTimeout='30']
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [Customers] ([Address], [CardCode], [CardName], [City], [Country], [CreatedAt], [CreditLimit], [Currency], [Email], [IsActive], [Phone], [SapDocNum], [UpdatedAt])
+OUTPUT INSERTED.[Id]
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12);
+2026-02-23 10:01:57.097 +00:00 [DBG] The foreign key property 'Customer.Id' was detected as changed. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see property values.
+2026-02-23 10:01:57.101 +00:00 [DBG] Closing data reader to 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.106 +00:00 [DBG] A data reader for 'SapB1AppDB' on server '.\SQLEXPRESS' is being disposed after spending 9ms reading results.
+2026-02-23 10:01:57.115 +00:00 [DBG] Closing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.121 +00:00 [DBG] Closed connection to database 'SapB1AppDB' on server '.\SQLEXPRESS' (5ms).
+2026-02-23 10:01:57.129 +00:00 [DBG] An entity of type 'Customer' tracked by 'AppDbContext' changed state from '"Added"' to '"Unchanged"'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see key values.
+2026-02-23 10:01:57.140 +00:00 [DBG] SaveChanges completed for 'AppDbContext' with 1 entities written to the database.
+2026-02-23 10:01:57.148 +00:00 [DBG] List of registered output formatters, in the following order: ["Microsoft.AspNetCore.Mvc.Formatters.HttpNoContentOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StringOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.StreamOutputFormatter","Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter"]
+2026-02-23 10:01:57.162 +00:00 [DBG] No information found on request to perform content negotiation.
+2026-02-23 10:01:57.165 +00:00 [DBG] Attempting to select an output formatter without using a content type as no explicit content types were specified for the response.
+2026-02-23 10:01:57.168 +00:00 [DBG] Attempting to select the first formatter in the output formatters list which can write the result.
+2026-02-23 10:01:57.169 +00:00 [DBG] Selected output formatter 'Microsoft.AspNetCore.Mvc.Formatters.SystemTextJsonOutputFormatter' and content type 'application/json' to write the response.
+2026-02-23 10:01:57.170 +00:00 [INF] Executing CreatedAtActionResult, writing value of type 'SapB1App.DTOs.ApiResponse`1[[SapB1App.DTOs.CustomerDto, SapB1App, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-02-23 10:01:57.172 +00:00 [DBG] Found the endpoints ["SapB1App.Controllers.CustomersController.GetById (SapB1App)"] for address (id=[4],action=[GetById],controller=[Customers])
+2026-02-23 10:01:57.179 +00:00 [DBG] Successfully processed template api/Customers/{id:int} for SapB1App.Controllers.CustomersController.GetById (SapB1App) resulting in /api/Customers/4 and 
+2026-02-23 10:01:57.185 +00:00 [DBG] Link generation succeeded for endpoints ["SapB1App.Controllers.CustomersController.GetById (SapB1App)"] with result /api/Customers/4
+2026-02-23 10:01:57.189 +00:00 [INF] Executed action SapB1App.Controllers.CustomersController.Create (SapB1App) in 300.0318ms
+2026-02-23 10:01:57.196 +00:00 [INF] Executed endpoint 'SapB1App.Controllers.CustomersController.Create (SapB1App)'
+2026-02-23 10:01:57.199 +00:00 [INF] HTTP POST /api/customers responded 201 in 350.6451 ms
+2026-02-23 10:01:57.204 +00:00 [DBG] Connection id "0HNJIO78S90TE" completed keep alive response.
+2026-02-23 10:01:57.210 +00:00 [DBG] 'AppDbContext' disposed.
+2026-02-23 10:01:57.215 +00:00 [DBG] Disposing connection to database 'SapB1AppDB' on server '.\SQLEXPRESS'.
+2026-02-23 10:01:57.221 +00:00 [DBG] Disposed connection to database '' on server '' (5ms).
+2026-02-23 10:01:57.230 +00:00 [INF] Request finished HTTP/1.1 POST http://127.0.0.1:5000/api/customers - 201 null application/json; charset=utf-8 402.0265ms
+2026-02-23 10:02:02.209 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:02.223 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.013ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:02:12.256 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:12.304 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0117ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:02:22.365 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:22.392 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0182ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:02:32.419 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:32.435 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0111ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:02:42.470 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:42.482 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0701ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:02:52.503 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:02:52.515 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0094ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:02.555 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:02.592 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0123ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:12.627 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:12.652 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.01ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:22.677 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:22.695 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0162ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:32.724 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:32.756 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0079ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:37.235 +00:00 [DBG] Connection id "0HNJIO78S90TE" received FIN.
+2026-02-23 10:03:37.258 +00:00 [DBG] Connection id "0HNJIO78S90TE" sending FIN because: "The Socket transport's send loop completed gracefully."
+2026-02-23 10:03:37.317 +00:00 [DBG] Connection id "0HNJIO78S90TE" disconnecting.
+2026-02-23 10:03:37.375 +00:00 [DBG] Connection id "0HNJIO78S90TE" stopped.
+2026-02-23 10:03:42.794 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:42.798 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.006ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:52.819 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 2 items
+2026-02-23 10:03:52.849 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0069ms - processed: 0 items - remaining: 2 items
+2026-02-23 10:03:56.906 +00:00 [DBG] HttpMessageHandler expired after 120000ms for client 'ISapB1Service'
+2026-02-23 10:04:02.888 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:02.891 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0057ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:04:12.899 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:12.926 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0123ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:04:22.958 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:22.970 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0114ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:04:32.989 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:32.998 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0083ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:04:43.015 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:43.020 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0049ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:04:53.039 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:04:53.085 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0122ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:03.129 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:03.133 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0048ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:13.153 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:13.174 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0056ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:23.199 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:23.211 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0099ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:33.238 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:33.276 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0509ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:43.325 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:43.345 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0113ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:05:53.376 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:05:53.397 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.2745ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:06:03.431 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:06:03.439 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0057ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:06:13.449 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:06:13.456 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0072ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:06:23.514 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:06:23.567 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0061ms - processed: 0 items - remaining: 3 items
+2026-02-23 10:06:33.612 +00:00 [DBG] Starting HttpMessageHandler cleanup cycle with 3 items
+2026-02-23 10:06:33.620 +00:00 [DBG] Ending HttpMessageHandler cleanup cycle after 0.0058ms - processed: 0 items - remaining: 3 items
