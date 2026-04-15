@@ -170,9 +170,7 @@ npm start
 # → App disponible sur http://localhost:4200
 ```
 
-### 3. Connexion initiale
-- Utilisateur : **admin**
-- Mot de passe : **Admin@123**
+
 
 ---
 
@@ -197,8 +195,6 @@ qui envoie les données au format JSON attendu par la Service Layer SAP B1.
 
 | Rôle | Droits |
 |------|--------|
-| User | Lecture seule |
-| Manager | CRUD + Sync SAP |
 | Admin | Tout + suppression |
 
 Les routes Angular sont protégées par `authGuard`.  
@@ -206,11 +202,4 @@ Les endpoints .NET sont protégés par `[Authorize(Roles = "...")]`.
 
 ---
 
-## 📋 Prochaines étapes (modules à ajouter)
 
-1. **Fournisseurs** — BusinessPartners SAP de type fournisseur
-2. **Factures** — AR Invoices depuis les commandes confirmées
-3. **Avoirs** — Credit Memos
-4. **Stocks** — Mouvements de stock, réceptions
-5. **Rapports** — Export PDF/Excel des commandes
-6. **Multi-société** — Sélection de la compagnie SAP B1 au login
