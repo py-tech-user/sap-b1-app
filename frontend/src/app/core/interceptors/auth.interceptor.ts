@@ -30,7 +30,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }));
       }
       // Token réel rejeté → déconnexion auto (pas pour le mock)
-      if (err.status === 401 && !req.url.includes('/auth/login') && token !== MOCK_TOKEN) {
+      if (err.status === 401 && !req.url.toLowerCase().includes('/auth/login') && token !== MOCK_TOKEN) {
         console.warn('Token rejeté (401) → déconnexion automatique.');
         authService.logout();
       }

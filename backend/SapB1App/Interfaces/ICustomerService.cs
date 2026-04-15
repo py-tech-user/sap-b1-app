@@ -4,8 +4,10 @@ namespace SapB1App.Interfaces;
 
 public interface ICustomerService
 {
+    CustomerOptionsDto GetOptions();
+
     Task<PagedResult<CustomerDto>> GetAllAsync(
-        int page, int pageSize, string? search, bool? isActive);
+        int page, int pageSize, string? search, string? partnerType);
 
     Task<CustomerDto?> GetByIdAsync(int id);
 

@@ -8,6 +8,8 @@ public class PaymentDto
     public string   CustomerCode  { get; set; } = string.Empty;
     public int?     OrderId       { get; set; }
     public string?  OrderDocNum   { get; set; }
+    public int?     InvoiceId     { get; set; }
+    public string?  InvoiceDocNum { get; set; }
     public decimal  Amount        { get; set; }
     public DateTime PaymentDate   { get; set; }
     public string   PaymentMethod { get; set; } = string.Empty;
@@ -21,6 +23,7 @@ public class CreatePaymentDto
 {
     public int      CustomerId    { get; set; }
     public int?     OrderId       { get; set; }
+    public int?     InvoiceId     { get; set; }
     public decimal  Amount        { get; set; }
     public DateTime PaymentDate   { get; set; }
     public string   PaymentMethod { get; set; } = "Cash";

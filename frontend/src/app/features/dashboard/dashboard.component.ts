@@ -9,9 +9,6 @@ interface DashboardStats {
   totalCustomers: number;
   totalOrders: number;
   totalProducts: number;
-  pendingOrders: number;
-  totalVisits: number;
-  totalPayments: number;
 }
 
 @Component({
@@ -31,12 +28,12 @@ interface DashboardStats {
           <div class="stat-icon">👥</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalCustomers }}</span>
-            <span class="stat-label">Clients</span>
+            <span class="stat-label">Partenaires</span>
           </div>
         </a>
 
         <a routerLink="/orders" class="stat-card">
-          <div class="stat-icon">📦</div>
+          <div class="stat-icon">🛒</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalOrders }}</span>
             <span class="stat-label">Commandes</span>
@@ -47,33 +44,18 @@ interface DashboardStats {
           <div class="stat-icon">🏷️</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalProducts }}</span>
-            <span class="stat-label">Produits</span>
+            <span class="stat-label">Catalogue</span>
           </div>
         </a>
 
-        <a routerLink="/orders" class="stat-card pending">
-          <div class="stat-icon">⏳</div>
+        <a routerLink="/reporting" class="stat-card">
+          <div class="stat-icon">📈</div>
           <div class="stat-info">
-            <span class="stat-value">{{ stats().pendingOrders }}</span>
-            <span class="stat-label">Cmd. en attente</span>
+            <span class="stat-value">↗</span>
+            <span class="stat-label">Reporting</span>
           </div>
         </a>
 
-        <a routerLink="/visits" class="stat-card visits">
-          <div class="stat-icon">📋</div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats().totalVisits }}</span>
-            <span class="stat-label">Visites</span>
-          </div>
-        </a>
-
-        <a routerLink="/payments" class="stat-card payments">
-          <div class="stat-icon">💰</div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats().totalPayments }}</span>
-            <span class="stat-label">Encaissements</span>
-          </div>
-        </a>
       </div>
     </div>
   `,
@@ -106,9 +88,6 @@ interface DashboardStats {
     .stat-info { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.75rem; font-weight: bold; color: #333; }
     .stat-label { color: #666; font-size: 0.9rem; }
-    .stat-card.pending   { border-left: 4px solid #f39c12; }
-    .stat-card.visits    { border-left: 4px solid #3498db; }
-    .stat-card.payments  { border-left: 4px solid #2ecc71; }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -116,32 +95,34 @@ export class DashboardComponent implements OnInit {
   private api  = environment.apiUrl;
 
   stats = signal<DashboardStats>({
-    totalCustomers: 0, totalOrders: 0, totalProducts: 0,
-    pendingOrders: 0, totalVisits: 0, totalPayments: 0
+    totalCustomers: 0, totalOrders: 0, totalProducts: 0
   });
   loading = signal(true);
 
   ngOnInit(): void {
     forkJoin({
-      customers: this.http.get<any>(`${this.api}/customers?page=1&pageSize=1`).pipe(catchError(() => of(null))),
-      orders:    this.http.get<any>(`${this.api}/orders?page=1&pageSize=1`).pipe(catchError(() => of(null))),
-      products:  this.http.get<any>(`${this.api}/products?page=1&pageSize=1`).pipe(catchError(() => of(null))),
-      visits:    this.http.get<any>(`${this.api}/visits?page=1&pageSize=1`).pipe(catchError(() => of(null))),
-      payments:  this.http.get<any>(`${this.api}/payments?page=1&pageSize=1`).pipe(catchError(() => of(null)))
+      customers: this.http.get<any>(`${this.api}/sap/partners`).pipe(catchError(() => of(null))),
+      orders:    this.http.get<any>(`${this.api}/sap/orders`).pipe(catchError(() => of(null))),
+      products:  this.http.get<any>(`${this.api}/products?page=1&pageSize=1`).pipe(catchError(() => of(null)))
     }).subscribe({
       next: (res) => {
         const extract = (r: any) => {
           if (!r) return 0;
           const payload = r.data ?? r;
-          return payload.totalCount ?? payload.totalItems ?? payload.items?.length ?? 0;
+          if (typeof payload.totalCount === 'number') return payload.totalCount;
+          if (typeof payload.totalItems === 'number') return payload.totalItems;
+          if (Array.isArray(payload.items)) return payload.items.length;
+          if (Array.isArray(payload.value)) return payload.value.length;
+          if (Array.isArray(payload.data?.items)) return payload.data.items.length;
+          if (Array.isArray(payload.data?.value)) return payload.data.value.length;
+          if (Array.isArray(payload.data)) return payload.data.length;
+          if (Array.isArray(payload)) return payload.length;
+          return 0;
         };
         this.stats.set({
           totalCustomers: extract(res.customers),
           totalOrders:    extract(res.orders),
-          totalProducts:  extract(res.products),
-          pendingOrders:  0,
-          totalVisits:    extract(res.visits),
-          totalPayments:  extract(res.payments)
+          totalProducts:  extract(res.products)
         });
         this.loading.set(false);
       },

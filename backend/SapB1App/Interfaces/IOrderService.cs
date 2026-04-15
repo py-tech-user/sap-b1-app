@@ -11,6 +11,8 @@ public interface IOrderService
 
     Task<OrderDto>  CreateAsync(CreateOrderDto dto);
 
+    Task<OrderDto>  CreateFromQuoteAsync(int quoteId);
+
     Task<OrderDto?> UpdateStatusAsync(int id, UpdateOrderStatusDto dto);
 
     Task<bool>      DeleteAsync(int id);

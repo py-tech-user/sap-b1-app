@@ -61,14 +61,17 @@ public static class DbSeeder
             {
                 CardCode    = "CLI001",
                 CardName    = "Société ACME France",
+                PartnerType = PartnerType.Client,
+                ForeignName = "ACME France Company",
+                GroupCode   = CustomerGroup.Locaux,
+                Currency    = CurrencyType.EUR,
+                FederalTaxId = "FR12345678901",
                 Phone       = "+33 1 23 45 67 89",
                 Email       = "contact@acme.fr",
-                Address     = "1 rue de la Paix",
+                Location    = "1 rue de la Paix",
                 City        = "Paris",
                 Country     = "FR",
-                Currency    = "EUR",
-                CreditLimit = 50000m,
-                IsActive    = true
+                CreditLimit = 50000m
             });
             await context.SaveChangesAsync();
         }

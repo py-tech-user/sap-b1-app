@@ -23,8 +23,7 @@ public class DashboardController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<ApiResponse<DashboardDto>>> Get()
     {
-        var totalCustomers = await _db.Customers
-            .CountAsync(c => c.IsActive);
+        var totalCustomers = await _db.Customers.CountAsync();
 
         var totalOrders = await _db.Orders.CountAsync();
 

@@ -72,7 +72,12 @@ public interface ITrackingService
     /// Récupère les statistiques de tracking d'un utilisateur.
     /// </summary>
     Task<UserTrackingStatsDto> GetUserTrackingStatsAsync(int userId);
-    
+
+    /// <summary>
+    /// Récupère les statistiques de tracking de tous les utilisateurs.
+    /// </summary>
+    Task<List<UserTrackingStatsDto>> GetAllUsersTrackingStatsAsync();
+
     /// <summary>
     /// Récupère le résumé journalier d'un utilisateur.
     /// </summary>

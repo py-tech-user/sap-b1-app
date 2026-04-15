@@ -5,7 +5,7 @@ namespace SapB1App.Interfaces;
 public interface IPaymentService
 {
     Task<PagedResult<PaymentDto>> GetAllAsync(
-        int page, int pageSize, string? search, int? customerId, int? orderId);
+        int page, int pageSize, string? search, int? customerId, int? orderId, int? invoiceId);
 
     Task<PaymentDto?> GetByIdAsync(int id);
 

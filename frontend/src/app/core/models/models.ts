@@ -319,6 +319,111 @@ export interface DailyKpis {
   pendingPaymentsAmount: number;
 }
 
+// ── Commercial (Devis / BC / BL / Facture / Avoir / Retour) ───────────────
+
+export type CommercialResource = 'quotes' | 'orders' | 'deliverynotes' | 'invoices' | 'creditnotes' | 'returns';
+
+export interface CommercialDocumentLine {
+  id?: number;
+  lineNum?: number;
+  lineStatus?: string;
+  productId?: number;
+  itemCode?: string;
+  itemName?: string;
+  warehouseCode?: string;
+  quantity: number;
+  unitPrice: number;
+  discountPct?: number;
+  vatPct?: number;
+  subtotalHt?: number;
+  vatAmount?: number;
+  totalTtc?: number;
+  lineTotal?: number;
+}
+
+export interface CommercialLinkedDocument {
+  type: string;
+  id: number;
+  docNum?: string;
+  status?: string;
+}
+
+export interface CommercialDocument {
+  id: number;
+  docNum?: string;
+  documentNumber?: string;
+  customerId: number;
+  cardCode?: string;
+  customerName?: string;
+  status: string;
+  docDate?: string;
+  postingDate?: string;
+  dueDate?: string;
+  currency?: string;
+  comments?: string;
+  paymentMethod?: string;
+  docTotal?: number;
+  totalAmount?: number;
+  lines: CommercialDocumentLine[];
+  linkedDocuments?: CommercialLinkedDocument[];
+  sourceDocument?: CommercialLinkedDocument;
+  quoteId?: number;
+  orderId?: number;
+  deliveryNoteId?: number;
+  invoiceId?: number;
+  returnId?: number;
+  creditNoteId?: number;
+}
+
+export interface CommercialListFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  customer?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface SaveCommercialDocumentDto {
+  customerId?: number;
+  cardCode?: string;
+  docDate?: string;
+  dueDate?: string;
+  comments?: string;
+  paymentMethod?: string;
+  currency?: string;
+  orderId?: number;
+  deliveryNoteId?: number;
+  reason?: string;
+  lines: CommercialDocumentLine[];
+}
+
+export interface InvoicePaymentDto {
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  reference?: string;
+}
+
+export interface CommercialDashboard {
+  pendingQuotes: number;
+  ordersInPreparation: number;
+  deliveryInProgress: number;
+  unpaidInvoices: number;
+  pendingReturns: number;
+  totalCreditNotes: number;
+  amounts?: {
+    quotes?: number;
+    orders?: number;
+    deliveryNotes?: number;
+    invoices?: number;
+    creditNotes?: number;
+    returns?: number;
+    unpaidInvoices?: number;
+  };
+}
+
 // ── Retours ──────────────────────────────────────────────────────
 
 export type ReturnStatus = 'Pending' | 'Approved' | 'Rejected' | 'Received' | 'Processed' | 'Closed';
@@ -354,9 +459,11 @@ export interface Return {
 export interface CreateReturn {
   customerId: number;
   orderId?: number;
+  deliveryNoteId?: number;
   reason: ReturnReason;
   reasonDetails?: string;
-  lines: { productId: number; quantity: number; unitPrice?: number; condition?: string }[];
+  comments?: string;
+  lines: { productId: number; quantity: number; unitPrice?: number; condition?: string; comments?: string }[];
 }
 
 // ── Réclamations ─────────────────────────────────────────────────
@@ -394,6 +501,7 @@ export interface CreateClaim {
   customerId: number;
   orderId?: number;
   productId?: number;
+  assignedTo?: number;
   type: ClaimType;
   priority: ClaimPriority;
   subject: string;
@@ -441,6 +549,8 @@ export interface CreateServiceTicket {
   serialNumber?: string;
   type: string;
   priority: ClaimPriority;
+  assignedTo?: number;
+  claimId?: number;
   description: string;
   underWarranty?: boolean;
 }
@@ -479,8 +589,10 @@ export interface CreateDeliveryNote {
   orderId: number;
   deliveryAddress?: string;
   contactName?: string;
+  contactPhone?: string;
   carrier?: string;
-  lines: { productId: number; orderedQty: number; deliveredQty: number }[];
+  comments?: string;
+  lines: { productId: number; orderLineId?: number; orderedQty: number; deliveredQty: number; batchNumber?: string; serialNumber?: string }[];
 }
 
 // ── Fournisseurs ─────────────────────────────────────────────────
@@ -491,9 +603,12 @@ export interface Supplier {
   cardName: string;
   address?: string;
   city?: string;
+  country?: string;
   phone?: string;
   email?: string;
+  taxId?: string;
   paymentTerms?: string;
+  currency?: string;
   isActive: boolean;
 }
 
@@ -502,9 +617,12 @@ export interface CreateSupplier {
   cardName: string;
   address?: string;
   city?: string;
+  country?: string;
   phone?: string;
   email?: string;
+  taxId?: string;
   paymentTerms?: string;
+  currency?: string;
 }
 
 // ── Bons de commande fournisseur ─────────────────────────────────
@@ -579,6 +697,8 @@ export interface CreateCreditNote {
   orderId?: number;
   returnId?: number;
   reason: string;
+  currency?: string;
+  comments?: string;
   lines: { productId: number; quantity: number; unitPrice?: number; vatPct?: number }[];
 }
 
@@ -610,5 +730,6 @@ export interface CreateGoodsReceipt {
   supplierId: number;
   purchaseOrderId?: number;
   deliveryNoteRef?: string;
-  lines: { productId: number; quantity: number; unitPrice?: number; batchNumber?: string; location?: string }[];
+  comments?: string;
+  lines: { productId: number; quantity: number; unitPrice?: number; batchNumber?: string; serialNumber?: string; location?: string }[];
 }

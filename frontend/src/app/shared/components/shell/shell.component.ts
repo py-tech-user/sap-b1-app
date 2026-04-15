@@ -1,31 +1,30 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
 
 @Component({
   selector:   'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLinkActive],
   template: `
     <div class="shell-container">
       <!-- ── Sidenav ── -->
       @if (sidenavOpen()) {
         <aside class="sidenav">
           <div class="brand">
-            <span class="brand-icon">📦</span>
-            <span class="brand-title">SAP B1 App</span>
           </div>
 
           <nav class="nav-list">
             @for (item of visibleNavItems(); track item.route) {
-              <a [routerLink]="item.route"
-                 routerLinkActive="active-link"
-                 [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-                 class="nav-item">
+              <button type="button"
+                      (click)="onNavItemClick(item.route)"
+                      routerLinkActive="active-link"
+                      [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+                      class="nav-item nav-btn">
                 <span class="nav-icon">{{ item.icon }}</span>
                 <span>{{ item.label }}</span>
-              </a>
+              </button>
             }
           </nav>
 
@@ -41,10 +40,6 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
         <header class="toolbar">
           <button class="menu-btn" (click)="sidenavOpen.set(!sidenavOpen())">☰</button>
           <span class="toolbar-spacer"></span>
-          <div class="sap-badge">✅ SAP Business One</div>
-          <span class="role-badge" [class]="'role-badge role-' + auth.role().toLowerCase()">
-            {{ auth.role() }}
-          </span>
           <div class="user-section">
             <button class="user-btn" (click)="showUserMenu = !showUserMenu">
               👤 {{ auth.currentUser()?.fullName ?? 'Utilisateur' }} ▾
@@ -96,9 +91,6 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       padding: 18px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-    .brand-icon  { font-size: 24px; }
-    .brand-title { font-size: 17px; font-weight: 600; }
-
     .nav-list {
       padding: 6px 8px;
       flex: 1;
@@ -118,11 +110,17 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       gap: 10px;
       padding: 8px 14px;
       color: rgba(255,255,255,0.8);
-      text-decoration: none;
       border-radius: 8px;
       font-size: 13.5px;
       transition: background 0.2s;
       flex-shrink: 0;
+    }
+    .nav-btn {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
     }
     .nav-item:hover { background: rgba(255,255,255,0.08); }
     .nav-item.active-link {
@@ -169,29 +167,6 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
     .menu-btn:hover { background: #f0f0f0; }
 
     .toolbar-spacer { flex: 1; }
-
-    .sap-badge {
-      padding: 4px 14px;
-      background: #e8f5e9;
-      color: #2e7d32;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-right: 12px;
-    }
-
-    .role-badge {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-right: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .role-admin      { background: #fce4ec; color: #c62828; }
-    .role-manager    { background: #fff3e0; color: #e65100; }
-    .role-commercial { background: #e3f2fd; color: #1565c0; }
 
     .user-section { position: relative; }
 
@@ -252,6 +227,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
 })
 export class ShellComponent {
   auth        = inject(AuthService);
+  private readonly router = inject(Router);
   sidenavOpen = signal(true);
   showUserMenu = false;
 
@@ -260,4 +236,9 @@ export class ShellComponent {
     const currentRole = this.auth.role();
     return ROLE_NAV_ITEMS.filter(item => item.roles.includes(currentRole));
   });
+
+  onNavItemClick(route: string): void {
+    this.showUserMenu = false;
+    this.router.navigateByUrl(route);
+  }
 }

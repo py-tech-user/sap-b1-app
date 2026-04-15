@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { CurrencyPipe } from '@angular/common';
@@ -28,9 +28,10 @@ import { Customer } from '../../../core/models/models';
           <div class="header-fields">
             <div class="form-group col-2">
               <label>Client *</label>
+              <input type="text" [value]="customerSearch()" (input)="onCustomerSearch($event)" placeholder="Rechercher client (code / nom)" />
               <select formControlName="customerId">
                 <option [ngValue]="null" disabled>Sélectionner un client</option>
-                @for (c of customers(); track c.id) {
+                @for (c of filteredCustomers(); track c.id) {
                   <option [ngValue]="c.id">{{ c.cardCode }} — {{ c.cardName }}</option>
                 }
               </select>
@@ -235,6 +236,12 @@ export class OrderFormComponent implements OnInit {
 
   saving    = signal(false);
   customers = signal<Customer[]>([]);
+  customerSearch = signal('');
+  filteredCustomers = computed(() => {
+    const q = this.customerSearch().trim().toLowerCase();
+    if (!q) return this.customers();
+    return this.customers().filter(c => (`${c.cardCode} ${c.cardName}`).toLowerCase().includes(q));
+  });
   products  = signal<Product[]>([]);
   errorMessage = signal('');
   successMessage = signal('');
@@ -253,6 +260,11 @@ export class OrderFormComponent implements OnInit {
 
   get f()     { return this.form.controls; }
   get lines() { return this.form.get('lines') as FormArray; }
+
+  onCustomerSearch(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.customerSearch.set(input.value || '');
+  }
 
   ngOnInit(): void {
     let loaded = 0;

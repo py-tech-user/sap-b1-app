@@ -432,6 +432,28 @@ public class TrackingService : ITrackingService
         return stats;
     }
 
+    public async Task<List<UserTrackingStatsDto>> GetAllUsersTrackingStatsAsync()
+    {
+        // Récupérer tous les utilisateurs actifs (commerciaux)
+        var users = await _db.Users
+            .Where(u => u.IsActive && (u.Role == "Commercial" || u.Role == "Manager" || u.Role == "Admin"))
+            .ToListAsync();
+
+        var statsList = new List<UserTrackingStatsDto>();
+
+        foreach (var user in users)
+        {
+            var stats = await GetUserTrackingStatsAsync(user.Id);
+            // Ajouter les champs manquants pour le frontend
+            stats.TotalVisits = stats.VisitsCompletedMonth;
+            stats.CompletedVisits = stats.VisitsCompletedMonth;
+            stats.TotalDistanceKm = stats.TotalDistanceKmMonth;
+            statsList.Add(stats);
+        }
+
+        return statsList;
+    }
+
     public async Task<DailyTrackSummaryDto?> GetDailySummaryAsync(int userId, DateOnly date)
     {
         var summary = await _db.DailyTrackSummaries

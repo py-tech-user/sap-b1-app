@@ -1,39 +1,39 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { ApiResponse, PagedResult, Return, CreateReturn } from '../models/models';
+import {
+  ApiResponse,
+  CommercialDocument,
+  CommercialListFilters,
+  SaveCommercialDocumentDto,
+  PagedResult
+} from '../models/models';
+import { CommercialApiService } from './commercial-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ReturnApiService {
-  private readonly api = `${environment.apiUrl}/returns`;
-  constructor(private http: HttpClient) {}
+  private readonly commercialApi = inject(CommercialApiService);
 
-  getAll(page = 1, pageSize = 10, status?: string, customerId?: number): Observable<ApiResponse<PagedResult<Return>>> {
-    let p = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (status) p = p.set('status', status);
-    if (customerId) p = p.set('customerId', customerId);
-    return this.http.get<ApiResponse<PagedResult<Return>>>(this.api, { params: p });
+  getList(filters: CommercialListFilters): Observable<ApiResponse<PagedResult<CommercialDocument>>> {
+    return this.commercialApi.getList('returns', filters);
   }
-  getById(id: number): Observable<ApiResponse<Return>> {
-    return this.http.get<ApiResponse<Return>>(`${this.api}/${id}`);
+
+  getById(id: number): Observable<ApiResponse<CommercialDocument>> {
+    return this.commercialApi.getById('returns', id);
   }
-  create(data: CreateReturn): Observable<ApiResponse<Return>> {
-    return this.http.post<ApiResponse<Return>>(this.api, data);
+
+  create(dto: SaveCommercialDocumentDto): Observable<ApiResponse<CommercialDocument>> {
+    return this.commercialApi.create('returns', dto);
   }
-  update(id: number, data: any): Observable<ApiResponse<Return>> {
-    return this.http.put<ApiResponse<Return>>(`${this.api}/${id}`, data);
+
+  update(id: number, dto: SaveCommercialDocumentDto): Observable<ApiResponse<CommercialDocument>> {
+    return this.commercialApi.update('returns', id, dto);
   }
-  approve(id: number, approved: boolean, comments?: string): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.api}/${id}/approve`, { approved, comments });
+
+  updateStatus(id: number, status: string): Observable<ApiResponse<CommercialDocument>> {
+    return this.commercialApi.updateStatus('returns', id, status);
   }
-  receive(id: number): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.api}/${id}/receive`, {});
-  }
-  process(id: number): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.api}/${id}/process`, {});
-  }
-  delete(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(`${this.api}/${id}`);
+
+  delete(id: number): Observable<ApiResponse<void>> {
+    return this.commercialApi.delete('returns', id);
   }
 }

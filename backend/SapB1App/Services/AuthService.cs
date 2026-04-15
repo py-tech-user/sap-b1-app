@@ -14,44 +14,64 @@ public class AuthService : IAuthService
 {
     private readonly AppDbContext    _db;
     private readonly IConfiguration _config;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(AppDbContext db, IConfiguration config)
+    public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
     {
         _db     = db;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
-        // Find active user
-        var user = await _db.Users.FirstOrDefaultAsync(u =>
-            u.Username == request.Username && u.IsActive);
-
-        if (user is null)
-            return null;
-
-        // Verify password
-        if (!DbSeeder.VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt))
-            return null;
-
-        // Update last login
-        user.LastLogin = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
-
-        // Generate token
-        var expirationMinutes = int.Parse(
-            _config["JwtSettings:ExpirationMinutes"] ?? "480");
-        var expires = DateTime.UtcNow.AddMinutes(expirationMinutes);
-        var token   = GenerateJwtToken(user, expires);
-
-        return new LoginResponse
+        try
         {
-            Token    = token,
-            Username = user.Username,
-            FullName = user.FullName,
-            Role     = user.Role,
-            Expires  = expires
-        };
+            _logger.LogInformation("🔐 Tentative de connexion pour: {Username}", request.Username);
+
+            // Find active user
+            var user = await _db.Users.FirstOrDefaultAsync(u =>
+                u.Username == request.Username && u.IsActive);
+
+            if (user is null)
+            {
+                _logger.LogWarning("❌ Utilisateur '{Username}' introuvable ou inactif", request.Username);
+                return null;
+            }
+
+            // Verify password
+            if (!DbSeeder.VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt))
+            {
+                _logger.LogWarning("❌ Mot de passe incorrect pour '{Username}'", request.Username);
+                return null;
+            }
+
+            // Update last login
+            user.LastLogin = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            // Generate token
+            var expirationMinutes = int.Parse(
+                _config["JwtSettings:ExpirationMinutes"] ?? "480");
+            var expires = DateTime.UtcNow.AddMinutes(expirationMinutes);
+            var token   = GenerateJwtToken(user, expires);
+
+            _logger.LogInformation("✅ Connexion réussie pour '{Username}' (Rôle: {Role})", user.Username, user.Role);
+
+            return new LoginResponse
+            {
+                Token    = token,
+                Username = user.Username,
+                FullName = user.FullName,
+                Role     = user.Role,
+                Expires  = expires
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Erreur lors de la connexion pour '{Username}'", request.Username);
+            throw;
+        }
     }
 
     // ── JWT token generation ─────────────────────────────────────────────────

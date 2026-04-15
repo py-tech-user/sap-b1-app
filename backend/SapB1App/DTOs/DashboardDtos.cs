@@ -15,6 +15,19 @@ public class DashboardDto
     public List<TopProductDto>  TopProducts  { get; set; } = new();
 }
 
+public class CommercialDashboardDto
+{
+    public int TotalQuotesPending { get; set; }
+    public int TotalOrdersInPreparation { get; set; }
+    public int TotalDeliveryInProgress { get; set; }
+    public int TotalInvoicesUnpaid { get; set; }
+    public int TotalReturnsPending { get; set; }
+    public int TotalCreditNotes { get; set; }
+    public decimal TotalInvoicesUnpaidAmount { get; set; }
+    public decimal TotalQuotesPendingAmount { get; set; }
+    public decimal TotalReturnsPendingAmount { get; set; }
+}
+
 public class RecentOrderDto
 {
     public int      Id           { get; set; }

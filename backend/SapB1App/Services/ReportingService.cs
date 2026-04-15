@@ -27,7 +27,7 @@ public class ReportingService : IReportingService
 
         // KPIs de base
         var totalCustomers = await _db.Customers.CountAsync();
-        var activeCustomers = await _db.Customers.CountAsync(c => c.IsActive);
+        var activeCustomers = await _db.Customers.CountAsync(c => c.PartnerType == PartnerType.Client);
         var totalOrders = await _db.Orders.CountAsync();
         var totalRevenue = await _db.Orders
             .Where(o => o.Status != OrderStatus.Cancelled)
@@ -442,7 +442,7 @@ public class ReportingService : IReportingService
     {
         var today = DateTime.UtcNow.Date;
 
-        var totalCustomers = await _db.Customers.CountAsync(c => c.IsActive);
+        var totalCustomers = await _db.Customers.CountAsync();
         var totalOrders = await _db.Orders.CountAsync();
         var totalRevenue = await _db.Orders
             .Where(o => o.Status != OrderStatus.Cancelled)

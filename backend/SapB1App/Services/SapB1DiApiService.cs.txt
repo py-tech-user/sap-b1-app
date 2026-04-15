@@ -1,0 +1,258 @@
+/*
+ * ══════════════════════════════════════════════════════════════════════════════
+ * SapB1DiApiService.cs - Implémentation RÉELLE avec SAP DI API
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Ce fichier contient l'implémentation complète pour la connexion à SAP B1
+ * via la DI API (SAPbobsCOM.dll).
+ * 
+ * INSTRUCTIONS:
+ * 1. Copiez SAPbobsCOM.dll dans le dossier Lib/
+ * 2. Renommez ce fichier en SapB1Service.cs (remplacez le mock)
+ * 3. Recompilez le projet
+ * 
+ * ══════════════════════════════════════════════════════════════════════════════
+ */
+
+using System.Runtime.InteropServices;
+using Microsoft.EntityFrameworkCore;
+using SAPbobsCOM;
+using SapB1App.Data;
+using SapB1App.Interfaces;
+
+namespace SapB1App.Services;
+
+/// <summary>
+/// Couche d'intégration SAP Business One via DI API (SAPbobsCOM.dll).
+/// Connexion COM 32-bit - le projet doit être compilé en x86.
+/// </summary>
+public class SapB1DiApiService : ISapB1Service
+{
+    private readonly IConfiguration _config;
+    private readonly AppDbContext _db;
+    private readonly ILogger<SapB1DiApiService> _logger;
+
+    private Company? _company;
+    private bool _disposed;
+
+    public bool IsConnected => _company?.Connected ?? false;
+
+    public SapB1DiApiService(
+        IConfiguration config,
+        AppDbContext db,
+        ILogger<SapB1DiApiService> logger)
+    {
+        _config = config;
+        _db = db;
+        _logger = logger;
+    }
+
+    // ── Connect to SAP B1 via DI API ─────────────────────────────────────────
+    public bool Connect()
+    {
+        if (IsConnected)
+        {
+            _logger.LogDebug("Already connected to SAP B1");
+            return true;
+        }
+
+        try
+        {
+            _company = new Company
+            {
+                Server = _config["SapB1:Server"] ?? "localhost",
+                DbServerType = GetDbServerType(_config["SapB1:DbType"] ?? "MSSQL2019"),
+                CompanyDB = _config["SapB1:CompanyDB"] ?? "SBODemoFR",
+                UserName = _config["SapB1:UserName"] ?? "manager",
+                Password = _config["SapB1:Password"] ?? "manager",
+                DbUserName = _config["SapB1:DbUserName"] ?? "sa",
+                DbPassword = _config["SapB1:DbPassword"] ?? "",
+                UseTrusted = bool.Parse(_config["SapB1:UseTrusted"] ?? "false"),
+                language = BoSuppLangs.ln_French
+            };
+
+            int result = _company.Connect();
+
+            if (result != 0)
+            {
+                _company.GetLastError(out int errCode, out string errMsg);
+                _logger.LogError("SAP B1 connection failed: [{ErrCode}] {ErrMsg}", errCode, errMsg);
+                throw new InvalidOperationException($"Connexion SAP échouée: [{errCode}] {errMsg}");
+            }
+
+            _logger.LogInformation("Connected to SAP B1: {CompanyName}", _company.CompanyName);
+            return true;
+        }
+        catch (COMException ex)
+        {
+            _logger.LogError(ex, "SAP B1 COM error during connection");
+            throw new InvalidOperationException($"Erreur COM SAP: {ex.Message}", ex);
+        }
+    }
+
+    // ── Disconnect from SAP B1 ───────────────────────────────────────────────
+    public void Disconnect()
+    {
+        if (_company?.Connected == true)
+        {
+            _company.Disconnect();
+            _logger.LogInformation("Disconnected from SAP B1");
+        }
+
+        if (_company != null)
+        {
+            Marshal.ReleaseComObject(_company);
+            _company = null;
+        }
+    }
+
+    // ── Create BusinessPartner (Customer) ────────────────────────────────────
+    public (bool Success, string? ErrorMessage) CreateBusinessPartner(string cardCode, string cardName)
+    {
+        try
+        {
+            if (!IsConnected && !Connect())
+            {
+                return (false, "Impossible de se connecter à SAP B1");
+            }
+
+            var bp = (BusinessPartners)_company!.GetBusinessObject(BoObjectTypes.oBusinessPartners);
+
+            bp.CardCode = cardCode;
+            bp.CardName = cardName;
+            bp.CardType = BoCardTypes.cCustomer;
+            bp.Currency = "EUR";
+
+            int result = bp.Add();
+
+            Marshal.ReleaseComObject(bp);
+
+            if (result != 0)
+            {
+                _company.GetLastError(out int errCode, out string errMsg);
+                _logger.LogWarning("Failed to create BusinessPartner {CardCode}: [{ErrCode}] {ErrMsg}",
+                    cardCode, errCode, errMsg);
+                return (false, $"[{errCode}] {errMsg}");
+            }
+
+            _logger.LogInformation("BusinessPartner {CardCode} created successfully", cardCode);
+            return (true, null);
+        }
+        catch (COMException ex)
+        {
+            _logger.LogError(ex, "COM error creating BusinessPartner {CardCode}", cardCode);
+            return (false, $"Erreur COM: {ex.Message}");
+        }
+    }
+
+    // ── Sync Customer → SAP B1 BusinessPartner ──────────────────────────────
+    public async Task<bool> SyncCustomerAsync(int customerId)
+    {
+        var customer = await _db.Customers.FindAsync(customerId);
+        if (customer is null) return false;
+
+        _logger.LogInformation("Syncing customer {CardCode} to SAP B1...", customer.CardCode);
+
+        var (success, error) = CreateBusinessPartner(customer.CardCode, customer.CardName);
+
+        if (!success)
+        {
+            _logger.LogWarning("Failed to sync customer {CardCode}: {Error}", customer.CardCode, error);
+        }
+
+        return success;
+    }
+
+    // ── Sync Order → SAP B1 Sales Order ─────────────────────────────────────
+    public async Task<bool> SyncOrderAsync(int orderId)
+    {
+        var order = await _db.Orders
+            .Include(o => o.Customer)
+            .Include(o => o.Lines).ThenInclude(l => l.Product)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order is null) return false;
+
+        try
+        {
+            if (!IsConnected && !Connect())
+                return false;
+
+            var doc = (Documents)_company!.GetBusinessObject(BoObjectTypes.oOrders);
+
+            doc.CardCode = order.Customer.CardCode;
+            doc.DocDate = order.DocDate;
+            doc.DocDueDate = order.DeliveryDate ?? order.DocDate.AddDays(30);
+            doc.Comments = order.Comments;
+
+            foreach (var line in order.Lines)
+            {
+                doc.Lines.ItemCode = line.Product.ItemCode;
+                doc.Lines.Quantity = (double)line.Quantity;
+                doc.Lines.UnitPrice = (double)line.UnitPrice;
+                doc.Lines.Add();
+            }
+
+            int result = doc.Add();
+
+            Marshal.ReleaseComObject(doc);
+
+            if (result != 0)
+            {
+                _company.GetLastError(out int errCode, out string errMsg);
+                _logger.LogWarning("Failed to sync order {DocNum}: [{ErrCode}] {ErrMsg}",
+                    order.DocNum, errCode, errMsg);
+                return false;
+            }
+
+            _logger.LogInformation("Order {DocNum} synced to SAP B1", order.DocNum);
+            return true;
+        }
+        catch (COMException ex)
+        {
+            _logger.LogError(ex, "COM error syncing order {DocNum}", order.DocNum);
+            return false;
+        }
+    }
+
+    // ── Test Connection ──────────────────────────────────────────────────────
+    public Task<bool> TestConnectionAsync()
+    {
+        try
+        {
+            var connected = Connect();
+            return Task.FromResult(connected);
+        }
+        catch
+        {
+            return Task.FromResult(false);
+        }
+    }
+
+    // ── Helper: Get DB Server Type ───────────────────────────────────────────
+    private static BoDataServerTypes GetDbServerType(string dbType) => dbType.ToUpperInvariant() switch
+    {
+        "MSSQL2019" => BoDataServerTypes.dst_MSSQL2019,
+        "MSSQL2017" => BoDataServerTypes.dst_MSSQL2017,
+        "MSSQL2016" => BoDataServerTypes.dst_MSSQL2016,
+        "MSSQL2014" => BoDataServerTypes.dst_MSSQL2014,
+        "MSSQL2012" => BoDataServerTypes.dst_MSSQL2012,
+        "HANADB" => BoDataServerTypes.dst_HANADB,
+        _ => BoDataServerTypes.dst_MSSQL2019
+    };
+
+    // ── Dispose ──────────────────────────────────────────────────────────────
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        Disconnect();
+        _disposed = true;
+        GC.SuppressFinalize(this);
+    }
+
+    ~SapB1DiApiService()
+    {
+        Dispose();
+    }
+}

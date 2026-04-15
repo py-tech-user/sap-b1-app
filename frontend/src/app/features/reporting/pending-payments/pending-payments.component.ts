@@ -39,13 +39,21 @@ import { PendingPayment } from '../../../core/models/models';
         <!-- Table -->
         <div class="table-card">
           <table>
+            <colgroup>
+              <col class="col-order" />
+              <col class="col-customer" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-delay" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Commande</th>
                 <th>Client</th>
-                <th>Total cmd</th>
-                <th>Payé</th>
-                <th>Reste</th>
+                <th class="num">Total cmd</th>
+                <th class="num">Payé</th>
+                <th class="num">Reste</th>
                 <th>Retard</th>
               </tr>
             </thead>
@@ -95,10 +103,14 @@ import { PendingPayment } from '../../../core/models/models';
       background: white; border-radius: 12px; padding: 1.25rem;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow-x: auto;
     }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .col-order { width: 14%; }
+    .col-customer { width: 26%; }
+    .col-money { width: 15%; }
+    .col-delay { width: 15%; }
     th, td { padding: 0.75rem 0.75rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
     th { background: #f8f9fa; font-weight: 600; font-size: 0.82rem; color: #555; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .paid { color: #27ae60; }
     .remaining { color: #e74c3c; font-weight: 600; }
     .empty { text-align: center; color: #999; padding: 2rem; }

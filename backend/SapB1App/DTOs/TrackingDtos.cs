@@ -150,6 +150,11 @@ public class UserTrackingStatsDto
     public int    VisitsCompletedMonth   { get; set; }
     public double AvgDistancePerVisit    { get; set; }
     public double AvgVisitDurationMins   { get; set; }
+
+    // Champs pour le frontend (compatibilité)
+    public int    TotalVisits            { get; set; }
+    public int    CompletedVisits        { get; set; }
+    public double TotalDistanceKm        { get; set; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

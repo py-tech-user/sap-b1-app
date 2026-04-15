@@ -2,8 +2,10 @@ namespace SapB1App.DTOs;
 
 public class OrderDto
 {
+    public int      DocEntry      { get; set; }
     public int      Id           { get; set; }
     public string   DocNum       { get; set; } = string.Empty;
+    public string   CardCode     { get; set; } = string.Empty;
     public int      CustomerId   { get; set; }
     public string   CustomerName { get; set; } = string.Empty;
     public string   CustomerCode { get; set; } = string.Empty;
@@ -12,6 +14,9 @@ public class OrderDto
     public string   Status       { get; set; } = string.Empty;
     public decimal  DocTotal     { get; set; }
     public decimal  VatTotal     { get; set; }
+    public string?  BaseType     { get; set; }
+    public int?     BaseEntry    { get; set; }
+    public int?     BaseLine     { get; set; }
     public string   Currency     { get; set; } = "EUR";
     public string?  Comments     { get; set; }
     public bool     SyncedToSap  { get; set; }
@@ -28,8 +33,11 @@ public class OrderLineDto
     public string  ItemName  { get; set; } = string.Empty;
     public int     Quantity  { get; set; }
     public decimal UnitPrice { get; set; }
+    public decimal Price     { get; set; }
     public decimal VatPct    { get; set; }
     public decimal LineTotal { get; set; }
+    public int?    BaseEntry { get; set; }
+    public int?    BaseLine  { get; set; }
 }
 
 public class CreateOrderDto

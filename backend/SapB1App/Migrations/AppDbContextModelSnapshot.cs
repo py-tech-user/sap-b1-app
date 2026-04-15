@@ -79,132 +79,6 @@ namespace SapB1App.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.Claim", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AssignedTo")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ClaimNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("ClosedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CreditNoteId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("OpenDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("OrderId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Resolution")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ReturnId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ServiceTicketId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignedTo");
-
-                    b.HasIndex("ClaimNumber")
-                        .IsUnique();
-
-                    b.HasIndex("CreditNoteId");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("ReturnId");
-
-                    b.ToTable("Claims");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ClaimComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ClaimId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsInternal")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClaimId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ClaimComments");
-                });
-
             modelBuilder.Entity("SapB1App.Models.CreditNote", b =>
                 {
                     b.Property<int>("Id")
@@ -213,40 +87,21 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("AppliedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("AppliedToInvoiceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)")
-                        .HasDefaultValue("EUR");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("DocDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DocNum")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<decimal>("DocTotal")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int?>("OrderId")
+                    b.Property<int>("InvoiceId")
                         .HasColumnType("int");
 
                     b.Property<string>("Reason")
@@ -256,74 +111,11 @@ namespace SapB1App.Migrations
                     b.Property<int?>("ReturnId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("VatTotal")
-                        .HasColumnType("decimal(18,4)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("DocNum")
-                        .IsUnique();
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("ReturnId")
-                        .IsUnique()
-                        .HasFilter("[ReturnId] IS NOT NULL");
+                    b.HasIndex("InvoiceId");
 
                     b.ToTable("CreditNotes");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.CreditNoteLine", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CreditNoteId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("VatPct")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreditNoteId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("CreditNoteLines");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Customer", b =>
@@ -334,8 +126,9 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("AdditionalIdentificationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CardCode")
                         .IsRequired()
@@ -350,6 +143,10 @@ namespace SapB1App.Migrations
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Contact")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Country")
                         .HasColumnType("nvarchar(max)");
 
@@ -362,23 +159,60 @@ namespace SapB1App.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("EUR");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                    b.Property<string>("FederalTaxId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ForeignName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GroupCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Locaux");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("MobilePhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PartnerType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("Phone1")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Phone2")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int?>("SapDocNum")
                         .HasColumnType("int");
+
+                    b.Property<string>("UnifiedTaxIdentificationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -439,16 +273,21 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Carrier")
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BaseType")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardCode")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ContactName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ContactPhone")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -456,9 +295,6 @@ namespace SapB1App.Migrations
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
-
-                    b.Property<string>("DeliveryAddress")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeliveryDate")
                         .HasColumnType("datetime2");
@@ -468,19 +304,13 @@ namespace SapB1App.Migrations
 
                     b.Property<string>("DocNum")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
+                    b.Property<decimal>("DocTotal")
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<int>("PackageCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReceivedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("SapDocNum")
+                    b.Property<int?>("OrderId")
                         .HasColumnType("int");
 
                     b.Property<string>("Signature")
@@ -490,24 +320,15 @@ namespace SapB1App.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("TotalWeight")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TrackingNumber")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("VatTotal")
+                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
-
-                    b.HasIndex("DocNum")
-                        .IsUnique();
 
                     b.HasIndex("OrderId");
 
@@ -522,29 +343,43 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BatchNumber")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
 
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("DeliveredQty")
-                        .HasColumnType("decimal(18,4)");
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
 
                     b.Property<int>("DeliveryNoteId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("LineNum")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<int?>("OrderLineId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("OrderedQty")
+                    b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SerialNumber")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("VatPct")
+                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -557,13 +392,27 @@ namespace SapB1App.Migrations
                     b.ToTable("DeliveryNoteLines");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.GoodsReceipt", b =>
+            modelBuilder.Entity("SapB1App.Models.Invoice", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BaseType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardCode")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
@@ -571,49 +420,53 @@ namespace SapB1App.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeliveryNoteRef")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasDefaultValue("EUR");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DeliveryNoteId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("DocDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DocNum")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<int?>("PurchaseOrderId")
-                        .HasColumnType("int");
+                    b.Property<decimal>("DocTotal")
+                        .HasColumnType("decimal(18,4)");
 
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("VatTotal")
+                        .HasColumnType("decimal(18,4)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("DocNum")
-                        .IsUnique();
+                    b.HasIndex("CustomerId");
 
-                    b.HasIndex("PurchaseOrderId");
+                    b.HasIndex("DeliveryNoteId");
 
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("GoodsReceipts");
+                    b.ToTable("Invoices");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.GoodsReceiptLine", b =>
+            modelBuilder.Entity("SapB1App.Models.InvoiceLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -621,40 +474,48 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BatchNumber")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
 
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
 
-                    b.Property<int>("GoodsReceiptId")
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("LineNum")
                         .HasColumnType("int");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("Location")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("SerialNumber")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("VatPct")
+                        .HasColumnType("decimal(5,2)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("GoodsReceiptId");
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("GoodsReceiptLines");
+                    b.ToTable("InvoiceLines");
                 });
 
             modelBuilder.Entity("SapB1App.Models.LocationTrack", b =>
@@ -703,6 +564,20 @@ namespace SapB1App.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BaseType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardCode")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
@@ -765,6 +640,17 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int>("LineNum")
                         .HasColumnType("int");
 
@@ -773,6 +659,9 @@ namespace SapB1App.Migrations
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -815,6 +704,9 @@ namespace SapB1App.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("OrderId")
                         .HasColumnType("int");
 
@@ -841,6 +733,8 @@ namespace SapB1App.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("OrderId");
 
@@ -900,13 +794,27 @@ namespace SapB1App.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.PurchaseOrder", b =>
+            modelBuilder.Entity("SapB1App.Models.Quote", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BaseType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardCode")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
@@ -921,38 +829,23 @@ namespace SapB1App.Migrations
                         .HasColumnType("nvarchar(5)")
                         .HasDefaultValue("EUR");
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("DocDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DocNum")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<decimal>("DocTotal")
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<DateTime?>("ExpectedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ReceivedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Reference")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -962,15 +855,12 @@ namespace SapB1App.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocNum")
-                        .IsUnique();
+                    b.HasIndex("CustomerId");
 
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("PurchaseOrders");
+                    b.ToTable("Quotes");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.PurchaseOrderLine", b =>
+            modelBuilder.Entity("SapB1App.Models.QuoteLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -978,26 +868,34 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("BaseEntry")
+                        .HasColumnType("int");
 
-                    b.Property<DateTime?>("ExpectedDate")
-                        .HasColumnType("datetime2");
+                    b.Property<int?>("BaseLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("LineNum")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PurchaseOrderId")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("ReceivedQty")
-                        .HasColumnType("decimal(18,4)");
+                    b.Property<int>("QuoteId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,4)");
@@ -1009,9 +907,9 @@ namespace SapB1App.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("PurchaseOrderId");
+                    b.HasIndex("QuoteId");
 
-                    b.ToTable("PurchaseOrderLines");
+                    b.ToTable("QuoteLines");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Return", b =>
@@ -1022,15 +920,6 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("ApprovalDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ApprovedBy")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1040,58 +929,37 @@ namespace SapB1App.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("DeliveryNoteId")
+                    b.Property<int>("DeliveryNoteId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("OrderId")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("DocDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ReasonDetails")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ReceivedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("ReturnNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApprovedBy");
+                    b.HasIndex("CreditNoteId")
+                        .IsUnique()
+                        .HasFilter("[CreditNoteId] IS NOT NULL");
 
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("DeliveryNoteId");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("ReturnNumber")
-                        .IsUnique();
 
                     b.ToTable("Returns");
                 });
@@ -1104,11 +972,8 @@ namespace SapB1App.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Condition")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("LineNum")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,4)");
@@ -1116,14 +981,17 @@ namespace SapB1App.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
 
                     b.Property<int>("ReturnId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("VatPct")
+                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -1132,199 +1000,6 @@ namespace SapB1App.Migrations
                     b.HasIndex("ReturnId");
 
                     b.ToTable("ReturnLines");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ServicePart", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<int>("ServiceTicketId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("ServiceTicketId");
-
-                    b.ToTable("ServiceParts");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ServiceTicket", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AssignedTo")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ClaimId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CompletedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Diagnosis")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("LaborCost")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<DateTime>("OpenDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("PartsCost")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Resolution")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ScheduledDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SerialNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TicketNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<decimal>("TotalCost")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("UnderWarranty")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignedTo");
-
-                    b.HasIndex("ClaimId")
-                        .IsUnique()
-                        .HasFilter("[ClaimId] IS NOT NULL");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("TicketNumber")
-                        .IsUnique();
-
-                    b.ToTable("ServiceTickets");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.Supplier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CardCode")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)");
-
-                    b.Property<string>("CardName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("City")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Country")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)")
-                        .HasDefaultValue("EUR");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("PaymentTerms")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TaxId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CardCode")
-                        .IsUnique();
-
-                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Visit", b =>
@@ -1446,111 +1121,15 @@ namespace SapB1App.Migrations
                     b.ToTable("VisitCheckPoints");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.Claim", b =>
-                {
-                    b.HasOne("SapB1App.Models.AppUser", "AssignedUser")
-                        .WithMany()
-                        .HasForeignKey("AssignedTo")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.CreditNote", "CreditNote")
-                        .WithMany()
-                        .HasForeignKey("CreditNoteId");
-
-                    b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Return", "Return")
-                        .WithMany()
-                        .HasForeignKey("ReturnId");
-
-                    b.Navigation("AssignedUser");
-
-                    b.Navigation("CreditNote");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Return");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ClaimComment", b =>
-                {
-                    b.HasOne("SapB1App.Models.Claim", "Claim")
-                        .WithMany("Comments")
-                        .HasForeignKey("ClaimId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Claim");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SapB1App.Models.CreditNote", b =>
                 {
-                    b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Return", "Return")
-                        .WithOne("CreditNote")
-                        .HasForeignKey("SapB1App.Models.CreditNote", "ReturnId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Return");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.CreditNoteLine", b =>
-                {
-                    b.HasOne("SapB1App.Models.CreditNote", "CreditNote")
-                        .WithMany("Lines")
-                        .HasForeignKey("CreditNoteId")
+                    b.HasOne("SapB1App.Models.Invoice", "Invoice")
+                        .WithMany("CreditNotes")
+                        .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SapB1App.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreditNote");
-
-                    b.Navigation("Product");
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("SapB1App.Models.DailyTrackSummary", b =>
@@ -1567,7 +1146,7 @@ namespace SapB1App.Migrations
             modelBuilder.Entity("SapB1App.Models.DeliveryNote", b =>
                 {
                     b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
+                        .WithMany("DeliveryNotes")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1575,8 +1154,7 @@ namespace SapB1App.Migrations
                     b.HasOne("SapB1App.Models.Order", "Order")
                         .WithMany()
                         .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Customer");
 
@@ -1609,29 +1187,29 @@ namespace SapB1App.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.GoodsReceipt", b =>
+            modelBuilder.Entity("SapB1App.Models.Invoice", b =>
                 {
-                    b.HasOne("SapB1App.Models.PurchaseOrder", "PurchaseOrder")
-                        .WithMany()
-                        .HasForeignKey("PurchaseOrderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId")
+                    b.HasOne("SapB1App.Models.Customer", "Customer")
+                        .WithMany("Invoices")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("PurchaseOrder");
+                    b.HasOne("SapB1App.Models.DeliveryNote", "DeliveryNote")
+                        .WithMany()
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Supplier");
+                    b.Navigation("Customer");
+
+                    b.Navigation("DeliveryNote");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.GoodsReceiptLine", b =>
+            modelBuilder.Entity("SapB1App.Models.InvoiceLine", b =>
                 {
-                    b.HasOne("SapB1App.Models.GoodsReceipt", "GoodsReceipt")
+                    b.HasOne("SapB1App.Models.Invoice", "Invoice")
                         .WithMany("Lines")
-                        .HasForeignKey("GoodsReceiptId")
+                        .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1641,7 +1219,7 @@ namespace SapB1App.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("GoodsReceipt");
+                    b.Navigation("Invoice");
 
                     b.Navigation("Product");
                 });
@@ -1695,6 +1273,11 @@ namespace SapB1App.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SapB1App.Models.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SapB1App.Models.Order", "Order")
                         .WithMany()
                         .HasForeignKey("OrderId")
@@ -1702,21 +1285,23 @@ namespace SapB1App.Migrations
 
                     b.Navigation("Customer");
 
+                    b.Navigation("Invoice");
+
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.PurchaseOrder", b =>
+            modelBuilder.Entity("SapB1App.Models.Quote", b =>
                 {
-                    b.HasOne("SapB1App.Models.Supplier", "Supplier")
-                        .WithMany("PurchaseOrders")
-                        .HasForeignKey("SupplierId")
+                    b.HasOne("SapB1App.Models.Customer", "Customer")
+                        .WithMany("Quotes")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Supplier");
+                    b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.PurchaseOrderLine", b =>
+            modelBuilder.Entity("SapB1App.Models.QuoteLine", b =>
                 {
                     b.HasOne("SapB1App.Models.Product", "Product")
                         .WithMany()
@@ -1724,46 +1309,41 @@ namespace SapB1App.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SapB1App.Models.PurchaseOrder", "PurchaseOrder")
+                    b.HasOne("SapB1App.Models.Quote", "Quote")
                         .WithMany("Lines")
-                        .HasForeignKey("PurchaseOrderId")
+                        .HasForeignKey("QuoteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
 
-                    b.Navigation("PurchaseOrder");
+                    b.Navigation("Quote");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Return", b =>
                 {
-                    b.HasOne("SapB1App.Models.AppUser", "Approver")
-                        .WithMany()
-                        .HasForeignKey("ApprovedBy")
+                    b.HasOne("SapB1App.Models.CreditNote", "CreditNote")
+                        .WithOne("Return")
+                        .HasForeignKey("SapB1App.Models.Return", "CreditNoteId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
+                        .WithMany("Returns")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SapB1App.Models.DeliveryNote", "DeliveryNote")
                         .WithMany()
-                        .HasForeignKey("DeliveryNoteId");
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.HasOne("SapB1App.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Approver");
+                    b.Navigation("CreditNote");
 
                     b.Navigation("Customer");
 
                     b.Navigation("DeliveryNote");
-
-                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("SapB1App.Models.ReturnLine", b =>
@@ -1783,57 +1363,6 @@ namespace SapB1App.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Return");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ServicePart", b =>
-                {
-                    b.HasOne("SapB1App.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.ServiceTicket", "ServiceTicket")
-                        .WithMany("Parts")
-                        .HasForeignKey("ServiceTicketId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("ServiceTicket");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ServiceTicket", b =>
-                {
-                    b.HasOne("SapB1App.Models.AppUser", "Technician")
-                        .WithMany()
-                        .HasForeignKey("AssignedTo")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Claim", "Claim")
-                        .WithOne("ServiceTicket")
-                        .HasForeignKey("SapB1App.Models.ServiceTicket", "ClaimId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Claim");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Technician");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Visit", b =>
@@ -1873,21 +1402,22 @@ namespace SapB1App.Migrations
                     b.Navigation("Visit");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.Claim", b =>
-                {
-                    b.Navigation("Comments");
-
-                    b.Navigation("ServiceTicket");
-                });
-
             modelBuilder.Entity("SapB1App.Models.CreditNote", b =>
                 {
-                    b.Navigation("Lines");
+                    b.Navigation("Return");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Customer", b =>
                 {
+                    b.Navigation("DeliveryNotes");
+
+                    b.Navigation("Invoices");
+
                     b.Navigation("Orders");
+
+                    b.Navigation("Quotes");
+
+                    b.Navigation("Returns");
                 });
 
             modelBuilder.Entity("SapB1App.Models.DeliveryNote", b =>
@@ -1895,9 +1425,13 @@ namespace SapB1App.Migrations
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.GoodsReceipt", b =>
+            modelBuilder.Entity("SapB1App.Models.Invoice", b =>
                 {
+                    b.Navigation("CreditNotes");
+
                     b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Order", b =>
@@ -1905,26 +1439,14 @@ namespace SapB1App.Migrations
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.PurchaseOrder", b =>
+            modelBuilder.Entity("SapB1App.Models.Quote", b =>
                 {
                     b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Return", b =>
                 {
-                    b.Navigation("CreditNote");
-
                     b.Navigation("Lines");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.ServiceTicket", b =>
-                {
-                    b.Navigation("Parts");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.Supplier", b =>
-                {
-                    b.Navigation("PurchaseOrders");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Visit", b =>

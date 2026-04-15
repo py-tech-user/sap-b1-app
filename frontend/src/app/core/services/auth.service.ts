@@ -49,7 +49,7 @@ const MOCK_USERS: Record<string, LoginResponseData> = {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiUrl = `${environment.apiUrl}/auth`;
+  private readonly loginUrl = `${environment.apiUrl}/Auth/Login`;
   private readonly tokenKey = 'auth_token';
   private readonly userKey = 'auth_user';
 
@@ -67,7 +67,10 @@ export class AuthService {
 
   getRole(): AppRole { return this.role(); }
 
-  hasRole(roles: string[]): boolean { return roles.includes(this.getRole()); }
+  hasRole(roles: string[]): boolean {
+    const currentRole = String(this.getRole() ?? '').trim().toLowerCase();
+    return roles.some(role => String(role ?? '').trim().toLowerCase() === currentRole);
+  }
 
   private decodeJwt(token: string): Record<string, unknown> | null {
     try {
@@ -83,12 +86,21 @@ export class AuthService {
 
 
   login(request: LoginRequest): Observable<LoginResponseData> {
-    return this.http.post<ApiResponse<LoginResponseData>>(`${this.apiUrl}/login`, request).pipe(
+    return this.http.post<ApiResponse<LoginResponseData> | LoginResponseData>(this.loginUrl, request).pipe(
       map(response => {
-        if (!response.success) {
-          throw new Error(response.message || 'Erreur de connexion');
+        const wrapped = response as ApiResponse<LoginResponseData>;
+        if (wrapped?.success !== undefined) {
+          if (!wrapped.success) {
+            throw new Error(wrapped.message || 'Erreur de connexion');
+          }
+          return wrapped.data;
         }
-        return response.data;
+
+        const direct = response as LoginResponseData;
+        if (!direct?.token) {
+          throw new Error('Réponse de login invalide.');
+        }
+        return direct;
       }),
       tap(data => this.storeSession(data)),
       catchError(err => {

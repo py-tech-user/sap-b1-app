@@ -1,11 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>SapB1App</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
@@ -21,11 +26,34 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.3" />
-    <PackageReference Include="Microsoft.OpenApi" Version="2.4.1" />
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
   </ItemGroup>
+
+  <!-- 
+  ???????????????????????????????????????????????????????????????????????????????
+  R�f�rence � la DI API SAP Business One (32-bit)
+
+  INSTRUCTIONS pour activer SAP DI API:
+  1. Copiez SAPbobsCOM.dll depuis "C:\Program Files (x86)\SAP\SAP Business One DI API\" vers "Lib\"
+  2. D�commentez le bloc ItemGroup ci-dessous
+  3. Renommez Services/SapB1DiApiService.cs.txt en SapB1Service.cs
+  4. Supprimez l'ancien Services/SapB1Service.cs (version mock)
+  ???????????????????????????????????????????????????????????????????????????????
+
+  <ItemGroup>
+    <Reference Include="SAPbobsCOM">
+      <HintPath>Lib\SAPbobsCOM.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Lib\*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  -->
 
 </Project>

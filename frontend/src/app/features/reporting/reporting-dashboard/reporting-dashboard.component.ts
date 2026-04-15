@@ -63,18 +63,6 @@ import { TopProductsComponent } from '../top-products/top-products.component';
 
         <!-- Alert Banners -->
         <div class="alerts-row">
-          @if (d().pendingOrdersCount > 0) {
-            <a routerLink="/orders" class="alert-banner orange">
-              <span class="alert-count">{{ d().pendingOrdersCount }}</span>
-              <span>Commandes en attente</span>
-            </a>
-          }
-          @if (d().lateOrdersCount > 0) {
-            <a routerLink="/reporting/late-orders" class="alert-banner red">
-              <span class="alert-count">{{ d().lateOrdersCount }}</span>
-              <span>Commandes en retard</span>
-            </a>
-          }
           @if (d().pendingPaymentsAmount > 0) {
             <a routerLink="/reporting/pending-payments" class="alert-banner yellow">
               <span class="alert-count">{{ d().pendingPaymentsAmount | number:'1.0-0' }} MAD</span>

@@ -19,7 +19,9 @@ public class ProductService : IProductService
     public async Task<PagedResult<ProductDto>> GetAllAsync(
         int page, int pageSize, string? search, string? category)
     {
-        var query = _db.Products.AsQueryable();
+        var query = _db.Products
+            .AsNoTracking()
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(p =>
@@ -50,7 +52,9 @@ public class ProductService : IProductService
     // ── GET BY ID ────────────────────────────────────────────────────────────
     public async Task<ProductDto?> GetByIdAsync(int id)
     {
-        var p = await _db.Products.FindAsync(id);
+        var p = await _db.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id);
         return p is null ? null : MapToDto(p);
     }
 
@@ -59,7 +63,7 @@ public class ProductService : IProductService
     {
         var code = dto.ItemCode.Trim().ToUpperInvariant();
 
-        if (await _db.Products.AnyAsync(p => p.ItemCode == code))
+        if (await _db.Products.AsNoTracking().AnyAsync(p => p.ItemCode == code))
             throw new InvalidOperationException(
                 $"Le code article '{code}' existe déjà.");
 

@@ -1,8 +1,23 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+
+const GROUP_LABELS: { [key: string]: string } = {
+  'Etranger': 'Etranger',
+  'GroupeScolaire': 'Groupe scolaire',
+  'LesParticuliersGP': 'Les particuliers GP',
+  'LesRevendeurs': 'Les revendeurs',
+  'LesSallesDeSports': 'Les salles de sports',
+  'Locaux': 'Locaux',
+  'OrganismePublic': 'Organisme public'
+};
+
+const CURRENCY_LABELS: { [key: string]: string } = {
+  'CHF': 'CHF', 'DKK': 'DKK', 'EUR': 'Euro', 'GBP': 'GBP', 'JPY': 'JPY',
+  'MAD': 'MAD', 'NOK': 'NOK', 'SEK': 'SEK', 'USD': 'USD', 'ToutesDevises': 'Toutes devises'
+};
 
 @Component({
   selector: 'app-customer-detail',
@@ -21,28 +36,35 @@ import { environment } from '../../../../environments/environment';
         
         <div class="info-grid">
           <div class="info-card">
-            <label>Code client</label>
+            <label>Code</label>
             <span>{{ customer.cardCode }}</span>
           </div>
           <div class="info-card">
-            <label>Email</label>
-            <span>{{ customer.email || '-' }}</span>
-          </div>
-          <div class="info-card">
-            <label>Téléphone</label>
-            <span>{{ customer.phone || '-' }}</span>
-          </div>
-          <div class="info-card">
-            <label>Statut</label>
-            <span [class]="customer.isActive ? 'status active' : 'status inactive'">
-              {{ customer.isActive ? 'Actif' : 'Inactif' }}
+            <label>Type</label>
+            <span [class]="'badge badge-' + customer.partnerType.toLowerCase()">
+              {{ customer.partnerType }}
             </span>
           </div>
-        </div>
-        
-        <div class="address-section">
-          <label>Adresse</label>
-          <p>{{ customer.address || 'Non renseignée' }}</p>
+          <div class="info-card">
+            <label>Nom</label>
+            <span>{{ customer.cardName }}</span>
+          </div>
+          <div class="info-card">
+            <label>Nom etranger</label>
+            <span>{{ customer.foreignName || '-' }}</span>
+          </div>
+          <div class="info-card">
+            <label>Groupe</label>
+            <span>{{ getGroupLabel(customer.groupCode) }}</span>
+          </div>
+          <div class="info-card">
+            <label>Devise</label>
+            <span>{{ getCurrencyLabel(customer.currency) }}</span>
+          </div>
+          <div class="info-card">
+            <label>N Identification entreprise</label>
+            <span>{{ customer.federalTaxId || '-' }}</span>
+          </div>
         </div>
       }
     </div>
@@ -57,10 +79,9 @@ import { environment } from '../../../../environments/environment';
     .info-card { background: #f8f9fa; padding: 1rem; border-radius: 4px; }
     .info-card label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 0.25rem; }
     .info-card span { font-size: 1.1rem; color: #333; }
-    .status { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; }
-    .status.active { background: #d4edda; color: #155724; }
-    .status.inactive { background: #f8d7da; color: #721c24; }
-    .address-section label { display: block; color: #666; margin-bottom: 0.5rem; }
+    .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; }
+    .badge-prospect { background: #fff3cd; color: #856404; }
+    .badge-client { background: #d4edda; color: #155724; }
   `]
 })
 export class CustomerDetailComponent implements OnInit {
@@ -71,8 +92,32 @@ export class CustomerDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.params['id'];
-    this.http.get<any>(`${environment.apiUrl}/customers/${id}`).subscribe({
-      next: (res) => { this.customer = res.data ?? res; this.cdr.markForCheck(); }
+    this.http.get<any>(`${environment.apiUrl}/sap/clients`).subscribe({
+      next: (res) => {
+        const rows = this.extractRows(res);
+        const byId = rows.find((row: any) => Number(row?.id ?? row?.DocEntry ?? 0) === Number(id));
+        this.customer = byId ?? rows[Number(id) - 1] ?? null;
+        this.cdr.markForCheck();
+      }
     });
+  }
+
+  private extractRows(res: any): any[] {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.value)) return res.value;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data?.value)) return res.data.value;
+    if (Array.isArray(res.data?.items)) return res.data.items;
+    if (Array.isArray(res.items)) return res.items;
+    return [];
+  }
+
+  getGroupLabel(code: string): string {
+    return GROUP_LABELS[code] || code;
+  }
+
+  getCurrencyLabel(code: string): string {
+    return CURRENCY_LABELS[code] || code;
   }
 }

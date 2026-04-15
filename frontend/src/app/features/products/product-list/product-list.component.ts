@@ -1,79 +1,89 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { Product, ProductApiService } from '../../../core/services/product-api.service';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
     <div class="product-list">
       <div class="header">
-        <h1>Produits</h1>
-        <a routerLink="/products/new" class="btn-primary">+ Nouveau produit</a>
+        <h1>Catalogue</h1>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Nom</th>
-            <th>Catégorie</th>
-            <th>Prix</th>
-            <th>Stock</th>
-            <th>Statut</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+      @if (loading()) {
+        <div class="status">Chargement du catalogue...</div>
+      } @else if (error()) {
+        <div class="status error">{{ error() }}</div>
+      } @else if (products().length === 0) {
+        <div class="status">Aucun produit</div>
+      } @else {
+        <div class="catalog-grid">
           @for (product of products(); track product.id) {
-            <tr>
-              <td>{{ product.itemCode }}</td>
-              <td>{{ product.itemName }}</td>
-              <td>{{ product.category || '-' }}</td>
-              <td>{{ product.price | currency:'EUR' }}</td>
-              <td [class]="product.stock < 10 ? 'low-stock' : ''">{{ product.stock }}</td>
-              <td>
-                <span [class]="product.isActive ? 'badge active' : 'badge inactive'">
-                  {{ product.isActive ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
-              <td>
-                <a [routerLink]="['/products', product.id, 'edit']" class="btn-sm">Modifier</a>
-              </td>
-            </tr>
+            <article class="product-card">
+              <div class="product-image-wrap">
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" [alt]="product.itemName" class="product-image" />
+                } @else {
+                  <div class="product-image placeholder">📦</div>
+                }
+              </div>
+
+              <div class="product-content">
+                <h3 class="product-name">{{ product.itemName || '-' }}</h3>
+                <div class="product-meta">{{ product.itemCode || '-' }}</div>
+
+                <div class="product-row">
+                  <span class="label">Prix</span>
+                  <strong>{{ product.price | number:'1.2-2' }}</strong>
+                </div>
+
+                <div class="product-row">
+                  <span class="label">Stock</span>
+                  <strong [class.low-stock]="product.stock < 10">{{ product.stock }}</strong>
+                </div>
+              </div>
+            </article>
           }
-        </tbody>
-      </table>
+        </div>
+      }
     </div>
   `,
   styles: [`
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .btn-primary { background: #667eea; color: white; padding: 0.75rem 1.5rem; border-radius: 4px; text-decoration: none; }
-    table { width: 100%; background: white; border-radius: 8px; border-collapse: collapse; }
-    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f8f9fa; font-weight: 600; }
-    .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
-    .badge.active { background: #d4edda; color: #155724; }
-    .badge.inactive { background: #f8d7da; color: #721c24; }
-    .low-stock { color: #dc3545; font-weight: bold; }
-    .btn-sm { padding: 0.25rem 0.5rem; background: #eee; border-radius: 4px; text-decoration: none; color: #333; }
+    .status { padding: 1rem; color: #374151; }
+    .status.error { color: #b00020; }
+    .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+    .product-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #f0f0f0; }
+    .product-image-wrap { height: 160px; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
+    .product-image { width: 100%; height: 100%; object-fit: cover; }
+    .product-image.placeholder { font-size: 2rem; color: #94a3b8; }
+    .product-content { padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .product-name { margin: 0; font-size: 1rem; color: #111827; }
+    .product-meta { color: #6b7280; font-size: 0.82rem; }
+    .product-row { display: flex; justify-content: space-between; align-items: center; }
+    .label { color: #6b7280; }
+    .low-stock { color: #dc3545; }
   `]
 })
 export class ProductListComponent implements OnInit {
-  products = signal<any[]>([]);
+  products = signal<Product[]>([]);
+  loading = signal(true);
+  error = signal('');
 
-  constructor(private http: HttpClient) {}
+  constructor(private productApi: ProductApiService) {}
 
   ngOnInit(): void {
-    this.http.get<any>(`${environment.apiUrl}/products`).subscribe({
+    this.productApi.getAll(1, 500).subscribe({
       next: (res) => {
-        const payload = res.data ?? res;
-        this.products.set(payload.items ?? payload);
+        this.products.set(res.items ?? []);
+        this.loading.set(false);
       },
-      error: (err) => console.error('Erreur:', err)
+      error: (err) => {
+        this.error.set(err?.error?.message || err?.error?.error || 'Erreur chargement catalogue SAP');
+        this.loading.set(false);
+      },
     });
   }
 }

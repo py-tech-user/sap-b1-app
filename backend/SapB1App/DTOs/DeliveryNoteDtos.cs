@@ -1,0 +1,65 @@
+namespace SapB1App.DTOs;
+
+public class DeliveryNoteDto
+{
+    public int      DocEntry        { get; set; }
+    public int      Id             { get; set; }
+    public string   DocNum         { get; set; } = string.Empty;
+    public string   CardCode       { get; set; } = string.Empty;
+    public int      CustomerId     { get; set; }
+    public string   CustomerName   { get; set; } = string.Empty;
+    public string   CustomerCode   { get; set; } = string.Empty;
+    public int?     OrderId        { get; set; }
+    public string   OrderDocNum    { get; set; } = string.Empty;
+    public DateTime DocDate        { get; set; }
+    public DateTime? DeliveryDate  { get; set; }
+    public string   Status         { get; set; } = string.Empty;
+    public string?  Signature      { get; set; }
+    public decimal  DocTotal       { get; set; }
+    public decimal  VatTotal       { get; set; }
+    public string?  BaseType       { get; set; }
+    public int?     BaseEntry      { get; set; }
+    public int?     BaseLine       { get; set; }
+    public string?  Comments       { get; set; }
+    public DateTime CreatedAt      { get; set; }
+    public List<DeliveryNoteLineDto> Lines { get; set; } = new();
+}
+
+public class DeliveryNoteLineDto
+{
+    public int     Id        { get; set; }
+    public int     ProductId { get; set; }
+    public string  ItemCode  { get; set; } = string.Empty;
+    public string  ItemName  { get; set; } = string.Empty;
+    public int     Quantity  { get; set; }
+    public decimal Price     { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal VatPct    { get; set; }
+    public decimal LineTotal { get; set; }
+    public int?    BaseEntry { get; set; }
+    public int?    BaseLine  { get; set; }
+}
+
+public class CreateDeliveryNoteDto
+{
+    public int      CustomerId    { get; set; }
+    public int?     OrderId       { get; set; }
+    public DateTime? DeliveryDate { get; set; }
+    public string?  Comments      { get; set; }
+    public string?  Signature     { get; set; }
+    public List<CreateDeliveryNoteLineDto> Lines { get; set; } = new();
+}
+
+public class CreateDeliveryNoteLineDto
+{
+    public int     ProductId { get; set; }
+    public int     Quantity  { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal VatPct    { get; set; } = 20;
+}
+
+public class UpdateDeliveryNoteStatusDto
+{
+    public string  Status    { get; set; } = string.Empty;
+    public string? Signature { get; set; }
+}

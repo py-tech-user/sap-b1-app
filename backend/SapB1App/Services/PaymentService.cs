@@ -19,11 +19,12 @@ public class PaymentService : IPaymentService
     }
 
     public async Task<PagedResult<PaymentDto>> GetAllAsync(
-        int page, int pageSize, string? search, int? customerId, int? orderId)
+        int page, int pageSize, string? search, int? customerId, int? orderId, int? invoiceId)
     {
         var query = _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Order)
+            .Include(p => p.Invoice)
             .AsQueryable();
 
         // Filter by customer
@@ -33,6 +34,9 @@ public class PaymentService : IPaymentService
         // Filter by order
         if (orderId.HasValue)
             query = query.Where(p => p.OrderId == orderId.Value);
+
+        if (invoiceId.HasValue)
+            query = query.Where(p => p.InvoiceId == invoiceId.Value);
 
         // Search by customer name or reference
         if (!string.IsNullOrWhiteSpace(search))
@@ -54,6 +58,8 @@ public class PaymentService : IPaymentService
                 CustomerCode  = p.Customer.CardCode,
                 OrderId       = p.OrderId,
                 OrderDocNum   = p.Order != null ? p.Order.DocNum : null,
+                InvoiceId     = p.InvoiceId,
+                InvoiceDocNum = p.Invoice != null ? p.Invoice.DocNum : null,
                 Amount        = p.Amount,
                 PaymentDate   = p.PaymentDate,
                 PaymentMethod = p.PaymentMethod.ToString(),
@@ -72,6 +78,7 @@ public class PaymentService : IPaymentService
         var payment = await _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Order)
+            .Include(p => p.Invoice)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (payment is null)
@@ -85,6 +92,8 @@ public class PaymentService : IPaymentService
             CustomerCode  = payment.Customer.CardCode,
             OrderId       = payment.OrderId,
             OrderDocNum   = payment.Order?.DocNum,
+            InvoiceId     = payment.InvoiceId,
+            InvoiceDocNum = payment.Invoice?.DocNum,
             Amount        = payment.Amount,
             PaymentDate   = payment.PaymentDate,
             PaymentMethod = payment.PaymentMethod.ToString(),
@@ -107,6 +116,19 @@ public class PaymentService : IPaymentService
                 ?? throw new InvalidOperationException($"Order ID {dto.OrderId.Value} not found.");
         }
 
+        Invoice? invoice = null;
+        if (dto.InvoiceId.HasValue)
+        {
+            invoice = await _db.Invoices.FindAsync(dto.InvoiceId.Value)
+                ?? throw new InvalidOperationException($"Invoice ID {dto.InvoiceId.Value} not found.");
+        }
+
+        if (order is not null && invoice is not null && invoice.CustomerId != order.CustomerId)
+            throw new InvalidOperationException("Order and invoice must belong to the same customer.");
+
+        if (invoice is not null && invoice.CustomerId != dto.CustomerId)
+            throw new InvalidOperationException("Invoice customer mismatch.");
+
         if (!Enum.TryParse<PaymentMethod>(dto.PaymentMethod, true, out var paymentMethod))
             paymentMethod = Models.PaymentMethod.Cash;
 
@@ -114,6 +136,7 @@ public class PaymentService : IPaymentService
         {
             CustomerId    = dto.CustomerId,
             OrderId       = dto.OrderId,
+            InvoiceId     = dto.InvoiceId,
             Amount        = dto.Amount,
             PaymentDate   = dto.PaymentDate,
             PaymentMethod = paymentMethod,
@@ -132,6 +155,8 @@ public class PaymentService : IPaymentService
             CustomerCode  = customer.CardCode,
             OrderId       = payment.OrderId,
             OrderDocNum   = order?.DocNum,
+            InvoiceId     = payment.InvoiceId,
+            InvoiceDocNum = invoice?.DocNum,
             Amount        = payment.Amount,
             PaymentDate   = payment.PaymentDate,
             PaymentMethod = payment.PaymentMethod.ToString(),
@@ -147,6 +172,7 @@ public class PaymentService : IPaymentService
         var payment = await _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Order)
+            .Include(p => p.Invoice)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (payment is null)
@@ -171,6 +197,8 @@ public class PaymentService : IPaymentService
             CustomerCode  = payment.Customer.CardCode,
             OrderId       = payment.OrderId,
             OrderDocNum   = payment.Order?.DocNum,
+            InvoiceId     = payment.InvoiceId,
+            InvoiceDocNum = payment.Invoice?.DocNum,
             Amount        = payment.Amount,
             PaymentDate   = payment.PaymentDate,
             PaymentMethod = payment.PaymentMethod.ToString(),
@@ -199,6 +227,7 @@ public class PaymentService : IPaymentService
         var payment = await _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Order)
+            .Include(p => p.Invoice)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (payment is null)
@@ -218,6 +247,8 @@ public class PaymentService : IPaymentService
             CustomerCode  = payment.Customer.CardCode,
             OrderId       = payment.OrderId,
             OrderDocNum   = payment.Order?.DocNum,
+            InvoiceId     = payment.InvoiceId,
+            InvoiceDocNum = payment.Invoice?.DocNum,
             Amount        = payment.Amount,
             PaymentDate   = payment.PaymentDate,
             PaymentMethod = payment.PaymentMethod.ToString(),
