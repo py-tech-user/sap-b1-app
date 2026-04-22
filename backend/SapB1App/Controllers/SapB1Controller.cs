@@ -860,7 +860,7 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         pageSize = Math.Clamp(pageSize, 1, 200);
 
         var result = await _sapService.ServiceLayerGetAsync(
-            "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,E_Mail,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=2000",
+            "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=2000",
             cancellationToken);
 
         if (!result.Success)
@@ -1689,7 +1689,7 @@ ORDER BY LineNum ASC;";
         if (requireOpenStatus)
         {
             var current = await _sapService.ServiceLayerGetAsync(
-                $"{sapEntity}({docEntry})?$select=DocEntry,DocumentStatus,DocStatus&$expand=DocumentLines($select=LineNum,LineStatus)",
+                $"{sapEntity}({docEntry})",
                 cancellationToken);
             if (!current.Success || !current.Response.HasValue)
                 return StatusCode(current.StatusCode, SapError(current.ErrorMessage ?? "Impossible de vérifier le statut du document.", current.Response));

@@ -9,16 +9,6 @@ export const COMMERCIAL_DOCUMENT_CHILDREN: Routes = [
     component: DocumentListComponent
   },
   {
-    path: 'en-attente',
-    component: DocumentListComponent,
-    data: { docPhase: 'open' }
-  },
-  {
-    path: 'cloturees',
-    component: DocumentListComponent,
-    data: { docPhase: 'closed' }
-  },
-  {
     path: 'new',
     component: DocumentFormComponent
   },

@@ -31,10 +31,16 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
       <form [formGroup]="filtersForm" class="filters" (ngSubmit)="applyFilters()">
         <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" />
         <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" />
+        <select formControlName="phase" (change)="onFiltersChanged()">
+          <option value="all">Tous les statuts</option>
+          <option value="open">En attente</option>
+          <option value="closed">Clotures</option>
+          <option value="cancelled">Annules</option>
+        </select>
         <input type="date" formControlName="dateFrom" (change)="onFiltersChanged()" />
         <input type="date" formControlName="dateTo" (change)="onFiltersChanged()" />
         <button type="submit" class="btn-primary">Filtrer</button>
-        <button type="button" class="btn-outline" (click)="resetFilters()">Réinitialiser</button>
+        <button type="button" class="btn-outline" (click)="resetFilters()">Reinitialiser</button>
       </form>
 
       @if (loading()) {
@@ -42,125 +48,54 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
       } @else if (error()) {
         <div class="alert alert-error">
           <p>{{ error() }}</p>
-          <button type="button" class="btn-outline" (click)="applyFilters()">Réessayer</button>
+          <button type="button" class="btn-outline" (click)="applyFilters()">Reessayer</button>
         </div>
       } @else {
-        @if (isInvoicesResource()) {
-          <h3>Factures ouvertes</h3>
-          <table>
-            <thead>
+        <table>
+          <thead>
+            <tr>
+              <th>Numero</th>
+              <th>Raison sociale</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of items(); track doc.id) {
               <tr>
-                <th>Numéro</th>
-                <th>Raison social</th>
-                <th>Date</th>
-                <th>Statut</th>
-                <th>Total</th>
-                <th>Actions</th>
+                <td>{{ numberOf(doc) }}</td>
+                <td>{{ partnerNameOf(doc) }}</td>
+                <td>{{ dateOf(doc) ? (dateOf(doc) | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>
+                  <span class="badge" [class.badge-open]="isOpenStatus(doc.status)" [class.badge-closed]="isClosedStatus(doc.status)" [class.badge-cancelled]="isCancelledStatus(doc.status)">
+                    {{ statusPhase(doc.status) }}
+                  </span>
+                </td>
+                <td>{{ totalOf(doc) | number:'1.2-2' }}</td>
+                <td class="row-actions">
+                  <a class="btn-sm" [routerLink]="['/', resource(), doc.id]" [queryParams]="detailQueryParams()">Voir</a>
+                  @if (canManageDocument(doc)) {
+                    <a class="btn-sm" [routerLink]="['/', resource(), doc.id, 'edit']" [queryParams]="detailQueryParams()">Modifier</a>
+                  }
+                  @for (a of allowedActions(doc.status); track a.label) {
+                    <button class="btn-sm" type="button" (click)="changeStatus(doc, a.to)">{{ a.label }}</button>
+                  }
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              @for (doc of openInvoices(); track doc.id) {
-                <tr>
-                  <td>{{ numberOf(doc) }}</td>
-                  <td>{{ partnerNameOf(doc) }}</td>
-                  <td>{{ dateOf(doc) ? (dateOf(doc) | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td>
-                    <span class="badge badge-open">{{ statusPhase(doc.status) }}</span>
-                  </td>
-                  <td>{{ totalOf(doc) | number:'1.2-2' }}</td>
-                  <td class="row-actions">
-                    <a class="btn-sm" [routerLink]="['/', resource(), doc.id]" [queryParams]="detailQueryParams()">Voir</a>
-                    @if (canManageDocument(doc)) {
-                      <a class="btn-sm" [routerLink]="['/', resource(), doc.id, 'edit']" [queryParams]="detailQueryParams()">Modifier</a>
-                      <button class="btn-sm btn-danger" type="button" (click)="cancelDocument(doc)">Annuler</button>
-                    }
-                    @for (a of allowedActions(doc.status); track a.label) {
-                      <button class="btn-sm" type="button" (click)="changeStatus(doc, a.to)">{{ a.label }}</button>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="empty">Aucune facture ouverte</td></tr>
-              }
-            </tbody>
-          </table>
-
-          <h3>Factures clôturées</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Numéro</th>
-                <th>Raison social</th>
-                <th>Date</th>
-                <th>Statut</th>
-                <th>Total</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (doc of closedInvoices(); track doc.id) {
-                <tr>
-                  <td>{{ numberOf(doc) }}</td>
-                  <td>{{ partnerNameOf(doc) }}</td>
-                  <td>{{ dateOf(doc) ? (dateOf(doc) | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td>
-                    <span class="badge badge-closed">{{ statusPhase(doc.status) }}</span>
-                  </td>
-                  <td>{{ totalOf(doc) | number:'1.2-2' }}</td>
-                  <td class="row-actions">
-                    <a class="btn-sm" [routerLink]="['/', resource(), doc.id]" [queryParams]="detailQueryParams()">Voir</a>
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="empty">Aucune facture clôturée</td></tr>
-              }
-            </tbody>
-          </table>
-        } @else {
-          <table>
-            <thead>
-              <tr>
-                <th>Numéro</th>
-                <th>Raison social</th>
-                <th>Date</th>
-                <th>Statut</th>
-                <th>Total</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (doc of items(); track doc.id) {
-                <tr>
-                  <td>{{ numberOf(doc) }}</td>
-                  <td>{{ partnerNameOf(doc) }}</td>
-                  <td>{{ dateOf(doc) ? (dateOf(doc) | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td>
-                    <span class="badge" [class.badge-open]="isOpenStatus(doc.status)" [class.badge-closed]="!isOpenStatus(doc.status)">
-                      {{ statusPhase(doc.status) }}
-                    </span>
-                  </td>
-                  <td>{{ totalOf(doc) | number:'1.2-2' }}</td>
-                  <td class="row-actions">
-                    <a class="btn-sm" [routerLink]="['/', resource(), doc.id]" [queryParams]="detailQueryParams()">Voir</a>
-                    @for (a of allowedActions(doc.status); track a.label) {
-                      <button class="btn-sm" type="button" (click)="changeStatus(doc, a.to)">{{ a.label }}</button>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr><td colspan="6" class="empty">Aucune donnée</td></tr>
-              }
-            </tbody>
-          </table>
-        }
+            } @empty {
+              <tr><td colspan="6" class="empty">Aucune donnee</td></tr>
+            }
+          </tbody>
+        </table>
 
         <div class="pager">
-          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Précédent</button>
+          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Precedent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
           <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant →</button>
         </div>
       }
-
     </div>
   `,
   styles: [`
@@ -177,9 +112,9 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
     .badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.78rem; }
     .badge-open { background: #e8f5e9; color: #1b5e20; }
     .badge-closed { background: #f3f4f6; color: #374151; }
+    .badge-cancelled { background: #fdecea; color: #c62828; }
     .row-actions { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
-    .btn-danger { background: #fdecea; color: #c62828; }
     .pager { display: flex; justify-content: space-between; align-items: center; }
     .action-feedback { color: #1b5e20; font-weight: 700; }
     @media (max-width: 1024px) {
@@ -195,11 +130,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
 
   readonly resource = signal<CommercialResource>(this.resolveResource());
-  readonly forcedDocPhase = signal<'all' | 'open' | 'closed'>(this.resolveForcedDocPhase());
   readonly meta = computed(() => COMMERCIAL_META[this.resource()]);
-  readonly isInvoicesResource = computed(() => this.resource() === 'invoices');
-  readonly openInvoices = computed(() => this.items().filter(doc => this.isOpenStatus(doc.status)));
-  readonly closedInvoices = computed(() => this.items().filter(doc => !this.isOpenStatus(doc.status)));
 
   readonly loading = signal(false);
   readonly error = signal('');
@@ -215,6 +146,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   readonly filtersForm = this.fb.group({
     search: [''],
     customer: [''],
+    phase: ['all'],
     dateFrom: [''],
     dateTo: ['']
   });
@@ -267,7 +199,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   }
 
   resetFilters(): void {
-    this.filtersForm.reset({ search: '', customer: '', dateFrom: '', dateTo: '' });
+    this.filtersForm.reset({ search: '', customer: '', phase: 'all', dateFrom: '', dateTo: '' });
     this.clearCaches();
     this.page.set(1);
     this.load();
@@ -285,25 +217,14 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     this.load();
   }
 
-  isEditable(status: string): boolean {
-    return this.isOpenStatus(status);
-  }
-
   canManageDocument(doc: CommercialDocument): boolean {
     if (this.resource() !== 'quotes' && this.resource() !== 'orders') return false;
     return this.isOpenStatus(doc.status);
   }
 
-  cancelDocument(doc: CommercialDocument): void {
-    if (!this.canManageDocument(doc)) {
-      this.error.set('Annulation autorisee uniquement pour un devis/BC en statut Open.');
-      return;
-    }
-    this.remove(doc);
-  }
-
-  statusPhase(status: string): 'En attente' | 'Clôturé' {
-    return this.isOpenStatus(status) ? 'En attente' : 'Clôturé';
+  statusPhase(status: string): 'En attente' | 'Cloture' | 'Annule' {
+    if (this.isCancelledStatus(status)) return 'Annule';
+    return this.isOpenStatus(status) ? 'En attente' : 'Cloture';
   }
 
   isOpenStatus(status: string): boolean {
@@ -319,6 +240,19 @@ export class DocumentListComponent implements OnInit, OnDestroy {
       || compact === 'partialpaid'
       || compact === 'overdue'
       || (compact.includes('open') && !compact.includes('close'));
+  }
+
+  isCancelledStatus(status: string): boolean {
+    const s = (status || '').trim().toLowerCase();
+    const compact = s.replace(/[\s_-]/g, '');
+    return s === 'cancelled'
+      || s === 'canceled'
+      || s === 'annule'
+      || compact.includes('cancel');
+  }
+
+  isClosedStatus(status: string): boolean {
+    return !this.isOpenStatus(status) && !this.isCancelledStatus(status);
   }
 
   allowedActions(status: string): { from: string; to: string; label: string }[] {
@@ -339,30 +273,11 @@ export class DocumentListComponent implements OnInit, OnDestroy {
             this.error.set(res.message || 'Echec de changement de statut.');
             return;
           }
-          this.toast.set('Statut mis à jour.');
+          this.toast.set('Statut mis a jour.');
           this.load();
           this.clearToastLater();
         },
         error: () => this.error.set('Erreur lors du changement de statut.')
-      });
-  }
-
-  remove(doc: CommercialDocument): void {
-    if (!confirm(`Supprimer ${this.meta().singular} ${this.numberOf(doc)} ?`)) return;
-
-    this.api.delete(this.resource(), doc.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (res.success === false) {
-            this.error.set(res.message || 'Suppression impossible.');
-            return;
-          }
-          this.toast.set('Suppression effectuée.');
-          this.load();
-          this.clearToastLater();
-        },
-        error: () => this.error.set('Erreur lors de la suppression.')
       });
   }
 
@@ -444,7 +359,7 @@ export class DocumentListComponent implements OnInit, OnDestroy {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Erreur lors du chargement des données.');
+          this.error.set('Erreur lors du chargement des donnees.');
           this.loading.set(false);
         }
       });
@@ -456,16 +371,23 @@ export class DocumentListComponent implements OnInit, OnDestroy {
 
   private buildFilters(page: number): CommercialListFilters {
     const formValue = this.filtersForm.getRawValue();
-    const phase = (this.forcedDocPhase() || 'all').trim().toLowerCase();
+    const phase = String(formValue.phase || 'all').trim().toLowerCase();
     const openStatusFilter = this.resource() === 'invoices' ? 'open' : 'O';
     const closedStatusFilter = this.resource() === 'invoices' ? 'closed' : 'C';
+    const cancelledStatusFilter = 'cancelled';
 
     return {
       page,
       pageSize: this.pageSize(),
       search: formValue.search || undefined,
       customer: formValue.customer || undefined,
-      status: phase === 'open' ? openStatusFilter : phase === 'closed' ? closedStatusFilter : undefined,
+      status: phase === 'open'
+        ? openStatusFilter
+        : phase === 'closed'
+          ? closedStatusFilter
+          : phase === 'cancelled'
+            ? cancelledStatusFilter
+            : undefined,
       dateFrom: formValue.dateFrom || undefined,
       dateTo: formValue.dateTo || undefined
     };
@@ -553,11 +475,5 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     if (routeData) return routeData;
     const parentData = this.route.snapshot.parent?.data['resource'] as CommercialResource | undefined;
     return parentData ?? 'orders';
-  }
-
-  private resolveForcedDocPhase(): 'all' | 'open' | 'closed' {
-    const routeValue = this.route.snapshot.data['docPhase'] as string | undefined;
-    if (routeValue === 'open' || routeValue === 'closed') return routeValue;
-    return 'all';
   }
 }

@@ -3,6 +3,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommercialApiService } from '../../core/services/commercial-api.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { COMMERCIAL_META, STATUS_ACTIONS } from './commercial-meta';
 import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } from '../../core/models/models';
 
@@ -45,8 +46,8 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
           <div class="card"><label>Date</label><strong>{{ dateOf(doc()!) | date:'dd/MM/yyyy' }}</strong></div>
           <div class="card">
             <label>Statut</label>
-            <strong class="status-badge" [class.open]="isOpenStatus(doc()!.status)" [class.closed]="!isOpenStatus(doc()!.status)">
-              {{ statusPhase(doc()!.status) }}
+            <strong class="status-badge" [class.open]="isOpenStatus(doc()!.status)" [class.closed]="isClosedStatus(doc()!.status)" [class.cancelled]="isCancelledStatus(doc()!.status)">
+              {{ statusLabel(doc()!.status) }}
             </strong>
           </div>
           <div class="card"><label>Total</label><strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong></div>
@@ -166,6 +167,7 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .status-badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.82rem; }
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }
     .status-badge.closed { background: #f3f4f6; color: #374151; }
+    .status-badge.cancelled { background: #fdecea; color: #c62828; }
     .source-doc { margin-bottom: 0.75rem; }
     .rel-label { color: #666; margin-right: 0.45rem; }
     .link-chip { display: inline-block; border: 1px solid #d0d7de; border-radius: 999px; padding: 0.2rem 0.55rem; text-decoration: none; }
@@ -186,6 +188,7 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
 })
 export class DocumentDetailComponent {
   private readonly api = inject(CommercialApiService);
+  private readonly notifications = inject(NotificationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -252,10 +255,12 @@ export class DocumentDetailComponent {
     if (!this.canCancelDocument()) {
       if (this.doc() && this.hasClosedLine(this.doc()!)) {
         this.error.set('Annulation impossible: ce document contient au moins une ligne clôturée.');
+        this.notifications.showError(this.error());
         return;
       }
 
       this.error.set('Annulation autorisee uniquement pour un devis/BC en statut Open.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -474,6 +479,7 @@ export class DocumentDetailComponent {
   closeDocument(): void {
     if (!this.canShowCloseButton()) {
       this.error.set('Cloture indisponible: document non encore transforme.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -537,6 +543,7 @@ export class DocumentDetailComponent {
     const selectedLineNums = this.selectedLineNumsForGeneration();
     if (selectedLineNums.length === 0) {
       this.error.set('Aucune ligne en attente sélectionnée pour la génération.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -546,9 +553,11 @@ export class DocumentDetailComponent {
         next: (res) => {
           if (res.success === false) {
             this.error.set(res.message || 'Echec de génération BC.');
+            this.notifications.showError(this.error());
             return;
           }
           const created = res.data;
+          this.notifications.showSuccess('BC créé depuis devis.');
           this.toast.set('BC créé depuis devis.');
           this.selectedGenerationLines.set([]);
           this.clearToastLater();
@@ -564,6 +573,7 @@ export class DocumentDetailComponent {
             return;
           }
           this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la génération BC.');
+          this.notifications.showError(this.error());
         }
       });
   }
@@ -572,6 +582,7 @@ export class DocumentDetailComponent {
     const selectedLineNums = this.selectedLineNumsForGeneration();
     if (selectedLineNums.length === 0) {
       this.error.set('Aucune ligne en attente sélectionnée pour la génération.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -581,9 +592,11 @@ export class DocumentDetailComponent {
         next: (res) => {
           if (res.success === false) {
             this.error.set(res.message || 'Echec de génération BL.');
+            this.notifications.showError(this.error());
             return;
           }
           const created = res.data;
+          this.notifications.showSuccess('BL créé depuis BC.');
           this.toast.set('BL créé depuis BC.');
           this.selectedGenerationLines.set([]);
           this.clearToastLater();
@@ -599,6 +612,7 @@ export class DocumentDetailComponent {
             return;
           }
           this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la génération BL.');
+          this.notifications.showError(this.error());
         }
       });
   }
@@ -607,6 +621,7 @@ export class DocumentDetailComponent {
     const selectedLineNums = this.selectedLineNumsForGeneration();
     if (selectedLineNums.length === 0) {
       this.error.set('Aucune ligne en attente sélectionnée pour la génération.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -616,9 +631,11 @@ export class DocumentDetailComponent {
         next: (res) => {
           if (res.success === false) {
             this.error.set(res.message || 'Echec de génération facture.');
+            this.notifications.showError(this.error());
             return;
           }
           const created = res.data;
+          this.notifications.showSuccess('Facture créée depuis BL.');
           this.toast.set('Facture créée depuis BL.');
           this.selectedGenerationLines.set([]);
           this.clearToastLater();
@@ -634,6 +651,7 @@ export class DocumentDetailComponent {
             return;
           }
           this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la génération facture.');
+          this.notifications.showError(this.error());
         }
       });
   }
@@ -642,6 +660,7 @@ export class DocumentDetailComponent {
     const payload = this.buildCreatePayloadFromCurrentDoc();
     if (!payload) {
       this.error.set('Impossible de générer: données source incomplètes (client/lignes).');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -651,9 +670,11 @@ export class DocumentDetailComponent {
         next: (res) => {
           if (res.success === false || !res.data) {
             this.error.set(res.message || defaultErrorMessage);
+            this.notifications.showError(this.error());
             return;
           }
 
+          this.notifications.showSuccess(successMessage);
           this.toast.set(successMessage);
           this.clearToastLater();
           const created = res.data;
@@ -665,6 +686,7 @@ export class DocumentDetailComponent {
         },
         error: (err) => {
           this.error.set(err?.error?.error || err?.error?.message || defaultErrorMessage);
+          this.notifications.showError(this.error());
         }
       });
   }
@@ -754,6 +776,24 @@ export class DocumentDetailComponent {
 
   private clearToastLater(): void {
     setTimeout(() => this.toast.set(''), 2500);
+  }
+
+  statusLabel(status: string): 'En attente' | 'Cloture' | 'Annule' {
+    if (this.isCancelledStatus(status)) return 'Annule';
+    return this.isOpenStatus(status) ? 'En attente' : 'Cloture';
+  }
+
+  isCancelledStatus(status: string): boolean {
+    const s = (status || '').trim().toLowerCase();
+    const compact = s.replace(/[\s_-]/g, '');
+    return s === 'cancelled'
+      || s === 'canceled'
+      || s === 'annule'
+      || compact.includes('cancel');
+  }
+
+  isClosedStatus(status: string): boolean {
+    return !this.isOpenStatus(status) && !this.isCancelledStatus(status);
   }
 
   private resolveResource(): CommercialResource {

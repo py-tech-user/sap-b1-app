@@ -10,18 +10,7 @@ export const FACTURES_ROUTES: Routes = [
     children: [
       {
         path: '',
-        pathMatch: 'full',
-        redirectTo: 'en-attente'
-      },
-      {
-        path: 'en-attente',
-        component: InvoicesPageComponent,
-        data: { docPhase: 'open' }
-      },
-      {
-        path: 'cloturees',
-        component: InvoicesPageComponent,
-        data: { docPhase: 'closed' }
+        component: InvoicesPageComponent
       },
       {
         path: 'new',

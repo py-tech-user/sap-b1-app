@@ -4,6 +4,7 @@ import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommercialApiService } from '../../core/services/commercial-api.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { CustomerApiService } from '../../core/services/customer-api.service';
 import { PartnerApiService } from '../../core/services/partner-api.service';
 import { Product, ProductApiService } from '../../core/services/product-api.service';
@@ -34,7 +35,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
           </div>
 
           <div class="field">
-            <label>Date commande *</label>
+            <label>Date document *</label>
             <input type="date" formControlName="docDate" />
           </div>
           @if (showDeliveryDate()) {
@@ -58,9 +59,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
           <button class="btn-outline" type="button" (click)="addLine()" [disabled]="!canModify()">+ Ajouter ligne</button>
         </div>
 
-        <p class="lines-hint">
-          Sélectionne un article, puis ItemCode et WarehouseCode sont remplis automatiquement.
-        </p>
+        
 
         <div class="lines-scroll">
           <div class="line-row line-row-header" aria-hidden="true">
@@ -129,7 +128,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         </div>
 
         <div class="actions">
-          <button class="btn-primary" [disabled]="form.invalid || saving() || loadingLookups() || !canModify()" type="submit">
+          <button class="btn-primary" [disabled]="saving() || loadingLookups() || !canModify()" type="submit">
             {{ saving() ? (isEdit() ? 'Mise à jour...' : 'Création...') : (isEdit() ? 'Mettre à jour' : 'Créer') }}
           </button>
           @if (error()) {
@@ -181,6 +180,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
 })
 export class DocumentFormComponent implements OnInit {
   private readonly api = inject(CommercialApiService);
+  private readonly notifications = inject(NotificationService);
   private readonly customerApi = inject(CustomerApiService);
   private readonly partnerApi = inject(PartnerApiService);
   private readonly productApi = inject(ProductApiService);
@@ -383,11 +383,13 @@ export class DocumentFormComponent implements OnInit {
 
     if (isEditMode && !this.canModify()) {
       this.error.set('Modification autorisée uniquement pour un devis/BC en statut Open.');
+      this.notifications.showError(this.error());
       return;
     }
 
     if (this.form.invalid || this.lines.length === 0) {
-      this.error.set('Client, dates, mode de paiement et DocumentLines sont obligatoires.');
+      this.error.set(this.buildMissingFieldsMessage());
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -412,6 +414,7 @@ export class DocumentFormComponent implements OnInit {
     });
     if (hasInvalidLine) {
       this.error.set('Chaque ligne doit contenir ItemCode, WarehouseCode et Quantity > 0.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -657,6 +660,49 @@ export class DocumentFormComponent implements OnInit {
     return separatorIndex > 0 ? raw.slice(0, separatorIndex).trim() : raw;
   }
 
+  private buildMissingFieldsMessage(): string {
+    const missingFields: string[] = [];
+
+    const cardCode = String(this.form.get('cardCode')?.value ?? '').trim();
+    const docDate = String(this.form.get('docDate')?.value ?? '').trim();
+    const dueDate = String(this.form.get('dueDate')?.value ?? '').trim();
+    const paymentMethod = String(this.form.get('paymentMethod')?.value ?? '').trim();
+
+    if (!cardCode) {
+      missingFields.push('Client');
+    }
+
+    if (!docDate) {
+      missingFields.push('Date document');
+    }
+
+    if (this.showDeliveryDate() && !dueDate) {
+      missingFields.push('Date livraison');
+    }
+
+    if (!paymentMethod) {
+      missingFields.push('Mode de paiement');
+    }
+
+    if (this.lines.length === 0) {
+      missingFields.push('Au moins une ligne');
+    }
+
+    if (missingFields.length === 0) {
+      return 'vous devez ajouter au moins une ligne de commande.';
+    }
+
+    if (missingFields.length === 1) {
+      return `${missingFields[0]} est obligatoire.`;
+    }
+
+    if (missingFields.length === 2) {
+      return `${missingFields[0]} et ${missingFields[1]} sont obligatoires.`;
+    }
+
+    return `${missingFields.slice(0, -1).join(', ')} et ${missingFields.at(-1)} sont obligatoires.`;
+  }
+
   private sumLineField(field: 'subtotalHt' | 'vatAmount' | 'totalTtc'): number {
     return this.lines.controls.reduce((acc, control) => {
       const value = Number(control.get(field)?.value ?? 0);
@@ -732,7 +778,7 @@ export class DocumentFormComponent implements OnInit {
             return;
           }
 
-          this.router.navigate(['/', this.resource(), 'en-attente']);
+          this.router.navigate(['/', this.resource()]);
         },
         error: () => {
           this.router.navigate(['/', this.resource(), saved.id]);
@@ -760,7 +806,7 @@ export class DocumentFormComponent implements OnInit {
   backRoute(): string {
     const target = this.returnTo().trim();
     if (target.startsWith('/')) return target;
-    return this.isEdit() ? `/${this.resource()}/en-attente` : `/${this.resource()}`;
+    return `/${this.resource()}`;
   }
 
   private resolveResource(): CommercialResource {

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import {
   ApiResponse,
   PagedResult,
@@ -13,10 +13,12 @@ import {
   SaveCommercialDocumentDto
 } from '../models/models';
 import { SapApiService } from './sap-api.service';
+import { NotificationService } from './notification.service';
 
 @Injectable({ providedIn: 'root' })
 export class CommercialApiService {
   private readonly sapApi = inject(SapApiService);
+  private readonly notifications = inject(NotificationService);
 
   getList(resource: CommercialResource, filters: CommercialListFilters): Observable<ApiResponse<PagedResult<CommercialDocument>>> {
     let params = new HttpParams()
@@ -179,8 +181,12 @@ export class CommercialApiService {
 
   create(resource: CommercialResource, dto: SaveCommercialDocumentDto): Observable<ApiResponse<CommercialDocument>> {
     const sapPayload = this.toSapPayload(dto, false);
+    const successMessage = this.getMutationSuccessMessage(resource, 'create');
+    const errorMessage = this.getMutationErrorMessage(resource, 'create');
+
     if (resource === 'orders') {
-      return this.sapApi
+      return this.withMutationNotification(
+        this.sapApi
         .post<any>('orders', sapPayload)
         .pipe(
           map((res) => this.normalizeByIdResponse(res)),
@@ -192,28 +198,43 @@ export class CommercialApiService {
             }
             return throwError(() => err);
           })
-        );
+        ),
+        successMessage,
+        errorMessage
+      );
     }
 
     const endpoint = this.getPrimaryEndpoint(resource);
-    return this.sapApi
+    return this.withMutationNotification(
+      this.sapApi
       .post<any>(endpoint, sapPayload)
-      .pipe(map((res) => this.normalizeByIdResponse(res)));
+      .pipe(map((res) => this.normalizeByIdResponse(res))),
+      successMessage,
+      errorMessage
+    );
   }
 
   update(resource: CommercialResource, id: number, dto: SaveCommercialDocumentDto): Observable<ApiResponse<CommercialDocument>> {
     const endpoint = this.getPrimaryEndpoint(resource);
     const sapPayload = this.toSapPayload(dto, true);
-    return this.sapApi
+    return this.withMutationNotification(
+      this.sapApi
       .put<any>(`${endpoint}/${id}`, sapPayload)
-      .pipe(map((res) => this.normalizeByIdResponse(res)));
+      .pipe(map((res) => this.normalizeByIdResponse(res))),
+      this.getMutationSuccessMessage(resource, 'update'),
+      this.getMutationErrorMessage(resource, 'update')
+    );
   }
 
   delete(resource: CommercialResource, id: number): Observable<ApiResponse<void>> {
     const endpoint = this.getPrimaryEndpoint(resource);
-    return this.sapApi
+    return this.withMutationNotification(
+      this.sapApi
       .delete<any>(`${endpoint}/${id}`)
-      .pipe(map((res) => this.normalizeDeleteResponse(res)));
+      .pipe(map((res) => this.normalizeDeleteResponse(res))),
+      this.getMutationSuccessMessage(resource, 'delete'),
+      this.getMutationErrorMessage(resource, 'delete')
+    );
   }
 
   close(resource: CommercialResource, id: number): Observable<ApiResponse<CommercialDocument>> {
@@ -224,7 +245,11 @@ export class CommercialApiService {
         .pipe(map((res) => this.normalizeByIdResponse(res)))
     );
 
-    return this.tryCloseAttempts(attempts, 0);
+    return this.withMutationNotification(
+      this.tryCloseAttempts(attempts, 0),
+      this.getMutationSuccessMessage(resource, 'close'),
+      this.getMutationErrorMessage(resource, 'close')
+    );
   }
 
   updateStatus(resource: CommercialResource, id: number, status: string): Observable<ApiResponse<CommercialDocument>> {
@@ -258,7 +283,11 @@ export class CommercialApiService {
       () => this.sapApi.put<any>(fallbackUrl, payload).pipe(map((res) => this.normalizeByIdResponse(res)))
     ];
 
-    return this.tryStatusAttempts(attempts, 0);
+    return this.withMutationNotification(
+      this.tryStatusAttempts(attempts, 0),
+      this.getMutationSuccessMessage(resource, 'status'),
+      this.getMutationErrorMessage(resource, 'status')
+    );
   }
 
   private tryStatusAttempts(
@@ -303,6 +332,102 @@ export class CommercialApiService {
         return throwError(() => err);
       })
     );
+  }
+
+  private withMutationNotification<T>(
+    source$: Observable<T>,
+    successMessage: string,
+    defaultErrorMessage: string
+  ): Observable<T> {
+    return source$.pipe(
+      tap((result: any) => {
+        if (result?.success === false) {
+          this.notifications.showError(this.resolveMutationError(result, defaultErrorMessage));
+          return;
+        }
+
+        this.notifications.showSuccess(successMessage);
+      }),
+      catchError((err) => {
+        this.notifications.showError(this.resolveMutationError(err, defaultErrorMessage));
+        return throwError(() => err);
+      })
+    );
+  }
+
+  private resolveMutationError(source: any, fallbackMessage: string): string {
+    const directMessage = source?.error?.error;
+    if (typeof directMessage === 'string' && directMessage.trim() !== '') {
+      return directMessage.trim();
+    }
+
+    const nestedMessage = source?.error?.message;
+    if (typeof nestedMessage === 'string' && nestedMessage.trim() !== '') {
+      return nestedMessage.trim();
+    }
+
+    const rootMessage = source?.message;
+    if (typeof rootMessage === 'string' && rootMessage.trim() !== '') {
+      return rootMessage.trim();
+    }
+
+    const errorMessage = source?.errorMessage;
+    if (typeof errorMessage === 'string' && errorMessage.trim() !== '') {
+      return errorMessage.trim();
+    }
+
+    const rawError = source?.error;
+    if (typeof rawError === 'string' && rawError.trim() !== '') {
+      return rawError.trim();
+    }
+
+    const sapValueMessage = source?.error?.sapResponse?.error?.message?.value;
+    if (typeof sapValueMessage === 'string' && sapValueMessage.trim() !== '') {
+      return sapValueMessage.trim();
+    }
+
+    return fallbackMessage;
+  }
+
+  private getEntityLabel(resource: CommercialResource): string {
+    switch (resource) {
+      case 'orders': return 'bon de commande';
+      case 'deliverynotes': return 'bon de livraison';
+      case 'invoices': return 'facture';
+      case 'quotes': return 'devis';
+      case 'creditnotes': return 'avoir';
+      case 'returns': return 'retour';
+      default: return 'document';
+    }
+  }
+
+  private getMutationSuccessMessage(resource: CommercialResource, action: 'create' | 'update' | 'delete' | 'close' | 'status'): string {
+    const label = this.getEntityLabel(resource);
+
+    return action === 'create'
+      ? `${label.charAt(0).toUpperCase() + label.slice(1)} créé avec succès.`
+      : action === 'update'
+        ? `${label.charAt(0).toUpperCase() + label.slice(1)} modifié avec succès.`
+        : action === 'delete'
+          ? (resource === 'orders' || resource === 'quotes'
+            ? `${label.charAt(0).toUpperCase() + label.slice(1)} annulé avec succès.`
+            : `${label.charAt(0).toUpperCase() + label.slice(1)} supprimé avec succès.`)
+          : action === 'close'
+            ? `${label.charAt(0).toUpperCase() + label.slice(1)} clôturé avec succès.`
+            : `Statut du ${label} mis à jour.`;
+  }
+
+  private getMutationErrorMessage(resource: CommercialResource, action: 'create' | 'update' | 'delete' | 'close' | 'status'): string {
+    const label = this.getEntityLabel(resource);
+    return action === 'create'
+      ? `Erreur lors de la création du ${label}.`
+      : action === 'update'
+        ? `Erreur lors de la modification du ${label}.`
+        : action === 'delete'
+          ? `Erreur lors de l'annulation du ${label}.`
+          : action === 'close'
+            ? `Erreur lors de la clôture du ${label}.`
+            : `Erreur lors de la mise à jour du statut du ${label}.`;
   }
 
   generateOrderFromQuote(quoteId: number, selectedLineNums?: number[]): Observable<ApiResponse<CommercialDocument>> {
@@ -830,6 +955,14 @@ export class CommercialApiService {
     const lower = raw.toLowerCase();
     const compact = lower.replace(/[\s_-]/g, '');
 
+    if (
+      lower === 'cancelled'
+      || lower === 'canceled'
+      || compact.includes('cancel')
+    ) {
+      return 'Cancelled';
+    }
+
     // Business rule: status phase is derived only from SAP DocStatus.
     if (
       lower === 'o'
@@ -847,7 +980,6 @@ export class CommercialApiService {
       || compact === 'bostclose'
       || compact === 'bostclosed'
       || compact.includes('close')
-      || compact.includes('cancel')
     ) {
       return 'Closed';
     }

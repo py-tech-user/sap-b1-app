@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { NotificationService } from '../../../core/services/notification.service';
 
 interface OptionDto {
   value: string;
@@ -199,6 +200,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
 })
 export class CustomerFormComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
+  private notifications = inject(NotificationService);
   
   customer: any = {
     cardCode: '',
@@ -259,6 +261,7 @@ export class CustomerFormComponent implements OnInit {
           const selected = byId ?? rows[Number(id) - 1] ?? null;
           if (!selected) {
             this.errorMsg = 'Impossible de charger le partenaire.';
+            this.notifications.showError(this.errorMsg);
             this.cdr.markForCheck();
             return;
           }
@@ -325,6 +328,7 @@ export class CustomerFormComponent implements OnInit {
 
     if (!this.customer.cardCode?.trim() || !this.customer.cardName?.trim()) {
       this.errorMsg = 'Le code client et le nom client sont obligatoires.';
+      this.notifications.showError(this.errorMsg);
       this.loading = false;
       this.cdr.markForCheck();
       return;
@@ -376,6 +380,7 @@ export class CustomerFormComponent implements OnInit {
     this.http.post<any>(`${environment.apiUrl}/sap/clients`, payload).subscribe({
       next: (res) => {
         this.successMsg = res?.message || 'Client créé.';
+        this.notifications.showSuccess(this.successMsg);
         this.loading = false;
         this.cdr.markForCheck();
         this.refreshSapCustomers();
@@ -384,6 +389,7 @@ export class CustomerFormComponent implements OnInit {
         this.errorMsg = err.status === 0
           ? 'Impossible de joindre le service clients.'
           : this.extractSapError(err);
+        this.notifications.showError(this.errorMsg);
         this.loading = false;
         this.cdr.markForCheck();
       }
@@ -414,17 +420,20 @@ export class CustomerFormComponent implements OnInit {
       next: (res) => {
         if (res.success === false) {
           this.errorMsg = res.message || 'Erreur.';
+          this.notifications.showError(this.errorMsg);
           this.loading = false;
           this.cdr.markForCheck();
           return;
         }
         this.successMsg = res.message || 'Partenaire modifié.';
+        this.notifications.showSuccess(this.successMsg);
         this.loading = false;
         this.cdr.markForCheck();
         setTimeout(() => this.router.navigate(['/customers']), 1200);
       },
       error: (err) => {
         this.errorMsg = err.status === 0 ? 'Impossible de contacter le serveur.' : (err.error?.message || 'Erreur ' + err.status);
+        this.notifications.showError(this.errorMsg);
         this.loading = false;
         this.cdr.markForCheck();
       }

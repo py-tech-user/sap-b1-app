@@ -1,7 +1,7 @@
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoices-api.service';
 
@@ -17,12 +17,18 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
       </div>
 
       <form [formGroup]="filtersForm" class="filters" (ngSubmit)="applyFilters()">
-        <input formControlName="search" placeholder="Recherche" />
-        <input formControlName="customer" placeholder="Client" />
-        <input type="date" formControlName="dateFrom" />
-        <input type="date" formControlName="dateTo" />
+        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" />
+        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" />
+        <select formControlName="phase" (change)="onFiltersChanged()">
+          <option value="all">Tous les statuts</option>
+          <option value="open">En attente</option>
+          <option value="closed">Cloturees</option>
+          <option value="cancelled">Annulees</option>
+        </select>
+        <input type="date" formControlName="dateFrom" (change)="onFiltersChanged()" />
+        <input type="date" formControlName="dateTo" (change)="onFiltersChanged()" />
         <button type="submit" class="btn-primary">Filtrer</button>
-        <button type="button" class="btn-outline" (click)="resetFilters()">Réinitialiser</button>
+        <button type="button" class="btn-outline" (click)="resetFilters()">Reinitialiser</button>
       </form>
 
       @if (loading()) {
@@ -30,12 +36,10 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
       } @else if (error()) {
         <div class="alert alert-error">{{ error() }}</div>
       } @else {
-        @if (showOpenSection()) {
-        <h3>Factures ouvertes</h3>
         <table>
           <thead>
             <tr>
-              <th>Numéro</th>
+              <th>Numero</th>
               <th>Client</th>
               <th>Date</th>
               <th>Total</th>
@@ -44,54 +48,27 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
             </tr>
           </thead>
           <tbody>
-            @for (doc of openInvoices(); track doc.id) {
+            @for (doc of items(); track doc.id) {
               <tr>
                 <td>{{ doc.docNum || ('#' + doc.id) }}</td>
                 <td>{{ doc.cardName || doc.cardCode || '-' }}</td>
                 <td>{{ doc.docDate ? (doc.docDate | date:'dd/MM/yyyy') : '-' }}</td>
                 <td>{{ doc.docTotal | number:'1.2-2' }}</td>
-                <td><span class="badge badge-open">Open</span></td>
+                <td>
+                  <span class="badge" [class.badge-open]="isOpenStatus(doc.status)" [class.badge-closed]="isClosedStatus(doc.status)" [class.badge-cancelled]="isCancelledStatus(doc.status)">
+                    {{ statusLabel(doc.status) }}
+                  </span>
+                </td>
                 <td><a class="btn-sm" [routerLink]="['/factures', doc.id]">Voir</a></td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty">Aucune facture ouverte</td></tr>
+              <tr><td colspan="6" class="empty">Aucune facture</td></tr>
             }
           </tbody>
         </table>
-        }
-
-        @if (showClosedSection()) {
-        <h3>Factures clôturées</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Numéro</th>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (doc of closedInvoices(); track doc.id) {
-              <tr>
-                <td>{{ doc.docNum || ('#' + doc.id) }}</td>
-                <td>{{ doc.cardName || doc.cardCode || '-' }}</td>
-                <td>{{ doc.docDate ? (doc.docDate | date:'dd/MM/yyyy') : '-' }}</td>
-                <td>{{ doc.docTotal | number:'1.2-2' }}</td>
-                <td><span class="badge badge-closed">Closed</span></td>
-                <td><a class="btn-sm" [routerLink]="['/factures', doc.id]">Voir</a></td>
-              </tr>
-            } @empty {
-              <tr><td colspan="6" class="empty">Aucune facture clôturée</td></tr>
-            }
-          </tbody>
-        </table>
-        }
 
         <div class="pager">
-          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Précédent</button>
+          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Precedent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
           <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant →</button>
         </div>
@@ -108,6 +85,7 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
     .badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.78rem; }
     .badge-open { background: #e8f5e9; color: #1b5e20; }
     .badge-closed { background: #f3f4f6; color: #374151; }
+    .badge-cancelled { background: #fdecea; color: #c62828; }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
     .pager { display: flex; justify-content: space-between; align-items: center; }
     @media (max-width: 1024px) {
@@ -119,7 +97,6 @@ export class InvoicesPageComponent implements OnInit {
   private readonly api = inject(InvoicesApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
 
   readonly loading = signal(false);
   readonly error = signal('');
@@ -128,24 +105,33 @@ export class InvoicesPageComponent implements OnInit {
   readonly pageSize = signal(15);
   readonly totalCount = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
-  readonly forcedDocPhase = signal<'all' | 'open' | 'closed'>(this.resolveForcedDocPhase());
-  readonly showOpenSection = computed(() => this.forcedDocPhase() !== 'closed');
-  readonly showClosedSection = computed(() => this.forcedDocPhase() !== 'open');
-  readonly openInvoices = computed(() => this.items().filter((x) => this.isOpenStatus(x.status)));
-  readonly closedInvoices = computed(() => this.items().filter((x) => !this.isOpenStatus(x.status)));
 
   private readonly pageCache = new Map<string, InvoiceListItem[]>();
   private readonly totalCountCache = new Map<string, number>();
+  private filterDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly filtersForm = this.fb.group({
     search: [''],
     customer: [''],
+    phase: ['all'],
     dateFrom: [''],
     dateTo: ['']
   });
 
   ngOnInit(): void {
     this.load();
+  }
+
+  onFiltersChanged(): void {
+    if (this.filterDebounceHandle) {
+      clearTimeout(this.filterDebounceHandle);
+    }
+
+    this.filterDebounceHandle = setTimeout(() => {
+      this.clearCaches();
+      this.page.set(1);
+      this.load();
+    }, 250);
   }
 
   applyFilters(): void {
@@ -155,7 +141,7 @@ export class InvoicesPageComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filtersForm.reset({ search: '', customer: '', dateFrom: '', dateTo: '' });
+    this.filtersForm.reset({ search: '', customer: '', phase: 'all', dateFrom: '', dateTo: '' });
     this.clearCaches();
     this.page.set(1);
     this.load();
@@ -212,11 +198,13 @@ export class InvoicesPageComponent implements OnInit {
 
   private buildFilters(page: number): InvoiceListFilters {
     const form = this.filtersForm.getRawValue();
-    const phase = (this.forcedDocPhase() || 'all').toLowerCase();
+    const phase = String(form.phase || 'all').toLowerCase();
     const statusFilter = phase === 'closed'
       ? 'closed'
       : phase === 'open'
         ? 'open'
+        : phase === 'cancelled'
+          ? 'cancelled'
         : undefined;
 
     return {
@@ -292,7 +280,7 @@ export class InvoicesPageComponent implements OnInit {
     return Math.max(reported, loadedThroughCurrentPage, minimumFromPages);
   }
 
-  private isOpenStatus(status: string): boolean {
+  isOpenStatus(status: string): boolean {
     const s = (status || '').trim().toLowerCase();
     const compact = s.replace(/[\s_-]/g, '');
     return s === 'open'
@@ -307,9 +295,21 @@ export class InvoicesPageComponent implements OnInit {
       || (compact.includes('open') && !compact.includes('close'));
   }
 
-  private resolveForcedDocPhase(): 'all' | 'open' | 'closed' {
-    const routeValue = this.route.snapshot.data['docPhase'] as string | undefined;
-    if (routeValue === 'open' || routeValue === 'closed') return routeValue;
-    return 'all';
+  isCancelledStatus(status: string): boolean {
+    const s = (status || '').trim().toLowerCase();
+    const compact = s.replace(/[\s_-]/g, '');
+    return s === 'cancelled'
+      || s === 'canceled'
+      || s === 'annule'
+      || compact.includes('cancel');
+  }
+
+  isClosedStatus(status: string): boolean {
+    return !this.isOpenStatus(status) && !this.isCancelledStatus(status);
+  }
+
+  statusLabel(status: string): 'En attente' | 'Cloturee' | 'Annulee' {
+    if (this.isCancelledStatus(status)) return 'Annulee';
+    return this.isOpenStatus(status) ? 'En attente' : 'Cloturee';
   }
 }

@@ -4,6 +4,7 @@ import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommercialApiService } from '../../../core/services/commercial-api.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { CustomerApiService } from '../../../core/services/customer-api.service';
 import { Product, ProductApiService } from '../../../core/services/product-api.service';
 import { COMMERCIAL_META } from '../commercial-meta';
@@ -91,7 +92,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         </div>
 
         <div class="actions">
-          <button class="btn-primary" [disabled]="form.invalid || saving() || loadingLookups()" type="submit">
+          <button class="btn-primary" [disabled]="saving() || loadingLookups()" type="submit">
             {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
           </button>
         </div>
@@ -129,6 +130,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
 })
 export class DocumentFormComponent implements OnInit {
   private readonly api = inject(CommercialApiService);
+  private readonly notifications = inject(NotificationService);
   private readonly customerApi = inject(CustomerApiService);
   private readonly productApi = inject(ProductApiService);
   private readonly route = inject(ActivatedRoute);
@@ -218,11 +220,16 @@ export class DocumentFormComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid || this.lines.length === 0) return;
+    if (this.form.invalid || this.lines.length === 0) {
+      this.error.set('Client, dates et lignes sont obligatoires.');
+      this.notifications.showError(this.error());
+      return;
+    }
 
     const hasLineWithoutProduct = this.lines.controls.some(c => !c.get('productId')?.value);
     if (hasLineWithoutProduct) {
       this.error.set('Chaque ligne doit avoir un article sélectionné.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -257,6 +264,7 @@ export class DocumentFormComponent implements OnInit {
       next: (res) => {
         if (res.success === false || !res.data) {
           this.error.set(res.message || 'Echec d\'enregistrement.');
+          this.notifications.showError(this.error());
           this.saving.set(false);
           return;
         }
@@ -264,6 +272,7 @@ export class DocumentFormComponent implements OnInit {
       },
       error: (err) => {
         this.error.set(this.extractError(err));
+        this.notifications.showError(this.error());
         this.saving.set(false);
       },
       complete: () => this.saving.set(false)
@@ -289,6 +298,7 @@ export class DocumentFormComponent implements OnInit {
         },
         error: () => {
           this.error.set('Impossible de charger les clients.');
+          this.notifications.showError(this.error());
           endOne();
         }
       });
@@ -303,6 +313,7 @@ export class DocumentFormComponent implements OnInit {
         },
         error: () => {
           this.error.set('Impossible de charger les articles.');
+          this.notifications.showError(this.error());
           endOne();
         }
       });

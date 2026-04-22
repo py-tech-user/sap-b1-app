@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { Router, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
 
 @Component({
@@ -39,7 +40,15 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
         <!-- Toolbar -->
         <header class="toolbar">
           <button class="menu-btn" (click)="sidenavOpen.set(!sidenavOpen())">☰</button>
-          <span class="toolbar-spacer"></span>
+
+          <div class="toolbar-center">
+            @if (notification.visible()) {
+              <div class="notification-banner" [class.success]="notification.isSuccess()" [class.error]="notification.isError()">
+                {{ notification.message() }}
+              </div>
+            }
+          </div>
+
           <div class="user-section">
             <button class="user-btn" (click)="showUserMenu = !showUserMenu">
               👤 {{ auth.currentUser()?.fullName ?? 'Utilisateur' }} ▾
@@ -166,7 +175,28 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
     }
     .menu-btn:hover { background: #f0f0f0; }
 
-    .toolbar-spacer { flex: 1; }
+    .toolbar-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 0;
+      padding: 0 12px;
+    }
+
+    .notification-banner {
+      max-width: 100%;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notification-banner.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .notification-banner.error { background: #ffebee; color: #b71c1c; border: 1px solid #ef9a9a; }
 
     .user-section { position: relative; }
 
@@ -227,6 +257,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
 })
 export class ShellComponent {
   auth        = inject(AuthService);
+  notification = inject(NotificationService);
   private readonly router = inject(Router);
   sidenavOpen = signal(true);
   showUserMenu = false;
