@@ -882,86 +882,6 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         return Ok(new ApiResponse<IReadOnlyList<DocumentViewDto>>(true, null, pagedItems, totalCount));
     }
 
-    private async Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetFacturesFromServiceLayerAsync(
-        bool openOnly,
-        int page,
-        int pageSize,
-        string? search,
-        string? customer,
-        string? status,
-        DateTime? dateFrom,
-        DateTime? dateTo,
-        CancellationToken cancellationToken)
-    {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 200);
-
-        var relativeUrl =
-            "Invoices?$select=DocEntry,DocNum,CardCode,CardName,DocTotal,PaidToDate,DocumentStatus,DocDate&$orderby=DocEntry desc&$top=1000&$skip=0";
-
-        try
-        {
-            var result = await _sapService.ServiceLayerGetAsync(relativeUrl, cancellationToken);
-            if (!result.Success)
-            {
-                _logger.LogWarning("[FACTURES-SL] Requête liste factures avec projection échouée. Fallback requête brute sans filtres/projection. Error={Error}", result.ErrorMessage);
-                var fallbackUrl = "Invoices?$top=1000&$skip=0";
-                result = await _sapService.ServiceLayerGetAsync(fallbackUrl, cancellationToken);
-            }
-
-            if (!result.Success)
-                return StatusCode(result.StatusCode, SapError($"Service Layer SAP inaccessible: {result.ErrorMessage}", result.Response));
-
-            var items = new List<DocumentViewDto>();
-            if (result.Response.HasValue &&
-                result.Response.Value.ValueKind == JsonValueKind.Object &&
-                result.Response.Value.TryGetProperty("value", out var values) &&
-                values.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var node in values.EnumerateArray())
-                {
-                    var rawStatus = GetRawDocumentStatus(node);
-                    var total = GetDecimal(node, "DocTotal");
-                    var paidToDate = GetDecimal(node, "PaidToDate");
-                    var computedStatus = IsCancelled(node)
-                        ? "Cancelled"
-                        : string.IsNullOrWhiteSpace(rawStatus)
-                            ? (ResolveOpenAmount(node) > 0 ? "Open" : "Closed")
-                            : NormalizeDocumentStatus(rawStatus, node);
-
-                    items.Add(new DocumentViewDto
-                    {
-                        DocEntry = GetInt(node, "DocEntry"),
-                        DocNum = GetInt(node, "DocNum"),
-                        CardCode = GetString(node, "CardCode"),
-                        CardName = GetString(node, "CardName"),
-                        Total = total,
-                        PaidToDate = paidToDate,
-                        Date = GetDate(node, "DocDate"),
-                        DocStatus = rawStatus,
-                        DocumentStatus = rawStatus,
-                        IsCancelled = IsCancelled(node),
-                        Status = computedStatus
-                    });
-                }
-            }
-
-            var filteredItems = ApplyDocumentFilters(items, openOnly, search, customer, status, dateFrom, dateTo);
-            var totalCount = filteredItems.Count;
-            var pagedItems = filteredItems
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            return Ok(new ApiResponse<IReadOnlyList<DocumentViewDto>>(true, null, pagedItems, totalCount));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[FACTURES-SL] Erreur d'accès Service Layer pour la liste des factures.");
-            return StatusCode(503, SapError("Service Layer SAP inaccessible. Veuillez réessayer."));
-        }
-    }
-
     /// <summary>
     /// Mode hybride : lecture SQL + écriture Service Layer
     /// 
@@ -971,7 +891,7 @@ ORDER BY DocDate ASC, DocEntry ASC;";
     /// - Écriture (création, suppression, paiements) : via Service Layer uniquement
     /// 
     /// AUTRES DOCUMENTS (ORDR, ODLN, OQUT, ORIN, ORDN):
-    /// - Lecture : via SQL en priorité, fallback Service Layer si SQL échoue
+    /// - Lecture : exclusivement via SQL (aucun fallback Service Layer)
     /// - Écriture : via Service Layer
     /// </summary>
     private async Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDocumentsViaSqlAsync(
@@ -1222,39 +1142,6 @@ WHERE (@openOnly = 0 OR {openCondition})
         });
 
         return await Task.WhenAll(tasks);
-    }
-
-    private async Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDocumentsFromServiceLayerFallbackAsync(
-        string serviceLayerEntity,
-        bool openOnly,
-        int page,
-        int pageSize,
-        string? search,
-        string? customer,
-        string? status,
-        DateTime? dateFrom,
-        DateTime? dateTo,
-        CancellationToken cancellationToken)
-    {
-        var relativeUrl = string.Equals(serviceLayerEntity, "Invoices", StringComparison.OrdinalIgnoreCase)
-            ? "Invoices?$select=DocEntry,DocNum,CardCode,CardName,DocDate,DocDueDate,DocTotal,PaidToDate,DocumentStatus&$orderby=DocEntry desc&$top=1000&$skip=0"
-            : $"{serviceLayerEntity}?$select=DocEntry,DocNum,CardCode,CardName,DocDate,DocDueDate,DocTotal,DocumentStatus&$orderby=DocEntry desc&$top=1000&$skip=0";
-
-        var result = await _sapService.ServiceLayerGetAsync(relativeUrl, cancellationToken);
-        if (!result.Success)
-            return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
-
-        var items = string.Equals(serviceLayerEntity, "Invoices", StringComparison.OrdinalIgnoreCase)
-            ? MapInvoiceDocuments(result.Response)
-            : MapDocuments(result.Response);
-        var filteredItems = ApplyDocumentFilters(items, openOnly, search, customer, status, dateFrom, dateTo);
-        var totalCount = filteredItems.Count;
-        var pagedItems = filteredItems
-            .Skip((Math.Max(1, page) - 1) * Math.Clamp(pageSize, 1, 200))
-            .Take(Math.Clamp(pageSize, 1, 200))
-            .ToList();
-
-        return Ok(new ApiResponse<IReadOnlyList<DocumentViewDto>>(true, null, pagedItems, totalCount));
     }
 
     private static List<DocumentViewDto> ApplyDocumentFilters(
@@ -2880,7 +2767,7 @@ WHERE DocEntry = @docEntry;";
     }
 
     private static bool ShouldApplySalesScopeBySalesPerson(string tableName)
-        => tableName.ToUpperInvariant() is "ORDR" or "OINV" or "OQUT";
+        => tableName.ToUpperInvariant() is "ORDR" or "OINV" or "OQUT" or "ODLN" or "ORIN" or "ORDN";
 
     private static bool IsCancelled(JsonElement node)
     {

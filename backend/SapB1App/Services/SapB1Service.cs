@@ -673,7 +673,10 @@ public class SapB1Service : ISapB1Service
 
         return firstSegment.Equals("Orders", StringComparison.OrdinalIgnoreCase) ||
                firstSegment.Equals("Invoices", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase);
+               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("DeliveryNotes", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("CreditNotes", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Returns", StringComparison.OrdinalIgnoreCase);
     }
 
     private string BuildRequestRelativeUrl(HttpMethod method, string relativeUrl)
@@ -708,7 +711,10 @@ public class SapB1Service : ISapB1Service
 
         return firstSegment.Equals("Orders", StringComparison.OrdinalIgnoreCase) ||
                firstSegment.Equals("Invoices", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase);
+               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("DeliveryNotes", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("CreditNotes", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Returns", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string AppendSalesPersonFilter(string relativeUrl, int salesPersonCode)
