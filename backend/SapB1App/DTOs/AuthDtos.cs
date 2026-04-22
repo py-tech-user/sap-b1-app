@@ -12,5 +12,13 @@ public class LoginResponse
     public string   Username { get; set; } = string.Empty;
     public string   FullName { get; set; } = string.Empty;
     public string   Role     { get; set; } = string.Empty;
+    public int      SapSalesPersonCode { get; set; }
+    public CurrentUserDto CurrentUser { get; set; } = new();
     public DateTime Expires  { get; set; }
+}
+
+public class CurrentUserDto
+{
+    public string FullName { get; set; } = string.Empty;
+    public int SapSalesPersonCode { get; set; }
 }

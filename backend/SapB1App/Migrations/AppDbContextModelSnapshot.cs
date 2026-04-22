@@ -40,7 +40,8 @@ namespace SapB1App.Migrations
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -63,6 +64,9 @@ namespace SapB1App.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("User");
 
+                    b.Property<int>("SapSalesPersonCode")
+                        .HasColumnType("int");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -71,6 +75,9 @@ namespace SapB1App.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("SapSalesPersonCode")
                         .IsUnique();
 
                     b.HasIndex("Username")

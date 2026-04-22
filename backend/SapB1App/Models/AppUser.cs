@@ -36,6 +36,7 @@ public class AppUser
     public string   Username     { get; set; } = string.Empty;
     public string   Email        { get; set; } = string.Empty;
     public string   FullName     { get; set; } = string.Empty;
+    public int      SapSalesPersonCode { get; set; }
     public string   Role         { get; set; } = Roles.Commercial;  // Admin | Manager | Commercial
     public string   PasswordHash { get; set; } = string.Empty;
     public string   PasswordSalt { get; set; } = string.Empty;
@@ -43,3 +44,5 @@ public class AppUser
     public DateTime CreatedAt    { get; set; } = DateTime.UtcNow;
     public DateTime? LastLogin   { get; set; }
 }
+
+public record CurrentUser(string FullName, int SapSalesPersonCode);

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SapB1App.Data;
 using SapB1App.Interfaces;
@@ -27,6 +28,7 @@ public class SapB1Service : ISapB1Service
 
     private readonly IConfiguration _config;
     private readonly AppDbContext _db;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<SapB1Service> _logger;
 
     private bool _mockConnected;
@@ -37,10 +39,12 @@ public class SapB1Service : ISapB1Service
     public SapB1Service(
         IConfiguration config,
         AppDbContext db,
+        ICurrentUserService currentUserService,
         ILogger<SapB1Service> logger)
     {
         _config = config;
         _db = db;
+        _currentUserService = currentUserService;
         _logger = logger;
     }
 
@@ -419,10 +423,11 @@ public class SapB1Service : ISapB1Service
 
     private async Task<(bool Success, JsonElement? Response, int StatusCode, string? ErrorMessage)> SendServiceLayerRequestWithClientAsync(HttpClient httpClient, HttpMethod method, string relativeUrl, object? payload, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(method, relativeUrl);
+        var scopedRelativeUrl = BuildRequestRelativeUrl(method, relativeUrl);
+        using var request = new HttpRequestMessage(method, scopedRelativeUrl);
         if (payload is not null)
         {
-            var jsonPayload = JsonSerializer.Serialize(payload);
+            var jsonPayload = BuildRequestJsonPayload(method, relativeUrl, payload);
             request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
         }
 
@@ -464,8 +469,10 @@ public class SapB1Service : ISapB1Service
             return (false, sessionResult.Response, sessionResult.StatusCode, sessionResult.ErrorMessage ?? "Session Service Layer indisponible.");
         }
 
+        var scopedRelativeUrl = BuildRequestRelativeUrl(method, relativeUrl);
+
         var response = await SendWithSessionAsync(
-            serviceLayerUrl!, ignoreSslErrors, method, relativeUrl, payload, _cachedSessionId, cancellationToken);
+            serviceLayerUrl!, ignoreSslErrors, method, scopedRelativeUrl, payload, _cachedSessionId, cancellationToken);
 
         if (response.StatusCode == (int)HttpStatusCode.Unauthorized)
         {
@@ -476,7 +483,7 @@ public class SapB1Service : ISapB1Service
             }
 
             response = await SendWithSessionAsync(
-                serviceLayerUrl!, ignoreSslErrors, method, relativeUrl, payload, _cachedSessionId, cancellationToken);
+                serviceLayerUrl!, ignoreSslErrors, method, scopedRelativeUrl, payload, _cachedSessionId, cancellationToken);
         }
 
         return response;
@@ -565,7 +572,7 @@ public class SapB1Service : ISapB1Service
 
         if (payload is not null)
         {
-            var jsonPayload = JsonSerializer.Serialize(payload);
+            var jsonPayload = BuildRequestJsonPayload(method, relativeUrl, payload);
             request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
         }
 
@@ -625,6 +632,136 @@ public class SapB1Service : ISapB1Service
             string.IsNullOrWhiteSpace(responseJson) ? "<empty>" : responseJson);
 
         return (false, responseBody, (int)response.StatusCode, error);
+    }
+
+    private string BuildRequestJsonPayload(HttpMethod method, string relativeUrl, object payload)
+    {
+        var jsonPayload = JsonSerializer.Serialize(payload);
+        if (!ShouldInjectSalesPersonCode(method, relativeUrl))
+        {
+            return jsonPayload;
+        }
+
+        var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
+        if (salesPersonCode <= 0)
+        {
+            return jsonPayload;
+        }
+
+        var jsonNode = JsonNode.Parse(jsonPayload);
+        if (jsonNode is not JsonObject jsonObject)
+        {
+            return jsonPayload;
+        }
+
+        jsonObject["SalesPersonCode"] = salesPersonCode;
+        return jsonObject.ToJsonString();
+    }
+
+    private static bool ShouldInjectSalesPersonCode(HttpMethod method, string relativeUrl)
+    {
+        if (method != HttpMethod.Post || string.IsNullOrWhiteSpace(relativeUrl))
+        {
+            return false;
+        }
+
+        var trimmed = relativeUrl.Trim().TrimStart('/');
+        var firstSegment = trimmed
+            .Split('?', 2)[0]
+            .Split('/', 2)[0]
+            .Split('(', 2)[0];
+
+        return firstSegment.Equals("Orders", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Invoices", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string BuildRequestRelativeUrl(HttpMethod method, string relativeUrl)
+    {
+        if (method != HttpMethod.Get || string.IsNullOrWhiteSpace(relativeUrl))
+        {
+            return relativeUrl;
+        }
+
+        if (!ShouldFilterSalesDocuments(relativeUrl) || _currentUserService.IsAdmin())
+        {
+            return relativeUrl;
+        }
+
+        var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
+        if (salesPersonCode <= 0)
+        {
+            // Fail closed: if we cannot resolve a commercial code, never return all documents.
+            return AppendSalesPersonFilter(relativeUrl, -1);
+        }
+
+        return AppendSalesPersonFilter(relativeUrl, salesPersonCode);
+    }
+
+    private static bool ShouldFilterSalesDocuments(string relativeUrl)
+    {
+        var trimmed = relativeUrl.Trim().TrimStart('/');
+        var firstSegment = trimmed
+            .Split('?', 2)[0]
+            .Split('/', 2)[0]
+            .Split('(', 2)[0];
+
+        return firstSegment.Equals("Orders", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Invoices", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string AppendSalesPersonFilter(string relativeUrl, int salesPersonCode)
+    {
+        var salesFilter = $"SalesPersonCode eq {salesPersonCode}";
+        var queryIndex = relativeUrl.IndexOf('?', StringComparison.Ordinal);
+        if (queryIndex < 0)
+        {
+            return $"{relativeUrl}?$filter={salesFilter}";
+        }
+
+        var path = relativeUrl[..queryIndex];
+        var query = relativeUrl[(queryIndex + 1)..];
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return $"{path}?$filter={salesFilter}";
+        }
+
+        const string marker = "$filter=";
+        var filterStart = query.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (filterStart < 0)
+        {
+            return $"{path}?{query}&$filter={salesFilter}";
+        }
+
+        var filterValueStart = filterStart + marker.Length;
+        var filterValueEnd = query.IndexOf('&', filterValueStart);
+        if (filterValueEnd < 0)
+        {
+            var existingFilter = query[filterValueStart..];
+            if (string.IsNullOrWhiteSpace(existingFilter))
+            {
+                var replacedQuery = query[..filterValueStart] + salesFilter;
+                return $"{path}?{replacedQuery}";
+            }
+
+            var combinedFilter = $"({existingFilter}) and ({salesFilter})";
+            var newQuery = query[..filterValueStart] + combinedFilter;
+            return $"{path}?{newQuery}";
+        }
+        else
+        {
+            var existingFilter = query[filterValueStart..filterValueEnd];
+            if (string.IsNullOrWhiteSpace(existingFilter))
+            {
+                var replacedQuery = query[..filterValueStart] + salesFilter + query[filterValueEnd..];
+                return $"{path}?{replacedQuery}";
+            }
+
+            var combinedFilter = $"({existingFilter}) and ({salesFilter})";
+            var newQuery = query[..filterValueStart] + combinedFilter + query[filterValueEnd..];
+            return $"{path}?{newQuery}";
+        }
     }
 
     public void Dispose()

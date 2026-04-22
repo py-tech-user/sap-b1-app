@@ -295,9 +295,12 @@ public class AppDbContext : DbContext
             e.HasKey(u => u.Id);
             e.Property(u => u.Username).HasMaxLength(50).IsRequired();
             e.Property(u => u.Email).HasMaxLength(100).IsRequired();
+            e.Property(u => u.FullName).HasMaxLength(150).IsRequired();
+            e.Property(u => u.SapSalesPersonCode).IsRequired();
             e.Property(u => u.Role).HasMaxLength(20).HasDefaultValue("User");
             e.HasIndex(u => u.Username).IsUnique();
             e.HasIndex(u => u.Email).IsUnique();
+            e.HasIndex(u => u.SapSalesPersonCode).IsUnique();
         });
 
         // ── Visit ───────────────────────────────────────────────────────────

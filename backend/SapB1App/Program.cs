@@ -59,6 +59,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderLineService, OrderLineService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IVisitService, VisitService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
@@ -71,6 +72,7 @@ builder.Services.AddScoped<IReportingService, ReportingService>();
 
 // ─── SAP B1 DI API Service (Scoped pour gestion de connexion par requête) ───
 builder.Services.AddScoped<ISapB1Service, SapB1Service>();
+builder.Services.AddHttpContextAccessor();
 
 // ─── JWT Authentication ─────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

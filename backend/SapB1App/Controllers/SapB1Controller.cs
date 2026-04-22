@@ -14,12 +14,18 @@ namespace SapB1App.Controllers;
 public class SapB1Controller : ControllerBase
 {
     private readonly ISapB1Service _sapService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<SapB1Controller> _logger;
 
-    public SapB1Controller(ISapB1Service sapService, IConfiguration configuration, ILogger<SapB1Controller> logger)
+    public SapB1Controller(
+        ISapB1Service sapService,
+        ICurrentUserService currentUserService,
+        IConfiguration configuration,
+        ILogger<SapB1Controller> logger)
     {
         _sapService = sapService;
+        _currentUserService = currentUserService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -986,6 +992,9 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         var normalizedSearch = (search ?? string.Empty).Trim();
         var normalizedCustomer = (customer ?? string.Empty).Trim();
         var normalizedStatus = NormalizeDocumentStatusFilter(status);
+        var applySalesScope = ShouldApplySalesScopeBySalesPerson(tableName);
+        var isAdmin = _currentUserService.IsAdmin();
+        var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
         var useSqlReadForDocuments = bool.TryParse(_configuration["SapB1:UseSqlReadForDocuments"], out var sqlReadEnabled) && sqlReadEnabled;
         if (!useSqlReadForDocuments)
         {
@@ -1012,6 +1021,9 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         var closedCondition = isInvoiceTable
             ? "(ISNULL(CANCELED,'N') <> 'Y' AND (ISNULL(DocStatus,'') = 'C' OR ((ISNULL(DocTotal,0) - ISNULL(PaidToDate,0)) <= 0 AND (ISNULL(DocTotalFC,0) - ISNULL(PaidFC,0)) <= 0)))"
             : "(ISNULL(CANCELED,'N') <> 'Y' AND ISNULL(DocStatus,'C') = 'C')";
+        var salesScopeCondition = applySalesScope
+            ? "      AND (@isAdmin = 1 OR (@salesPersonCode > 0 AND SlpCode = @salesPersonCode))"
+            : string.Empty;
 
         var sql = $@"
 ;WITH Filtered AS
@@ -1027,9 +1039,10 @@ ORDER BY DocDate ASC, DocEntry ASC;";
             OR (@status = 'open' AND {openCondition})
             OR (@status = 'closed' AND {closedCondition})
             OR (@status = 'cancelled' AND ISNULL(CANCELED,'N') = 'Y')
-          )
+      )
       AND (@dateFrom IS NULL OR DocDate >= @dateFrom)
       AND (@dateTo IS NULL OR DocDate < DATEADD(DAY, 1, @dateTo))
+{salesScopeCondition}
 )
 SELECT {selectColumns}
 FROM Filtered
@@ -1049,7 +1062,8 @@ WHERE (@openOnly = 0 OR {openCondition})
         OR (@status = 'cancelled' AND ISNULL(CANCELED,'N') = 'Y')
       )
   AND (@dateFrom IS NULL OR DocDate >= @dateFrom)
-  AND (@dateTo IS NULL OR DocDate < DATEADD(DAY, 1, @dateTo));";
+  AND (@dateTo IS NULL OR DocDate < DATEADD(DAY, 1, @dateTo))
+{salesScopeCondition};";
 
         var items = new List<DocumentViewDto>();
         var totalCount = 0;
@@ -1075,6 +1089,11 @@ WHERE (@openOnly = 0 OR {openCondition})
                     countCmd.Parameters.Add(new SqlParameter("@status", SqlDbType.NVarChar, 20) { Value = normalizedStatus });
                     countCmd.Parameters.Add(new SqlParameter("@dateFrom", SqlDbType.DateTime) { Value = dateFrom?.Date ?? (object)DBNull.Value });
                     countCmd.Parameters.Add(new SqlParameter("@dateTo", SqlDbType.DateTime) { Value = dateTo?.Date ?? (object)DBNull.Value });
+                    if (applySalesScope)
+                    {
+                        countCmd.Parameters.Add(new SqlParameter("@isAdmin", SqlDbType.Bit) { Value = isAdmin });
+                        countCmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = salesPersonCode });
+                    }
                     var countObj = await countCmd.ExecuteScalarAsync(cancellationToken);
                     totalCount = countObj is null || countObj == DBNull.Value ? 0 : Convert.ToInt32(countObj);
                 }
@@ -1089,6 +1108,11 @@ WHERE (@openOnly = 0 OR {openCondition})
                 cmd.Parameters.Add(new SqlParameter("@status", SqlDbType.NVarChar, 20) { Value = normalizedStatus });
                 cmd.Parameters.Add(new SqlParameter("@dateFrom", SqlDbType.DateTime) { Value = dateFrom?.Date ?? (object)DBNull.Value });
                 cmd.Parameters.Add(new SqlParameter("@dateTo", SqlDbType.DateTime) { Value = dateTo?.Date ?? (object)DBNull.Value });
+                if (applySalesScope)
+                {
+                    cmd.Parameters.Add(new SqlParameter("@isAdmin", SqlDbType.Bit) { Value = isAdmin });
+                    cmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = salesPersonCode });
+                }
                 cmd.Parameters.Add(new SqlParameter("@rowStart", SqlDbType.Int) { Value = offset + 1 });
                 cmd.Parameters.Add(new SqlParameter("@rowEnd", SqlDbType.Int) { Value = offset + pageSize });
 
@@ -2854,6 +2878,9 @@ WHERE DocEntry = @docEntry;";
 
         return string.IsNullOrWhiteSpace(status) ? "Open" : status;
     }
+
+    private static bool ShouldApplySalesScopeBySalesPerson(string tableName)
+        => tableName.ToUpperInvariant() is "ORDR" or "OINV" or "OQUT";
 
     private static bool IsCancelled(JsonElement node)
     {

@@ -30,7 +30,7 @@ public class AuthService : IAuthService
             _logger.LogInformation("🔐 Tentative de connexion pour: {Username}", request.Username);
 
             // Find active user
-            var user = await _db.Users.FirstOrDefaultAsync(u =>
+            var user = await _db.Users.AsTracking().FirstOrDefaultAsync(u =>
                 u.Username == request.Username && u.IsActive);
 
             if (user is null)
@@ -64,6 +64,12 @@ public class AuthService : IAuthService
                 Username = user.Username,
                 FullName = user.FullName,
                 Role     = user.Role,
+                SapSalesPersonCode = user.SapSalesPersonCode,
+                CurrentUser = new CurrentUserDto
+                {
+                    FullName = user.FullName,
+                    SapSalesPersonCode = user.SapSalesPersonCode
+                },
                 Expires  = expires
             };
         }
@@ -86,10 +92,12 @@ public class AuthService : IAuthService
         var claims = new[]
         {
             new System.Security.Claims.Claim(JwtRegisteredClaimNames.Sub,        user.Id.ToString()),
+            new System.Security.Claims.Claim(ClaimTypes.NameIdentifier,          user.Id.ToString()),
             new System.Security.Claims.Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
             new System.Security.Claims.Claim(JwtRegisteredClaimNames.Email,      user.Email),
             new System.Security.Claims.Claim(ClaimTypes.Role,                    user.Role),
-            new System.Security.Claims.Claim("fullName",                         user.FullName)
+            new System.Security.Claims.Claim("fullName",                         user.FullName),
+            new System.Security.Claims.Claim("sapSalesPersonCode",               user.SapSalesPersonCode.ToString())
         };
 
         var token = new JwtSecurityToken(

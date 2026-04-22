@@ -1,0 +1,340 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FluentValidation.AspNetCore</name>
+    </assembly>
+    <members>
+        <member name="P:FluentValidation.AspNetCore.CustomizeValidatorAttribute.RuleSet">
+            <summary>
+            Specifies the ruleset which should be used when executing this validator.
+            This can be a comma separated list of rulesets. The string "*" can be used to indicate all rulesets.
+            The string "default" can be used to specify those rules not in an explict ruleset.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.CustomizeValidatorAttribute.Properties">
+            <summary>
+            Specifies a whitelist of properties that should be validated, as a comma-separated list.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.CustomizeValidatorAttribute.Interceptor">
+            <summary>
+            Specifies an interceptor that can be used to customize the validation process.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.CustomizeValidatorAttribute.Skip">
+            <summary>
+            Indicates whether this model should skip being validated. The default is false.
+            </summary>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.CustomizeValidatorAttribute.ToValidatorSelector(Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ModelValidationContext)">
+            <summary>
+            Builds a validator selector from the options specified in the attribute's properties.
+            </summary>
+            <param name="mvContext"></param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationBindingMetadataProvider.CreateBindingMetadata(Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.BindingMetadataProviderContext)">
+            <summary>
+            If we're validating a non-nullable value type then
+            MVC will automatically add a "Required" error message.
+            We prefix these messages with a placeholder, so we can identify and remove them
+            during the validation process.
+            <see cref="T:FluentValidation.AspNetCore.FluentValidationVisitor"/>
+            <see cref="M:FluentValidation.AspNetCore.MvcValidationHelper.RemoveImplicitRequiredErrors(Microsoft.AspNetCore.Mvc.ActionContext)"/>
+            <see cref="M:FluentValidation.AspNetCore.MvcValidationHelper.ReApplyUnhandledImplicitRequiredErrors(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateEntry,Microsoft.AspNetCore.Mvc.ModelBinding.ModelError}})"/>
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.FluentValidationClientModelValidatorProvider">
+            <summary>
+            Used to generate clientside metadata from FluentValidation's rules.
+            </summary>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.FluentValidationModelValidatorProvider">
+            <summary>
+            ModelValidatorProvider implementation only used for child properties.
+            </summary>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.FluentValidationModelValidator">
+            <summary>
+            FluentValidation's implementation of an ASP.NET Core model validator.
+            </summary>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationModelValidator.GetRootMetadata(Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ModelValidationContext)">
+            <summary>
+            Gets the metadata object for the root object being validated.
+            </summary>
+            <param name="mvContext">MVC Validation context</param>
+            <returns>Metadata instance.</returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationModelValidator.GetCustomizations(Microsoft.AspNetCore.Mvc.ActionContext,System.Object)">
+            <summary>
+            Gets customizations associated with this validation request.
+            </summary>
+            <param name="context">Current action context</param>
+            <param name="model">The object being validated</param>
+            <returns>Customizations</returns>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration">
+            <summary>
+            Auto-validation configuration.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.ImplicitlyValidateChildProperties">
+            <summary>
+            Whether or not child properties should be implicitly validated if a matching validator can be found. By default this is false, and you should wire up child validators using SetValidator.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.ImplicitlyValidateRootCollectionElements">
+            <summary>
+            Gets or sets a value indicating whether the elements of a root model should be implicitly validated when
+            the root model is a collection type and a matching validator can be found for the element type.
+            By default this is <see langword="false"/>, and you will need to create a validator for the collection type
+            (unless <see cref="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.ImplicitlyValidateChildProperties"/> is <see langword="true"/>.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.ValidatorFactoryType">
+            <summary>
+            The type of validator factory to use. Uses the ServiceProviderValidatorFactory by default.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.ValidatorFactory">
+            <summary>
+            The validator factory to use. Uses the ServiceProviderValidatorFactory by default.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.DisableDataAnnotationsValidation">
+            <summary>
+            By default Data Annotations validation will also run as well as FluentValidation.
+            Setting this to true will disable DataAnnotations and only run FluentValidation.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration.Filter">
+            <summary>
+            When specified, automatic validation will only apply to the types matched by the filter.
+            If the filter does not match, automatic validation will not be applied.  This can be useful
+            for specific situations where you want to opt in/out of automatic validation
+            Example: Filter = type => type == typeof(Model)
+            </summary>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.FluentValidationMvcConfiguration">
+            <summary>
+            FluentValidation asp.net core configuration
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.ValidatorOptions">
+            <summary>
+            Options that are used to configure all validators.
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.LocalizationEnabled">
+            <summary>
+            Enables or disables localization support within FluentValidation
+            </summary>
+        </member>
+        <member name="P:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.AutomaticValidationEnabled">
+            <summary>
+            Whether automatic server-side validation should be enabled (default true).
+            </summary>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.RegisterValidatorsFromAssemblyContaining``1(System.Func{FluentValidation.AssemblyScanner.AssemblyScanResult,System.Boolean},Microsoft.Extensions.DependencyInjection.ServiceLifetime,System.Boolean)">
+            <summary>
+            Registers all validators derived from AbstractValidator within the assembly containing the specified type
+            </summary>
+            <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+            <param name="lifetime">The service lifetime that should be used for the validator registration. Defaults to Scoped</param>
+            <param name="includeInternalTypes">Include internal validators. The default is false.</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.RegisterValidatorsFromAssemblyContaining(System.Type,System.Func{FluentValidation.AssemblyScanner.AssemblyScanResult,System.Boolean},Microsoft.Extensions.DependencyInjection.ServiceLifetime,System.Boolean)">
+            <summary>
+            Registers all validators derived from AbstractValidator within the assembly containing the specified type
+            </summary>
+            <param name="type">The type that indicates which assembly that should be scanned</param>
+            <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+            <param name="lifetime">The service lifetime that should be used for the validator registration. Defaults to Scoped</param>
+            <param name="includeInternalTypes">Include internal validators. The default is false.</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.RegisterValidatorsFromAssembly(System.Reflection.Assembly,System.Func{FluentValidation.AssemblyScanner.AssemblyScanResult,System.Boolean},Microsoft.Extensions.DependencyInjection.ServiceLifetime,System.Boolean)">
+            <summary>
+            Registers all validators derived from AbstractValidator within the specified assembly
+            </summary>
+            <param name="assembly">The assembly to scan</param>
+            <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+            <param name="lifetime">The service lifetime that should be used for the validator registration. Defaults to Scoped</param>
+            <param name="includeInternalTypes">Include internal validators. The default is false.</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.RegisterValidatorsFromAssemblies(System.Collections.Generic.IEnumerable{System.Reflection.Assembly},System.Func{FluentValidation.AssemblyScanner.AssemblyScanResult,System.Boolean},Microsoft.Extensions.DependencyInjection.ServiceLifetime,System.Boolean)">
+            <summary>
+            Registers all validators derived from AbstractValidator within the specified assemblies
+            </summary>
+            <param name="assemblies">The assemblies to scan</param>
+            <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+            <param name="lifetime">The service lifetime that should be used for the validator registration. Defaults to Scoped</param>
+            <param name="includeInternalTypes">Include internal validators. The default is false.</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcConfiguration.ConfigureClientsideValidation(System.Action{FluentValidation.AspNetCore.FluentValidationClientModelValidatorProvider},System.Boolean)">
+            <summary>
+            Configures clientside validation support
+            </summary>
+            <param name="clientsideConfig"></param>
+            <param name="enabled">Whether clientside validation integration is enabled</param>
+            <returns></returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcExtensions.AddFluentValidation(Microsoft.Extensions.DependencyInjection.IMvcCoreBuilder,System.Action{FluentValidation.AspNetCore.FluentValidationMvcConfiguration})">
+            <summary>
+                Adds Fluent Validation services to the specified
+                <see cref="T:Microsoft.Extensions.DependencyInjection.IMvcBuilder" />.
+            </summary>
+            <returns>
+                An <see cref="T:Microsoft.Extensions.DependencyInjection.IMvcCoreBuilder" /> that can be used to further configure the
+                MVC services.
+            </returns>
+            <remarks>
+            	Calling AddFluentValidation() is deprecated. Call <c>services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters()</c> instead, which has the same effect. For details see <see href="https://github.com/FluentValidation/FluentValidation/issues/1965"/>.
+            </remarks>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcExtensions.AddFluentValidation(Microsoft.Extensions.DependencyInjection.IMvcBuilder,System.Action{FluentValidation.AspNetCore.FluentValidationMvcConfiguration})">
+            <summary>
+                Adds Fluent Validation services to the specified
+                <see cref="T:Microsoft.Extensions.DependencyInjection.IMvcBuilder" />.
+            </summary>
+            <returns>
+                An <see cref="T:Microsoft.Extensions.DependencyInjection.IMvcBuilder" /> that can be used to further configure the
+                MVC services.
+            </returns>
+            <remarks>
+            	Calling AddFluentValidation() is deprecated. Call <c>services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters()</c> instead, which has the same effect. For details see <see href="https://github.com/FluentValidation/FluentValidation/issues/1965"/>.
+            </remarks>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcExtensions.AddFluentValidation(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{FluentValidation.AspNetCore.FluentValidationMvcConfiguration})">
+            <summary>
+                Adds Fluent Validation services to the specified
+                <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+            </summary>
+            <returns>
+                A reference to this instance after the operation has completed.
+            </returns>
+            <remarks>
+            	Calling AddFluentValidation() is deprecated. Call <c>services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters()</c> instead, which has the same effect. For details see <see href="https://github.com/FluentValidation/FluentValidation/issues/1965"/>.
+            </remarks>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcExtensions.AddFluentValidationAutoValidation(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{FluentValidation.AspNetCore.FluentValidationAutoValidationConfiguration})">
+            <summary>
+            Enables integration between FluentValidation and ASP.NET MVC's automatic validation pipeline.
+            </summary>
+            <param name="services">services</param>
+            <param name="configurationExpression">Configuration callback</param>
+            <returns>The service collection</returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.FluentValidationMvcExtensions.AddFluentValidationClientsideAdapters(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{FluentValidation.AspNetCore.FluentValidationClientModelValidatorProvider})">
+            <summary>
+            Enables integration between FluentValidation and ASP.NET client-side validation. See <see href="https://docs.fluentvalidation.net/en/latest/aspnet.html#clientside-validation"/> for details.
+            </summary>
+            <param name="services">Service collection</param>
+            <param name="configuration">Configuration expression</param>
+            <returns></returns>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.IValidatorInterceptor">
+            <summary>
+            Specifies an interceptor that can be used to provide hooks that will be called before and after MVC validation occurs.
+            </summary>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.IValidatorInterceptor.BeforeAspNetValidation(Microsoft.AspNetCore.Mvc.ActionContext,FluentValidation.IValidationContext)">
+            <summary>
+            Invoked before MVC validation takes place which allows the ValidationContext to be customized prior to validation.
+            It should return a ValidationContext object.
+            </summary>
+            <param name="actionContext">Action Context</param>
+            <param name="commonContext">Validation Context</param>
+            <returns>Validation Context</returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.IValidatorInterceptor.AfterAspNetValidation(Microsoft.AspNetCore.Mvc.ActionContext,FluentValidation.IValidationContext,FluentValidation.Results.ValidationResult)">
+            <summary>
+            Invoked after MVC validation takes place which allows the result to be customized.
+            It should return a ValidationResult.
+            </summary>
+            <param name="actionContext">Controller Context</param>
+            <param name="validationContext">Validation Context</param>
+            <param name="result">The result of validation.</param>
+            <returns>Validation Context</returns>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.MvcValidationHelper">
+            <summary>
+            Utilities for working around limitations of the MVC validation api.
+            Used by <see cref="T:FluentValidation.AspNetCore.FluentValidationVisitor"/>
+            </summary>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.RuleSetForClientSideMessagesAttribute">
+            <summary>
+            Specifies which ruleset should be used when deciding which validators should be used to generate client-side messages.
+            </summary>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.RuleSetForClientSideMessagesAttribute.SetRulesetForClientValidation(Microsoft.AspNetCore.Http.HttpContext,System.String[])">
+            <summary>
+            Allows the ruleset used for generating clientside metadata to be overriden.
+            By default, only rules not in a ruleset will be used.
+            </summary>
+            <param name="context"></param>
+            <param name="ruleSets"></param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.RuleSetForClientSideMessagesAttribute.GetRuleSetsForClientValidation(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            Gets the rulesets used to generate clientside validation metadata.
+            </summary>
+            <param name="context"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.AddToModelState(FluentValidation.Results.ValidationResult,Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary)">
+            <summary>
+            Stores the errors in a ValidationResult object to the specified modelstate dictionary.
+            </summary>
+            <param name="result">The validation result to store</param>
+            <param name="modelState">The ModelStateDictionary to store the errors in.</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.AddToModelState(FluentValidation.Results.ValidationResult,Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary,System.String)">
+            <summary>
+            Stores the errors in a ValidationResult object to the specified modelstate dictionary.
+            </summary>
+            <param name="result">The validation result to store</param>
+            <param name="modelState">The ModelStateDictionary to store the errors in.</param>
+            <param name="prefix">An optional prefix. If omitted, the property names will be the keys. If specified, the prefix will be concatenated to the property name with a period. Eg "user.Name"</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.SetRulesetForClientsideMessages(Microsoft.AspNetCore.Http.HttpContext,System.String[])">
+            <summary>
+            Indicates which Rule Sets should be used when generating clientside messages.
+            </summary>
+            <param name="context">Http context</param>
+            <param name="ruleSets">Array of ruleset names</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.GetRuleSetsForClientValidation(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            Gets the Rule Sets used to generate clientside validation metadata.
+            </summary>
+            <param name="context">Http context</param>
+            <returns>Array of ruleset names</returns>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.SetRulesetForClientsideMessages(Microsoft.AspNetCore.Mvc.ControllerContext,System.String[])">
+            <summary>
+            Indicates which Rule Sets should be used when generating clientside messages.
+            </summary>
+            <param name="context">Controller context</param>
+            <param name="ruleSets">Array of ruleset names</param>
+        </member>
+        <member name="M:FluentValidation.AspNetCore.ValidationResultExtension.SetRulesetForClientsideMessages(Microsoft.AspNetCore.Mvc.RazorPages.PageContext,System.String[])">
+            <summary>
+            Indicates which Rule Sets should be used when generating clientside messages.
+            </summary>
+            <param name="context">Page context</param>
+            <param name="ruleSets">Array of ruleset names</param>
+        </member>
+        <member name="T:FluentValidation.AspNetCore.ValidatorDescriptorCache">
+            <summary>
+            Caches the validators used when generating clientside metadata.
+            Ideally, the validators would be singletons so this happens automatically,
+            but we can't rely on this behaviour. The user may have registered them as something else
+            And as of 10.0, the default is to auto-register validators as scoped as inexperienced developers
+            often have issues understanding issues that arise from having singleton-scoped objects depending on non-singleton-scoped services
+            Instead, we can cache the validators used for clientside validation in Httpcontext.Items to prevent them being instantiated once per property.
+            </summary>
+        </member>
+    </members>
+</doc>
