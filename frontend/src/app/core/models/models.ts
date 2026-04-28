@@ -327,6 +327,12 @@ export interface CommercialDocumentLine {
   id?: number;
   lineNum?: number;
   lineStatus?: string;
+  baseType?: string;
+  baseEntry?: number;
+  baseLine?: number;
+  targetType?: string;
+  targetEntry?: number;
+  targetLine?: number;
   productId?: number;
   itemCode?: string;
   itemName?: string;

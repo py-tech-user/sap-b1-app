@@ -356,7 +356,7 @@ export class DocumentDetailComponent {
       if (resolved) {
         return {
           route: resolved,
-          label: `${explicit.type} ${explicit.docNum || '#' + explicit.id}`
+          label: `${explicit.docNum || '#' + explicit.id}`
         };
       }
     }
@@ -375,8 +375,26 @@ export class DocumentDetailComponent {
       if (!route) continue;
       return {
         route,
-        label: `${candidate.type} #${candidate.id}`
+        label: `#${candidate.id}`
       };
+    }
+
+    // Fallback from document lines (BaseType/BaseEntry) when explicit links are absent.
+    const lineBasedSource = (d.lines ?? [])
+      .map((line: any) => ({
+        baseEntry: Number(line?.baseEntry ?? line?.BaseEntry ?? 0),
+        baseType: String(line?.baseType ?? line?.BaseType ?? '').trim()
+      }))
+      .find((x) => x.baseEntry > 0);
+
+    if (lineBasedSource) {
+      const sourceResource = this.resolveResourceFromBaseType(lineBasedSource.baseType);
+      if (sourceResource) {
+        return {
+          route: ['/' + sourceResource, String(lineBasedSource.baseEntry)],
+          label: `#${lineBasedSource.baseEntry}`
+        };
+      }
     }
 
     return null;
@@ -401,7 +419,7 @@ export class DocumentDetailComponent {
 
       result.push({
         route: mapped,
-        label: `${linked.type} ${linked.docNum || '#' + linked.id} (${linked.status || '-'})`
+        label: `${linked.docNum || '#' + linked.id}`
       });
     }
 
@@ -425,7 +443,27 @@ export class DocumentDetailComponent {
 
       result.push({
         route: mapped,
-        label: `${candidate.type} #${candidate.id}`
+        label: `#${candidate.id}`
+      });
+    }
+
+    // Fallback from document lines (TargetType/TargetEntry) for generated docs.
+    for (const line of d.lines ?? []) {
+      const targetEntry = Number((line as any)?.targetEntry ?? (line as any)?.TargetEntry ?? (line as any)?.TrgetEntry ?? 0);
+      if (targetEntry <= 0) continue;
+
+      const targetType = String((line as any)?.targetType ?? (line as any)?.TargetType ?? (line as any)?.TrgetType ?? '').trim();
+      const targetResource = this.resolveResourceFromBaseType(targetType);
+      if (!targetResource) continue;
+
+      if (targetResource === currentResource && targetEntry === d.id) continue;
+      const key = `/${targetResource}::${targetEntry}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      result.push({
+        route: ['/' + targetResource, String(targetEntry)],
+        label: `#${targetEntry}`
       });
     }
 
@@ -435,19 +473,19 @@ export class DocumentDetailComponent {
   canGenerateOrderFromQuote(): boolean {
     const d = this.doc();
     if (!d || this.resource() !== 'quotes' || !this.isOpenStatus(d.status)) return false;
-    return !this.hasGeneratedType('orders');
+    return this.hasOpenLinesForGeneration();
   }
 
   canGenerateDeliveryFromOrder(): boolean {
     const d = this.doc();
     if (!d || this.resource() !== 'orders' || !this.isOpenStatus(d.status)) return false;
-    return !this.hasGeneratedType('deliverynotes');
+    return this.hasOpenLinesForGeneration();
   }
 
   canGenerateInvoiceFromDelivery(): boolean {
     const d = this.doc();
     if (!d || this.resource() !== 'deliverynotes' || !this.isOpenStatus(d.status)) return false;
-    return !this.hasGeneratedType('invoices');
+    return this.hasOpenLinesForGeneration();
   }
 
   canEncaisser(): boolean {
@@ -765,6 +803,12 @@ export class DocumentDetailComponent {
     return (doc.lines ?? []).some((line) => !this.isOpenLineStatus(line));
   }
 
+  private hasOpenLinesForGeneration(): boolean {
+    const d = this.doc();
+    if (!d) return false;
+    return (d.lines ?? []).some((line) => this.isOpenLineStatus(line));
+  }
+
   private normalizeLineStatusToken(value: unknown): string {
     return String(value ?? '')
       .trim()
@@ -816,6 +860,30 @@ export class DocumentDetailComponent {
     if (normalized.includes('invoice') || normalized.includes('facture')) return ['/invoices', String(id)];
     if (normalized.includes('creditnote') || normalized.includes('avoir')) return ['/creditnotes', String(id)];
     if (normalized.includes('return') || normalized.includes('retour')) return ['/returns', String(id)];
+    return null;
+  }
+
+  private resolveResourceFromBaseType(baseType: string): CommercialResource | null {
+    const raw = String(baseType ?? '').trim();
+    if (!raw) return null;
+
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric)) {
+      if (numeric === 23) return 'quotes';
+      if (numeric === 17) return 'orders';
+      if (numeric === 15) return 'deliverynotes';
+      if (numeric === 13) return 'invoices';
+      if (numeric === 14) return 'creditnotes';
+      if (numeric === 16) return 'returns';
+    }
+
+    const normalized = raw.toLowerCase().replace(/[^a-z]/g, '');
+    if (normalized.includes('quote') || normalized.includes('devis')) return 'quotes';
+    if (normalized.includes('order') || normalized.includes('commande') || normalized === 'bc') return 'orders';
+    if (normalized.includes('deliverynote') || normalized.includes('bonlivraison') || normalized === 'bl') return 'deliverynotes';
+    if (normalized.includes('invoice') || normalized.includes('facture')) return 'invoices';
+    if (normalized.includes('creditnote') || normalized.includes('avoir')) return 'creditnotes';
+    if (normalized.includes('return') || normalized.includes('retour')) return 'returns';
     return null;
   }
 }

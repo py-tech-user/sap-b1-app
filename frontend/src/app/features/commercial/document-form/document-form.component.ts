@@ -28,7 +28,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
             <select formControlName="customerId">
               <option [ngValue]="null" disabled>Sélectionner un client</option>
               @for (c of filteredCustomers(); track c.id) {
-                <option [ngValue]="c.id">{{ c.cardCode }} - {{ c.cardName }}</option>
+                <option [ngValue]="c.id">{{ c.cardName }} ({{ c.cardCode }})</option>
               }
             </select>
           </div>

@@ -944,7 +944,13 @@ export class CommercialApiService {
       unitPrice: Number(line?.unitPrice ?? line?.UnitPrice ?? line?.Price ?? line?.price ?? line?.UnitPriceAfVAT ?? 0),
       vatPct: Number(line?.vatPct ?? line?.VatPercent ?? line?.TaxRate ?? 0),
       lineTotal: Number(line?.lineTotal ?? line?.LineTotal ?? line?.total ?? line?.Total ?? 0),
-      lineStatus
+      lineStatus,
+      baseType: String(line?.baseType ?? line?.BaseType ?? '').trim() || undefined,
+      baseEntry: Number(line?.baseEntry ?? line?.BaseEntry ?? 0) || undefined,
+      baseLine: Number(line?.baseLine ?? line?.BaseLine ?? 0) || undefined,
+      targetType: String(line?.targetType ?? line?.TargetType ?? line?.TrgetType ?? '').trim() || undefined,
+      targetEntry: Number(line?.targetEntry ?? line?.TargetEntry ?? line?.TrgetEntry ?? 0) || undefined,
+      targetLine: Number(line?.targetLine ?? line?.TargetLine ?? line?.TrgetLine ?? 0) || undefined
     };
   }
 

@@ -23,8 +23,8 @@ import { Product, ProductApiService } from '../../../core/services/product-api.s
           @for (product of products(); track product.id) {
             <article class="product-card">
               <div class="product-image-wrap">
-                @if (product.imageUrl) {
-                  <img [src]="product.imageUrl" [alt]="product.itemName" class="product-image" />
+                @if (product.imageUrl && !isImageBroken(product.id)) {
+                  <img [src]="product.imageUrl" [alt]="product.itemName" class="product-image" (error)="markImageBroken(product.id)" />
                 } @else {
                   <div class="product-image placeholder">📦</div>
                 }
@@ -71,6 +71,7 @@ export class ProductListComponent implements OnInit {
   products = signal<Product[]>([]);
   loading = signal(true);
   error = signal('');
+  private brokenImageIds = signal<Set<number>>(new Set<number>());
 
   constructor(private productApi: ProductApiService) {}
 
@@ -85,5 +86,15 @@ export class ProductListComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  isImageBroken(id: number): boolean {
+    return this.brokenImageIds().has(id);
+  }
+
+  markImageBroken(id: number): void {
+    const next = new Set(this.brokenImageIds());
+    next.add(id);
+    this.brokenImageIds.set(next);
   }
 }

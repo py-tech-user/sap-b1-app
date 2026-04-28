@@ -30,6 +30,7 @@ export interface CreateProductDto {
 export class ProductApiService {
   private readonly apiUrl = `${environment.apiUrl}/sap/items`;
   private readonly legacyUrl = `${environment.apiUrl}/products`;
+  private readonly apiRoot = environment.apiUrl.replace(/\/api\/?$/i, '');
 
   constructor(private http: HttpClient) {}
 
@@ -118,20 +119,21 @@ export class ProductApiService {
       ?? row?.PictureUrl
       ?? row?.photoUrl
       ?? row?.PhotoUrl
+      ?? row?.Picture
+      ?? row?.PicturName
+      ?? row?.U_ImageUrl
+      ?? row?.U_Image
       ?? row?.image
       ?? row?.Image
       ?? ''
-    ).trim() || undefined;
-
-    const imageUrl = itemCode === 'A000001' && Number(price) === 120
-      ? 'https://geemarc.com/fr/wp-content/uploads/sites/3/2018/06/2019KBSV3_BLK_Fr01.jpg'
-      : rawImageUrl;
+    ).trim();
+    const resolvedImageUrl = this.resolveImageUrl(rawImageUrl);
 
     return {
       id: Number(row?.id ?? row?.itemId ?? row?.ItemId ?? index + 1),
       itemCode,
       itemName: String(row?.itemName ?? row?.ItemName ?? row?.name ?? '').trim(),
-      imageUrl,
+      imageUrl: resolvedImageUrl,
       price,
       category: row?.category ?? row?.ItmsGrpNam ?? row?.ItemGroup,
       stock: Number(row?.stock ?? row?.Stock ?? row?.stockTotal ?? row?.StockTotal ?? row?.OnHand ?? row?.InStock ?? 0),
@@ -139,5 +141,27 @@ export class ProductApiService {
       isActive: String(row?.validFor ?? row?.ValidFor ?? 'Y').toUpperCase() !== 'N',
       warehouseCode: warehouse ? String(warehouse).trim() : undefined
     };
+  }
+
+  private resolveImageUrl(rawImageUrl: string): string | undefined {
+    if (!rawImageUrl) return undefined;
+
+    if (/^https?:\/\//i.test(rawImageUrl) || /^data:/i.test(rawImageUrl)) {
+      return rawImageUrl;
+    }
+
+    if (rawImageUrl.startsWith('/')) {
+      return `${this.apiRoot}${rawImageUrl}`;
+    }
+
+    if (/^api\//i.test(rawImageUrl)) {
+      return `${this.apiRoot}/${rawImageUrl}`;
+    }
+
+    const normalizedPath = rawImageUrl.replace(/\\/g, '/');
+    const fileName = normalizedPath.split('/').filter(Boolean).pop();
+    if (!fileName) return undefined;
+
+    return `${environment.apiUrl}/sap/item-images/${encodeURIComponent(fileName)}`;
   }
 }

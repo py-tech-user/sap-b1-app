@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using SapB1App.DTOs;
 using SapB1App.Interfaces;
@@ -105,6 +106,30 @@ public class SapB1Controller : ControllerBase
 
         var items = MapItems(result.Response, warehousesByItem);
         return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, items.Count));
+    }
+
+    [HttpGet("item-images/{*fileName}")]
+    [AllowAnonymous]
+    public IActionResult GetItemImage(string fileName)
+    {
+        var safeFileName = Path.GetFileName(fileName ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+            return BadRequest(SapError("Nom de fichier image invalide."));
+
+        var picturesRoot = _configuration["SapB1:AttachmentsPicturesPath"];
+        if (string.IsNullOrWhiteSpace(picturesRoot))
+            picturesRoot = @"C:\Users\stg1\Pictures\";
+
+        var rootFullPath = Path.GetFullPath(picturesRoot);
+        var imageFullPath = Path.GetFullPath(Path.Combine(rootFullPath, safeFileName));
+
+        if (!imageFullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
+            return BadRequest(SapError("Chemin image invalide."));
+
+        if (!System.IO.File.Exists(imageFullPath))
+            return NotFound(SapError($"Image introuvable: {safeFileName}"));
+
+        return PhysicalFile(imageFullPath, GetImageContentType(imageFullPath));
     }
 
     [HttpGet("orders")]
@@ -447,17 +472,30 @@ public class SapB1Controller : ControllerBase
     {
         _logger.LogInformation("[ENCAISSEMENT] Loading customers for payment screen.");
 
-        var result = await _sapService.ServiceLayerGetAsync(
-            "BusinessPartners?$select=CardCode,CardName,Currency,CreditLimit&$filter=CardType eq 'cCustomer'",
-            cancellationToken);
+        var clients = new List<EncaissementClientDto>();
+        var nextUrl = "BusinessPartners?$select=CardCode,CardName,Currency,CreditLimit&$filter=CardType eq 'cCustomer'&$orderby=CardCode asc&$top=2000";
+        var guard = 0;
 
-        if (!result.Success)
+        while (!string.IsNullOrWhiteSpace(nextUrl) && guard++ < 100)
         {
-            _logger.LogError("[ENCAISSEMENT] Failed to load customers. Error={Error}", result.ErrorMessage);
-            return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
+            var result = await _sapService.ServiceLayerGetAsync(nextUrl, cancellationToken);
+            if (!result.Success)
+            {
+                _logger.LogError("[ENCAISSEMENT] Failed to load customers. Error={Error}", result.ErrorMessage);
+                return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
+            }
+
+            clients.AddRange(MapEncaissementClients(result.Response));
+            nextUrl = ExtractServiceLayerNextLink(result.Response);
         }
 
-        var clients = MapEncaissementClients(result.Response);
+        clients = clients
+            .Where(c => !string.IsNullOrWhiteSpace(c.CardCode))
+            .GroupBy(c => c.CardCode, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(c => c.CardCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         _logger.LogInformation("[ENCAISSEMENT] Customers loaded. Count={Count}", clients.Count);
         return Ok(new ApiResponse<IReadOnlyList<EncaissementClientDto>>(true, null, clients, clients.Count));
     }
@@ -481,6 +519,13 @@ public class SapB1Controller : ControllerBase
 
         try
         {
+            var isAdmin = _currentUserService.IsAdmin();
+            var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
+            if (!isAdmin && salesPersonCode <= 0)
+            {
+                return Ok(new ApiResponse<IReadOnlyList<EncaissementInvoiceDto>>(true, null, [], 0));
+            }
+
             var sqlInvoices = new List<EncaissementInvoiceDto>();
 
             await using var conn = new SqlConnection(sqlConnectionString);
@@ -490,6 +535,7 @@ public class SapB1Controller : ControllerBase
 SELECT DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocCur, DocTotal, PaidToDate, DocTotalFC, PaidFC, DocStatus, CANCELED
 FROM OINV
 WHERE CardCode = @cardCode
+  AND (@isAdmin = 1 OR (@salesPersonCode > 0 AND SlpCode = @salesPersonCode))
   AND ISNULL(CANCELED, 'N') <> 'Y'
   AND (
         ISNULL(DocStatus, 'O') = 'O'
@@ -501,6 +547,8 @@ ORDER BY DocDate ASC, DocEntry ASC;";
             await using var cmd = new SqlCommand(sql, conn);
             cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
             cmd.Parameters.Add(new SqlParameter("@cardCode", SqlDbType.NVarChar, 50) { Value = cardCode });
+            cmd.Parameters.Add(new SqlParameter("@isAdmin", SqlDbType.Bit) { Value = isAdmin });
+            cmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = salesPersonCode });
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
@@ -863,23 +911,50 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         CancellationToken cancellationToken)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 200);
+        pageSize = Math.Clamp(pageSize, 1, 2000);
+        var allItems = new List<DocumentViewDto>();
+        var nextUrl = "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=2000";
+        var guard = 0;
 
-        var result = await _sapService.ServiceLayerGetAsync(
-            "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=2000",
-            cancellationToken);
+        while (!string.IsNullOrWhiteSpace(nextUrl) && guard++ < 100)
+        {
+            var result = await _sapService.ServiceLayerGetAsync(nextUrl, cancellationToken);
+            if (!result.Success)
+                return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
 
-        if (!result.Success)
-            return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
+            allItems.AddRange(MapBusinessPartners(result.Response));
+            nextUrl = ExtractServiceLayerNextLink(result.Response);
+        }
 
-        var allItems = MapBusinessPartners(result.Response);
         var totalCount = allItems.Count;
-        var pagedItems = allItems
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+        return Ok(new ApiResponse<IReadOnlyList<DocumentViewDto>>(true, null, allItems, totalCount));
+    }
 
-        return Ok(new ApiResponse<IReadOnlyList<DocumentViewDto>>(true, null, pagedItems, totalCount));
+    private static string? ExtractServiceLayerNextLink(JsonElement? response)
+    {
+        if (!response.HasValue || response.Value.ValueKind != JsonValueKind.Object)
+            return null;
+
+        if (!response.Value.TryGetProperty("odata.nextLink", out var nextLinkNode) &&
+            !response.Value.TryGetProperty("@odata.nextLink", out nextLinkNode))
+            return null;
+
+        var raw = nextLinkNode.GetString();
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        // Convert absolute Service Layer URL to relative URL expected by SapB1Service.
+        var marker = "/b1s/v1/";
+        var idx = raw.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            return raw[(idx + marker.Length)..];
+
+        marker = "/b1s/v2/";
+        idx = raw.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            return raw[(idx + marker.Length)..];
+
+        return raw.TrimStart('/');
     }
 
     /// <summary>
@@ -1515,7 +1590,8 @@ WHERE DocEntry = @docEntry;";
             await headerReader.CloseAsync();
 
             var lines = new List<Dictionary<string, object?>>();
-            var lineSql = $@"SELECT LineNum, ItemCode, Dscription, Quantity, Price, DiscPrcnt, VatPrcnt, WhsCode, LineStatus, LineTotal
+            var lineSql = $@"SELECT LineNum, ItemCode, Dscription, Quantity, Price, DiscPrcnt, VatPrcnt, WhsCode, LineStatus, LineTotal,
+       BaseType, BaseEntry, BaseLine
 FROM {lineTable}
 WHERE DocEntry = @docEntry
 ORDER BY LineNum ASC;";
@@ -1542,11 +1618,35 @@ ORDER BY LineNum ASC;";
                     ["VatPercent"] = lineReader["VatPrcnt"] is DBNull ? 0m : Convert.ToDecimal(lineReader["VatPrcnt"]),
                     ["WarehouseCode"] = lineReader["WhsCode"]?.ToString() ?? string.Empty,
                     ["LineStatus"] = lineReader["LineStatus"]?.ToString() ?? string.Empty,
-                    ["LineTotal"] = lineReader["LineTotal"] is DBNull ? 0m : Convert.ToDecimal(lineReader["LineTotal"])
+                    ["LineTotal"] = lineReader["LineTotal"] is DBNull ? 0m : Convert.ToDecimal(lineReader["LineTotal"]),
+                    ["BaseType"] = lineReader["BaseType"] is DBNull ? null : lineReader["BaseType"],
+                    ["BaseEntry"] = lineReader["BaseEntry"] is DBNull ? null : Convert.ToInt32(lineReader["BaseEntry"]),
+                    ["BaseLine"] = lineReader["BaseLine"] is DBNull ? null : Convert.ToInt32(lineReader["BaseLine"])
                 });
             }
+            await lineReader.CloseAsync();
 
             header["DocumentLines"] = lines;
+            var (sourceDocument, linkedDocuments) = BuildRelationsFromSqlLines(lines, docEntry);
+            var generatedByBase = await FindGeneratedDocumentsFromSqlAsync(conn, sapEntity, docEntry, cancellationToken);
+            foreach (var generated in generatedByBase)
+            {
+                var alreadyExists = linkedDocuments.Any(x =>
+                    string.Equals(x.TryGetValue("type", out var t) ? t?.ToString() : null, generated.Type, StringComparison.OrdinalIgnoreCase)
+                    && GetIntFromObject(x.TryGetValue("id", out var i) ? i : null) == generated.Id);
+                if (alreadyExists) continue;
+
+                linkedDocuments.Add(new Dictionary<string, object?>
+                {
+                    ["type"] = generated.Type,
+                    ["id"] = generated.Id,
+                    ["docNum"] = generated.DocNum
+                });
+            }
+            if (sourceDocument is not null)
+                header["sourceDocument"] = sourceDocument;
+            if (linkedDocuments.Count > 0)
+                header["linkedDocuments"] = linkedDocuments;
 
                 var normalized = NormalizeDocumentForFrontend(JsonSerializer.SerializeToElement(header));
                 return Ok(new ApiResponse<object>(true, null, normalized));
@@ -1557,6 +1657,143 @@ ORDER BY LineNum ASC;";
             _logger.LogWarning(ex, "[HYBRID-MODE][READ] Lecture SQL détail échouée. Entity={Entity}, DocEntry={DocEntry}", sapEntity, docEntry);
             return null;
         }
+    }
+
+    private static (Dictionary<string, object?>? Source, List<Dictionary<string, object?>> Linked) BuildRelationsFromSqlLines(
+        IReadOnlyList<Dictionary<string, object?>> lines,
+        int currentDocEntry)
+    {
+        Dictionary<string, object?>? source = null;
+        var linked = new List<Dictionary<string, object?>>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var line in lines)
+        {
+            var baseEntry = GetIntFromObject(line.TryGetValue("BaseEntry", out var be) ? be : null);
+            var baseType = ResolveLinkedTypeFromObjectCode(line.TryGetValue("BaseType", out var bt) ? bt : null);
+            if (source is null && baseEntry > 0 && !string.IsNullOrWhiteSpace(baseType))
+            {
+                source = new Dictionary<string, object?>
+                {
+                    ["type"] = baseType,
+                    ["id"] = baseEntry
+                };
+            }
+
+            var targetEntry = GetIntFromObject(line.TryGetValue("TrgetEntry", out var te) ? te : null);
+            var targetType = ResolveLinkedTypeFromObjectCode(line.TryGetValue("TargetType", out var tt) ? tt : null);
+            if (targetEntry <= 0 || string.IsNullOrWhiteSpace(targetType) || targetEntry == currentDocEntry)
+                continue;
+
+            var key = $"{targetType}:{targetEntry}";
+            if (!seen.Add(key))
+                continue;
+
+            linked.Add(new Dictionary<string, object?>
+            {
+                ["type"] = targetType,
+                ["id"] = targetEntry
+            });
+        }
+
+        return (source, linked);
+    }
+
+    private static int GetIntFromObject(object? value)
+    {
+        if (value is null || value is DBNull)
+            return 0;
+        if (value is int i)
+            return i;
+        if (value is long l)
+            return l is > int.MaxValue or < int.MinValue ? 0 : (int)l;
+        if (value is decimal d)
+            return d is > int.MaxValue or < int.MinValue ? 0 : (int)d;
+        if (int.TryParse(value.ToString(), out var parsed))
+            return parsed;
+        return 0;
+    }
+
+    private static string ResolveLinkedTypeFromObjectCode(object? value)
+    {
+        var raw = value?.ToString()?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        if (int.TryParse(raw, out var code))
+        {
+            return code switch
+            {
+                23 => "quote",
+                17 => "order",
+                15 => "deliverynote",
+                13 => "invoice",
+                14 => "creditnote",
+                16 => "return",
+                _ => string.Empty
+            };
+        }
+
+        var normalized = raw.ToLowerInvariant().Replace("_", string.Empty).Replace("-", string.Empty).Replace(" ", string.Empty);
+        if (normalized.Contains("quote") || normalized.Contains("devis")) return "quote";
+        if (normalized.Contains("order") || normalized.Contains("commande")) return "order";
+        if (normalized.Contains("deliverynote") || normalized.Contains("bonlivraison")) return "deliverynote";
+        if (normalized.Contains("invoice") || normalized.Contains("facture")) return "invoice";
+        if (normalized.Contains("creditnote") || normalized.Contains("avoir")) return "creditnote";
+        if (normalized.Contains("return") || normalized.Contains("retour")) return "return";
+        return string.Empty;
+    }
+
+    private async Task<List<(string Type, int Id, int DocNum)>> FindGeneratedDocumentsFromSqlAsync(
+        SqlConnection conn,
+        string sourceEntity,
+        int sourceDocEntry,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<(string Type, int Id, int DocNum)>();
+
+        var baseTypeRaw = ResolveDocObjectCode(sourceEntity);
+        if (!int.TryParse(baseTypeRaw, out var baseType) || sourceDocEntry <= 0)
+            return result;
+
+        var targets = new (string HeaderTable, string LineTable, string Type)[]
+        {
+            ("OQUT", "QUT1", "quote"),
+            ("ORDR", "RDR1", "order"),
+            ("ODLN", "DLN1", "deliverynote"),
+            ("OINV", "INV1", "invoice"),
+            ("ORIN", "RIN1", "creditnote"),
+            ("ORDN", "RDN1", "return")
+        };
+
+        foreach (var target in targets)
+        {
+            var sql = $@"
+SELECT DISTINCT H.DocEntry, H.DocNum
+FROM {target.HeaderTable} H
+INNER JOIN {target.LineTable} L ON L.DocEntry = H.DocEntry
+WHERE L.BaseType = @baseType
+  AND L.BaseEntry = @baseEntry
+  AND H.DocEntry <> @baseEntry;";
+
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+            cmd.Parameters.Add(new SqlParameter("@baseType", SqlDbType.Int) { Value = baseType });
+            cmd.Parameters.Add(new SqlParameter("@baseEntry", SqlDbType.Int) { Value = sourceDocEntry });
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var docEntry = reader["DocEntry"] is DBNull ? 0 : Convert.ToInt32(reader["DocEntry"]);
+                if (docEntry <= 0)
+                    continue;
+
+                var docNum = reader["DocNum"] is DBNull ? 0 : Convert.ToInt32(reader["DocNum"]);
+                result.Add((target.Type, docEntry, docNum));
+            }
+        }
+
+        return result;
     }
 
     private async Task<ActionResult<ApiResponse<object>>> GetDocumentByDocEntryAsync(
@@ -2272,6 +2509,23 @@ ORDER BY LineNum ASC;";
         var escapedCurrency = EscapeODataString(docCurrency);
         var date = docDate.ToString("yyyy-MM-dd");
 
+        // Prefer ExchangeRates collection queries only.
+        // This avoids Service Layer variants that require extra Date parameters
+        // or expose unsupported resource paths on some SAP environments.
+        var rateByDate = await _sapService.ServiceLayerGetAsync(
+            $"ExchangeRates?$filter=Currency eq '{escapedCurrency}' and RateDate eq '{date}'&$top=1",
+            cancellationToken);
+        var parsedRateByDate = ExtractRate(rateByDate.Response);
+        if (rateByDate.Success && parsedRateByDate.HasValue)
+            return (parsedRateByDate, "ExchangeRates(date)");
+
+        var latestRateResult = await _sapService.ServiceLayerGetAsync(
+            $"ExchangeRates?$filter=Currency eq '{escapedCurrency}'&$orderby=RateDate desc&$top=1",
+            cancellationToken);
+        var parsedLatestRate = ExtractRate(latestRateResult.Response);
+        if (parsedLatestRate.HasValue)
+            return (parsedLatestRate, "ExchangeRates(latest)");
+
         var b1Function = await _sapService.ServiceLayerPostAsync(
             "SBOBobService_GetCurrencyRate",
             new
@@ -2628,10 +2882,21 @@ WHERE DocEntry = @docEntry;";
             price = GetDecimal(node, "AvgPrice");
         }
 
+        var imageUrl = GetStringAny(node, "ImageUrl");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "ImageURL");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "PictureUrl");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "PhotoUrl");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "Picture");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "PicturName");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "U_ImageUrl");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "U_Image");
+        if (string.IsNullOrWhiteSpace(imageUrl)) imageUrl = GetStringAny(node, "U_Photo");
+
         return new SapItemDto
         {
             ItemCode = itemCode,
             ItemName = GetString(node, "ItemName"),
+            ImageUrl = NormalizeItemImageUrl(imageUrl),
             Price = price,
             Currency = currency,
             StockTotal = warehouses.Count > 0 ? warehouses.Sum(x => x.InStock) : GetDecimal(node, "OnHand"),
@@ -2818,6 +3083,42 @@ WHERE DocEntry = @docEntry;";
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
+        };
+    }
+
+    private static string NormalizeItemImageUrl(string rawImageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawImageUrl))
+            return string.Empty;
+
+        var value = rawImageUrl.Trim();
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        var normalized = value.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalized);
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+
+        return $"/api/sap/item-images/{Uri.EscapeDataString(fileName)}";
+    }
+
+    private static string GetImageContentType(string imagePath)
+    {
+        var extension = Path.GetExtension(imagePath)?.ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            _ => "application/octet-stream"
         };
     }
 
@@ -3012,6 +3313,7 @@ public class SapItemDto
 {
     public string ItemCode { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
+    public string ImageUrl { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Currency { get; set; } = string.Empty;
     public decimal StockTotal { get; set; }

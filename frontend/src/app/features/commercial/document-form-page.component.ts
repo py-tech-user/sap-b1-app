@@ -29,7 +29,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
             <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sélectionner client" />
             <datalist id="customer-options">
               @for (c of customers(); track c.id) {
-                <option [value]="c.cardCode || ''" [label]="(c.cardCode || '-') + ' - ' + (c.cardName || '-')"></option>
+                <option [value]="customerPickerValue(c)" [label]="(c.cardName || '-') + ' (' + (c.cardCode || '-') + ')'"></option>
               }
             </datalist>
           </div>
@@ -578,10 +578,23 @@ export class DocumentFormComponent implements OnInit {
   }
 
   private patchCardCodeForEdit(items: Customer[]): void {
-    const currentCardCode = String(this.form.get('cardCode')?.value ?? '').trim();
-    if (!currentCardCode && this.isEdit()) {
+    const currentValue = String(this.form.get('cardCode')?.value ?? '').trim();
+
+    if (!currentValue && this.isEdit()) {
       const guessed = items.find(c => c.id === this.loadedCustomerId)?.cardCode;
-      if (guessed) this.form.patchValue({ cardCode: guessed });
+      if (guessed) {
+        const customer = items.find(c => c.cardCode === guessed);
+        this.form.patchValue({ cardCode: customer ? this.customerPickerValue(customer) : guessed });
+      }
+      return;
+    }
+
+    if (currentValue) {
+      const code = this.extractCardCode(currentValue);
+      const customer = items.find(c => String(c.cardCode ?? '').trim().toLowerCase() === code.toLowerCase());
+      if (customer) {
+        this.form.patchValue({ cardCode: this.customerPickerValue(customer) }, { emitEvent: false });
+      }
     }
   }
 
@@ -653,11 +666,50 @@ export class DocumentFormComponent implements OnInit {
     }
   }
 
+  customerPickerValue(customer: Customer): string {
+    const cardName = String(customer.cardName ?? '').trim();
+    const cardCode = String(customer.cardCode ?? '').trim();
+    if (!cardName) return cardCode;
+    if (!cardCode) return cardName;
+    return `${cardName} (${cardCode})`;
+  }
+
   private extractCardCode(value: string): string {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
+
+    const customers = this.customers();
+    const asCode = customers.find(c => String(c.cardCode ?? '').trim().toLowerCase() === raw.toLowerCase());
+    if (asCode?.cardCode) return asCode.cardCode;
+
+    const asName = customers.find(c => String(c.cardName ?? '').trim().toLowerCase() === raw.toLowerCase());
+    if (asName?.cardCode) return asName.cardCode;
+
+    const parenthesizedCode = raw.match(/\(([^)]+)\)\s*$/);
+    if (parenthesizedCode?.[1]) {
+      const extracted = parenthesizedCode[1].trim();
+      if (extracted) return extracted;
+    }
+
     const separatorIndex = raw.indexOf(' - ');
-    return separatorIndex > 0 ? raw.slice(0, separatorIndex).trim() : raw;
+    if (separatorIndex > 0) {
+      const left = raw.slice(0, separatorIndex).trim();
+      const right = raw.slice(separatorIndex + 3).trim();
+
+      const leftAsCode = customers.find(c => String(c.cardCode ?? '').trim().toLowerCase() === left.toLowerCase());
+      if (leftAsCode?.cardCode) return leftAsCode.cardCode;
+
+      const rightAsCode = customers.find(c => String(c.cardCode ?? '').trim().toLowerCase() === right.toLowerCase());
+      if (rightAsCode?.cardCode) return rightAsCode.cardCode;
+
+      const leftAsName = customers.find(c => String(c.cardName ?? '').trim().toLowerCase() === left.toLowerCase());
+      if (leftAsName?.cardCode) return leftAsName.cardCode;
+
+      const rightAsName = customers.find(c => String(c.cardName ?? '').trim().toLowerCase() === right.toLowerCase());
+      if (rightAsName?.cardCode) return rightAsName.cardCode;
+    }
+
+    return raw;
   }
 
   private buildMissingFieldsMessage(): string {

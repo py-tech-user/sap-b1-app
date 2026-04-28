@@ -57,13 +57,13 @@ interface InvoiceSelection {
         <label>
           Partenaire
           <input
-            [ngModel]="selectedCardCode()"
+            [ngModel]="selectedClientInput()"
             (ngModelChange)="onClientPickerInput($event)"
             list="encaissement-client-options"
             placeholder="Rechercher et sélectionner client" />
           <datalist id="encaissement-client-options">
             @for (client of clients(); track client.cardCode) {
-              <option [value]="client.cardCode" [label]="client.cardCode + ' - ' + client.cardName + ' (' + client.currency + ')'">{{ client.cardCode }} - {{ client.cardName }}</option>
+              <option [value]="clientPickerValue(client)" [label]="client.cardName + ' (' + client.cardCode + ') - ' + client.currency">{{ client.cardName }} ({{ client.cardCode }})</option>
             }
           </datalist>
         </label>
@@ -228,6 +228,7 @@ export class EncaissementComponent {
   readonly selections = signal<InvoiceSelection[]>([]);
 
   readonly selectedCardCode = signal('');
+  readonly selectedClientInput = signal('');
   readonly paymentMethodCode = signal('Virement');
   readonly cashSum = signal(0);
   readonly totalSelectedAmount = computed(() =>
@@ -274,7 +275,10 @@ export class EncaissementComponent {
   }
 
   onClientChange(cardCode: string): void {
-    this.selectedCardCode.set(cardCode ?? '');
+    const nextCode = String(cardCode ?? '').trim();
+    this.selectedCardCode.set(nextCode);
+    const match = this.clients().find(c => c.cardCode.toLowerCase() === nextCode.toLowerCase());
+    this.selectedClientInput.set(match ? this.clientPickerValue(match) : nextCode);
     this.cashSum.set(0);
     this.error.set('');
     this.success.set('');
@@ -284,6 +288,7 @@ export class EncaissementComponent {
 
   onClientPickerInput(value: string): void {
     const typed = String(value ?? '').trim();
+    this.selectedClientInput.set(typed);
     if (!typed) {
       this.selectedCardCode.set('');
       this.invoices.set([]);
@@ -291,9 +296,9 @@ export class EncaissementComponent {
       return;
     }
 
-    const exact = this.clients().find(c => c.cardCode.toLowerCase() === typed.toLowerCase());
+    const exact = this.resolveClientFromInput(typed);
     if (!exact) {
-      this.selectedCardCode.set(typed);
+      this.selectedCardCode.set('');
       return;
     }
 
@@ -383,6 +388,10 @@ export class EncaissementComponent {
     this.error.set('');
     this.success.set('');
 
+    const resolved = this.resolveClientFromInput(this.selectedClientInput());
+    if (resolved && !this.selectedCardCode()) {
+      this.selectedCardCode.set(resolved.cardCode);
+    }
     const cardCode = this.selectedCardCode().trim();
     if (!cardCode) {
       this.error.set('Partenaire obligatoire.');
@@ -455,8 +464,7 @@ export class EncaissementComponent {
         console.log('[encaissement] partenaires loaded', normalized);
 
         if (this.prefillCardCode) {
-          this.selectedCardCode.set(this.prefillCardCode);
-          this.loadOpenInvoices();
+          this.onClientChange(this.prefillCardCode);
         }
       },
       error: (err) => {
@@ -544,6 +552,41 @@ export class EncaissementComponent {
       creditLimit,
       raw: row ?? {}
     };
+  }
+
+  clientPickerValue(client: EncaissementClient): string {
+    const name = String(client.cardName ?? '').trim();
+    const code = String(client.cardCode ?? '').trim();
+    if (!name) return code;
+    if (!code) return name;
+    return `${name} (${code})`;
+  }
+
+  private resolveClientFromInput(input: string): EncaissementClient | null {
+    const typed = String(input ?? '').trim().toLowerCase();
+    if (!typed) return null;
+
+    const exact = this.clients().find(c =>
+      c.cardCode.toLowerCase() === typed
+      || c.cardName.toLowerCase() === typed
+      || this.clientPickerValue(c).toLowerCase() === typed
+    );
+    if (exact) return exact;
+
+    const fromLabel = typed.match(/\(([^)]+)\)\s*$/);
+    if (fromLabel?.[1]) {
+      const extractedCode = fromLabel[1].trim().toLowerCase();
+      const byExtractedCode = this.clients().find(c => c.cardCode.toLowerCase() === extractedCode);
+      if (byExtractedCode) return byExtractedCode;
+    }
+
+    const byCode = this.clients().find(c => c.cardCode.toLowerCase() === typed);
+    if (byCode) return byCode;
+
+    const byName = this.clients().find(c => c.cardName.toLowerCase() === typed);
+    if (byName) return byName;
+
+    return null;
   }
 
   private normalizeInvoice(row: any): EncaissementInvoice {

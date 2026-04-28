@@ -637,25 +637,53 @@ public class SapB1Service : ISapB1Service
     private string BuildRequestJsonPayload(HttpMethod method, string relativeUrl, object payload)
     {
         var jsonPayload = JsonSerializer.Serialize(payload);
+        var jsonNode = JsonNode.Parse(jsonPayload);
+        int? payloadSalesPersonCode = null;
+        if (jsonNode is JsonObject jsonObject)
+        {
+            // Some frontend flows send SalesPersonCode=0, which SAP rejects (-2028).
+            // We remove non-positive values and let business rules inject a valid code when applicable.
+            if (jsonObject.TryGetPropertyValue("SalesPersonCode", out var existingSalesCodeNode) &&
+                existingSalesCodeNode is JsonValue existingSalesCodeValue &&
+                existingSalesCodeValue.TryGetValue<int>(out var existingSalesCode) &&
+                existingSalesCode <= 0)
+            {
+                jsonObject.Remove("SalesPersonCode");
+            }
+            else if (jsonObject.TryGetPropertyValue("SalesPersonCode", out existingSalesCodeNode) &&
+                     existingSalesCodeNode is JsonValue existingSalesCodeValue2 &&
+                     existingSalesCodeValue2.TryGetValue<int>(out var existingPositiveSalesCode) &&
+                     existingPositiveSalesCode > 0)
+            {
+                payloadSalesPersonCode = existingPositiveSalesCode;
+            }
+        }
+
         if (!ShouldInjectSalesPersonCode(method, relativeUrl))
         {
-            return jsonPayload;
+            return jsonNode?.ToJsonString() ?? jsonPayload;
         }
 
-        var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
+        var salesPersonCode = payloadSalesPersonCode ?? _currentUserService.GetSapSalesPersonCode();
         if (salesPersonCode <= 0)
         {
-            return jsonPayload;
+            // Admin can create/update even without a commercial code.
+            // In that case we simply do not inject SalesPersonCode.
+            if (_currentUserService.IsAdmin())
+            {
+                return jsonNode?.ToJsonString() ?? jsonPayload;
+            }
+
+            return jsonNode?.ToJsonString() ?? jsonPayload;
         }
 
-        var jsonNode = JsonNode.Parse(jsonPayload);
-        if (jsonNode is not JsonObject jsonObject)
+        if (jsonNode is not JsonObject objectNode)
         {
             return jsonPayload;
         }
 
-        jsonObject["SalesPersonCode"] = salesPersonCode;
-        return jsonObject.ToJsonString();
+        objectNode["SalesPersonCode"] = salesPersonCode;
+        return objectNode.ToJsonString();
     }
 
     private static bool ShouldInjectSalesPersonCode(HttpMethod method, string relativeUrl)
@@ -703,18 +731,18 @@ public class SapB1Service : ISapB1Service
 
     private static bool ShouldFilterSalesDocuments(string relativeUrl)
     {
-        var trimmed = relativeUrl.Trim().TrimStart('/');
-        var firstSegment = trimmed
-            .Split('?', 2)[0]
-            .Split('/', 2)[0]
-            .Split('(', 2)[0];
+        if (string.IsNullOrWhiteSpace(relativeUrl))
+        {
+            return false;
+        }
 
-        return firstSegment.Equals("Orders", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("Invoices", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("Quotations", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("DeliveryNotes", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("CreditNotes", StringComparison.OrdinalIgnoreCase) ||
-               firstSegment.Equals("Returns", StringComparison.OrdinalIgnoreCase);
+        var normalized = relativeUrl.Trim();
+        return normalized.Contains("Orders", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("Invoices", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("Quotations", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("DeliveryNotes", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("CreditNotes", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("Returns", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string AppendSalesPersonFilter(string relativeUrl, int salesPersonCode)
