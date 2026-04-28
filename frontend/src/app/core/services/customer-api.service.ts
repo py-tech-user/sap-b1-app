@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ApiResponse, PagedResult,
@@ -11,7 +11,6 @@ import {
 export class CustomerApiService {
   private readonly http = inject(HttpClient);
   private readonly sapUrl = `${environment.apiUrl}/sap/clients`;
-  private readonly partnersUrl = `${environment.apiUrl}/sap/partners`;
 
   getAll(
     page     = 1,
@@ -29,46 +28,7 @@ export class CustomerApiService {
       params = params.set('isActive', isActive);
 
     return this.http.get<any>(this.sapUrl, { params }).pipe(
-      map((res) => this.toPagedResponse(res, page, pageSize)),
-      switchMap((result) => {
-        const empty = (result.data?.items?.length ?? 0) === 0;
-        if (!empty) return of(result);
-
-        // Some SAP backends ignore/forbid extra query params; retry plain GET.
-        return this.http.get<any>(this.sapUrl).pipe(
-          map((res) => this.toPagedResponse(res, page, pageSize)),
-          switchMap((retryResult) => {
-            const retryEmpty = (retryResult.data?.items?.length ?? 0) === 0;
-            if (!retryEmpty) return of(retryResult);
-            return this.http.get<any>(this.partnersUrl).pipe(
-              map((res) => this.toPagedResponse(res, page, pageSize)),
-              catchError(() => of(retryResult))
-            );
-          }),
-          catchError(() => of(result))
-        );
-      }),
-      catchError(() => this.http.get<any>(this.sapUrl).pipe(
-        map((res) => this.toPagedResponse(res, page, pageSize)),
-        switchMap((result) => {
-          const empty = (result.data?.items?.length ?? 0) === 0;
-          if (!empty) return of(result);
-          return this.http.get<any>(this.partnersUrl).pipe(
-            map((res) => this.toPagedResponse(res, page, pageSize)),
-            catchError(() => of(result))
-          );
-        }),
-        catchError(() => of({
-          success: true,
-          data: {
-            items: [],
-            totalCount: 0,
-            page,
-            pageSize,
-            totalPages: 1
-          }
-        } as ApiResponse<PagedResult<Customer>>))
-      ))
+      map((res) => this.toPagedResponse(res, page, pageSize))
     );
   }
 

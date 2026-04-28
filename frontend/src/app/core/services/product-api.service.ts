@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface Product {
@@ -29,7 +29,6 @@ export interface CreateProductDto {
 @Injectable({ providedIn: 'root' })
 export class ProductApiService {
   private readonly apiUrl = `${environment.apiUrl}/sap/items`;
-  private readonly legacyUrl = `${environment.apiUrl}/products`;
   private readonly apiRoot = environment.apiUrl.replace(/\/api\/?$/i, '');
 
   constructor(private http: HttpClient) {}
@@ -41,22 +40,7 @@ export class ProductApiService {
 
     return this.http.get<any>(this.apiUrl, { params }).pipe(
       map((res) => this.normalizeList(res, page, pageSize)),
-      switchMap((result) => {
-        if (result.items.length > 0) return of(result);
-        return this.http.get<any>(this.apiUrl).pipe(
-          map((res) => this.normalizeList(res, page, pageSize)),
-          switchMap((retry) => {
-            if (retry.items.length > 0) return of(retry);
-            return this.http.get<any>(this.legacyUrl, { params }).pipe(
-              map((res) => this.normalizeList(res, page, pageSize))
-            );
-          })
-        );
-      }),
-      catchError(() => this.http.get<any>(this.legacyUrl, { params }).pipe(
-        map((res) => this.normalizeList(res, page, pageSize)),
-        catchError(() => of({ items: [], totalCount: 0 }))
-      ))
+      catchError(() => of({ items: [], totalCount: 0 }))
     );
   }
 
@@ -71,15 +55,15 @@ export class ProductApiService {
   }
 
   create(product: CreateProductDto): Observable<Product> {
-    return this.http.post<Product>(this.legacyUrl, product);
+    return this.http.post<Product>(`${environment.apiUrl}/products`, product);
   }
 
   update(id: number, product: CreateProductDto): Observable<void> {
-    return this.http.put<void>(`${this.legacyUrl}/${id}`, product);
+    return this.http.put<void>(`${environment.apiUrl}/products/${id}`, product);
   }
 
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.legacyUrl}/${id}`);
+    return this.http.delete<void>(`${environment.apiUrl}/products/${id}`);
   }
 
   private normalizeList(res: any, page: number, pageSize: number): { items: Product[]; totalCount: number } {

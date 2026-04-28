@@ -2,7 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, catchError, of } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface DashboardStats {
@@ -101,13 +101,12 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     forkJoin({
-      customers: this.http.get<any>(`${this.api}/sap/partners`).pipe(catchError(() => of(null))),
-      orders:    this.http.get<any>(`${this.api}/sap/orders`).pipe(catchError(() => of(null))),
-      products:  this.http.get<any>(`${this.api}/products?page=1&pageSize=1`).pipe(catchError(() => of(null)))
+      customers: this.http.get<any>(`${this.api}/sap/partners`),
+      orders: this.http.get<any>(`${this.api}/sap/orders`),
+      products: this.http.get<any>(`${this.api}/sap/items?page=1&pageSize=500`)
     }).subscribe({
       next: (res) => {
         const extract = (r: any) => {
-          if (!r) return 0;
           const payload = r.data ?? r;
           if (typeof payload.totalCount === 'number') return payload.totalCount;
           if (typeof payload.totalItems === 'number') return payload.totalItems;

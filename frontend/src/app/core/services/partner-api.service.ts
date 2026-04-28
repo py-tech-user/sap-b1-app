@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface PartnerRow {
@@ -36,7 +36,6 @@ export interface PartnerListResult {
 export class PartnerApiService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = `${environment.apiUrl}/sap/partners`;
-  private readonly clientsEndpoint = `${environment.apiUrl}/sap/clients`;
 
   getAll(page = 1, pageSize = 15): Observable<PartnerListResult> {
     const params = new HttpParams()
@@ -56,35 +55,7 @@ export class PartnerApiService {
           items,
           totalCount: Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length
         };
-      }),
-      switchMap((result) => {
-        if (result.items.length > 0) return of(result);
-        return this.http.get<any>(this.clientsEndpoint, { params }).pipe(
-          map((res) => {
-            const items = this.extractRows(res);
-            const totalCount = Number(
-              res?.totalCount ?? res?.TotalCount ??
-              res?.data?.totalCount ?? res?.data?.TotalCount ??
-              res?.Data?.totalCount ?? res?.Data?.TotalCount ??
-              items.length
-            );
-            return { items, totalCount: Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length };
-          })
-        );
-      }),
-      catchError(() => this.http.get<any>(this.clientsEndpoint, { params }).pipe(
-        map((res) => {
-          const items = this.extractRows(res);
-          const totalCount = Number(
-            res?.totalCount ?? res?.TotalCount ??
-            res?.data?.totalCount ?? res?.data?.TotalCount ??
-            res?.Data?.totalCount ?? res?.Data?.TotalCount ??
-            items.length
-          );
-          return { items, totalCount: Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length };
-        }),
-        catchError(() => of({ items: [], totalCount: 0 }))
-      ))
+      })
     );
   }
 

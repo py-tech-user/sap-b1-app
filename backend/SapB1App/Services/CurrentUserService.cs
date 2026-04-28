@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using SapB1App.Interfaces;
 using SapB1App.Models;
 
@@ -21,9 +22,12 @@ public class CurrentUserService : ICurrentUserService
             return null;
         }
 
-        var fullName = user.FindFirstValue("fullName");
+        var fullName = user.FindFirstValue("fullName")
+            ?? user.FindFirstValue(ClaimTypes.Name)
+            ?? user.FindFirstValue(JwtRegisteredClaimNames.UniqueName)
+            ?? string.Empty;
         var codeRaw = user.FindFirstValue("sapSalesPersonCode");
-        if (string.IsNullOrWhiteSpace(fullName) || !int.TryParse(codeRaw, out var sapSalesPersonCode))
+        if (!int.TryParse(codeRaw, out var sapSalesPersonCode))
         {
             return null;
         }

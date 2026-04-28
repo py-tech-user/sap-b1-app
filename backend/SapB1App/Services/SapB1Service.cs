@@ -667,13 +667,6 @@ public class SapB1Service : ISapB1Service
         var salesPersonCode = payloadSalesPersonCode ?? _currentUserService.GetSapSalesPersonCode();
         if (salesPersonCode <= 0)
         {
-            // Admin can create/update even without a commercial code.
-            // In that case we simply do not inject SalesPersonCode.
-            if (_currentUserService.IsAdmin())
-            {
-                return jsonNode?.ToJsonString() ?? jsonPayload;
-            }
-
             return jsonNode?.ToJsonString() ?? jsonPayload;
         }
 

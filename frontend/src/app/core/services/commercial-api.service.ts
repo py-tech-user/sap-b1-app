@@ -55,12 +55,7 @@ export class CommercialApiService {
       .get<any>(endpoint, params)
       .pipe(
         map((res) => this.normalizeListResponse(res, filters)),
-        switchMap((res) => this.hydrateInvoicesByDocEntry(endpoints, res, filters)),
-        catchError((err) => {
-          // [HYBRID-MODE] Pas de fallback silencieux - retourner l'erreur explicitement
-          console.error('[HYBRID-MODE-FRONTEND] Erreur lecture invoices (SQL strict):', err);
-          return throwError(() => err);
-        })
+        switchMap((res) => this.hydrateInvoicesByDocEntry(endpoints, res, filters))
       );
   }
 
@@ -89,8 +84,7 @@ export class CommercialApiService {
 
     const detailCalls = sourceItems.map((invoice) =>
       this.getByIdWithFallback(endpoints, 0, invoice.id).pipe(
-        map((detail) => detail.data ?? invoice),
-        catchError(() => of(invoice))
+        map((detail) => detail.data ?? invoice)
       )
     );
 
@@ -122,7 +116,7 @@ export class CommercialApiService {
   ): Observable<ApiResponse<PagedResult<CommercialDocument>>> {
     const endpoint = endpoints[index];
     if (!endpoint) {
-      return of(this.emptyListResponse(filters));
+      return throwError(() => new Error('Aucun endpoint disponible pour cette ressource.'));
     }
 
     return this.sapApi
@@ -133,17 +127,6 @@ export class CommercialApiService {
           // Retry next endpoint alias for path mismatches (e.g. deliverynotes vs delivery-notes).
           if ((err?.status === 404 || err?.status === 405) && index + 1 < endpoints.length) {
             return this.getListWithFallback(endpoints, index + 1, params, filters);
-          }
-
-          // Some SAP adapters return HTTP 400 with a business message when no readable data is available.
-          if (err?.status === 400 && (err?.error?.message || '').toLowerCase().includes('service layer')) {
-            return of(this.emptyListResponse(filters));
-          }
-
-          // If we exhausted endpoint aliases and still get a client-side HTTP error, show an empty list
-          // rather than blocking the whole screen with a generic error banner.
-          if ((err?.status === 400 || err?.status === 404 || err?.status === 405) && index + 1 >= endpoints.length) {
-            return of(this.emptyListResponse(filters));
           }
 
           return throwError(() => err);
@@ -776,21 +759,6 @@ export class CommercialApiService {
       return res as ApiResponse<void>;
     }
     return { success: true };
-  }
-
-  private emptyListResponse(filters: CommercialListFilters): ApiResponse<PagedResult<CommercialDocument>> {
-    const page = filters.page ?? 1;
-    const pageSize = filters.pageSize ?? 20;
-    return {
-      success: true,
-      data: {
-        items: [],
-        totalCount: 0,
-        page,
-        pageSize,
-        totalPages: 1
-      }
-    };
   }
 
   private getResourceEndpoints(resource: CommercialResource): string[] {

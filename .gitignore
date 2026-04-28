@@ -5,10 +5,18 @@ obj/
 *.user
 *.suo
 *.sln.docstates
+.dotnet/
+.nuget/
 
 # Angular
 node_modules/
 dist/
+.angular/
+coverage/
 
 # Logs
 *.log
+logs/
+
+# Build / publish artifacts
+publish/

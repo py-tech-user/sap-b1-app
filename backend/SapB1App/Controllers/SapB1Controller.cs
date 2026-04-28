@@ -90,46 +90,163 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems(CancellationToken cancellationToken)
     {
-        var result = await _sapService.ServiceLayerGetAsync("Items", cancellationToken);
-        if (!result.Success)
-            return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
+        var configuredPriceList = await ResolveDefaultPriceListAsync(cancellationToken);
 
-        Dictionary<string, List<SapItemWarehouseDto>>? warehousesByItem = null;
-        var warehousesResult = await _sapService.ServiceLayerGetAsync(
-            "ItemWarehouseInfoCollection?$select=ItemCode,WarehouseCode,InStock",
-            cancellationToken);
+        var sql = @"
+SELECT
+    I.ItemCode,
+    I.ItemName,
+    ISNULL(PL_CFG.Price, ISNULL(I.AvgPrice, 0)) AS Price,
+    ISNULL(PL_CFG.Currency, '') AS PriceCurrency,
+    ISNULL(I.OnHand, 0) AS OnHand,
+    ISNULL(I.PicturName, '') AS PicturName
+FROM OITM I
+LEFT JOIN ITM1 PL_CFG ON PL_CFG.ItemCode = I.ItemCode AND PL_CFG.PriceList = @priceList
+ORDER BY I.ItemCode;";
 
-        if (warehousesResult.Success)
+        var items = new List<SapItemDto>();
+        try
         {
-            warehousesByItem = MapWarehousesByItem(warehousesResult.Response);
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is null)
+            {
+                return StatusCode(500, SapError("Connexion SQL SAP impossible pour le catalogue."));
+            }
+
+            await using (conn)
+            await using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                cmd.Parameters.Add(new SqlParameter("@priceList", SqlDbType.Int) { Value = configuredPriceList > 0 ? configuredPriceList : 1 });
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    var picture = reader["PicturName"]?.ToString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(picture))
+                    {
+                        var itemName = reader["ItemName"]?.ToString() ?? string.Empty;
+                        picture = GuessPictureFileNameFromItemName(itemName);
+                    }
+                    items.Add(new SapItemDto
+                    {
+                        ItemCode = reader["ItemCode"]?.ToString() ?? string.Empty,
+                        ItemName = reader["ItemName"]?.ToString() ?? string.Empty,
+                        ImageUrl = BuildItemImageUrl(reader["ItemCode"]?.ToString() ?? string.Empty, picture),
+                        Price = reader["Price"] is DBNull ? 0m : Convert.ToDecimal(reader["Price"]),
+                        Currency = reader["PriceCurrency"]?.ToString() ?? string.Empty,
+                        StockTotal = reader["OnHand"] is DBNull ? 0m : Convert.ToDecimal(reader["OnHand"]),
+                        Warehouses = []
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur SQL lors du chargement du catalogue SAP.");
+            return StatusCode(500, SapError("Erreur SQL lors du chargement du catalogue."));
         }
 
-        var items = MapItems(result.Response, warehousesByItem);
         return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, items.Count));
     }
 
     [HttpGet("item-images/{*fileName}")]
     [AllowAnonymous]
-    public IActionResult GetItemImage(string fileName)
+    public async Task<IActionResult> GetItemImage(string fileName, CancellationToken cancellationToken)
     {
         var safeFileName = Path.GetFileName(fileName ?? string.Empty);
         if (string.IsNullOrWhiteSpace(safeFileName))
             return BadRequest(SapError("Nom de fichier image invalide."));
 
-        var picturesRoot = _configuration["SapB1:AttachmentsPicturesPath"];
-        if (string.IsNullOrWhiteSpace(picturesRoot))
-            picturesRoot = @"C:\Users\stg1\Pictures\";
+        var roots = await GetItemPictureRootsAsync(cancellationToken);
+        foreach (var root in roots)
+        {
+            string rootFullPath;
+            try
+            {
+                rootFullPath = Path.GetFullPath(root);
+            }
+            catch
+            {
+                continue;
+            }
 
-        var rootFullPath = Path.GetFullPath(picturesRoot);
-        var imageFullPath = Path.GetFullPath(Path.Combine(rootFullPath, safeFileName));
+            foreach (var candidateFileName in BuildImageFileNameCandidates(safeFileName))
+            {
+                string imageFullPath;
+                try
+                {
+                    imageFullPath = Path.GetFullPath(Path.Combine(rootFullPath, candidateFileName));
+                }
+                catch
+                {
+                    continue;
+                }
 
-        if (!imageFullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
-            return BadRequest(SapError("Chemin image invalide."));
+                if (!imageFullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
-        if (!System.IO.File.Exists(imageFullPath))
-            return NotFound(SapError($"Image introuvable: {safeFileName}"));
+                if (!System.IO.File.Exists(imageFullPath))
+                continue;
 
-        return PhysicalFile(imageFullPath, GetImageContentType(imageFullPath));
+                return PhysicalFile(imageFullPath, GetImageContentType(imageFullPath));
+            }
+        }
+
+        _logger.LogWarning("Image article introuvable. File={FileName}; Roots={Roots}",
+            safeFileName, string.Join(" | ", roots));
+        return NotFound(SapError($"Image introuvable: {safeFileName}"));
+    }
+
+    [HttpGet("item-images/by-item/{itemCode}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetItemImageByItemCode(string itemCode, CancellationToken cancellationToken)
+    {
+        var safeItemCode = (itemCode ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(safeItemCode))
+            return BadRequest(SapError("ItemCode image invalide."));
+
+        var (sessionOk, sessionId, _, _, sessionError) = await _sapService.LoginServiceLayerWithSessionIdAsync(cancellationToken);
+        if (sessionOk && !string.IsNullOrWhiteSpace(sessionId))
+        {
+            var slUrl = _configuration["SapB1ServiceLayer:ServiceLayerUrl"]?.TrimEnd('/');
+            if (!string.IsNullOrWhiteSpace(slUrl))
+            {
+                try
+                {
+                    var handler = new HttpClientHandler();
+                    if (bool.TryParse(_configuration["SapB1ServiceLayer:IgnoreSslErrors"], out var ignoreSsl) && ignoreSsl)
+                    {
+                        handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    }
+
+                    using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+                    using var request = new HttpRequestMessage(HttpMethod.Get, $"{slUrl}/ItemImages('{Uri.EscapeDataString(safeItemCode)}')/$value");
+                    request.Headers.Add("Cookie", $"B1SESSION={sessionId}");
+                    using var response = await client.SendAsync(request, cancellationToken);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                        var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                        return File(bytes, contentType);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "ItemImages Service Layer indisponible pour ItemCode={ItemCode}", safeItemCode);
+                }
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Session Service Layer indisponible pour image item {ItemCode}. Error={Error}", safeItemCode, sessionError);
+        }
+
+        // Fallback fichier local via PicturName si ItemImages n'est pas exposé.
+        var pictureName = await ResolvePictureNameByItemCodeAsync(safeItemCode, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(pictureName))
+            return await GetItemImage(pictureName, cancellationToken);
+
+        return NotFound(SapError($"Image introuvable pour item: {safeItemCode}"));
     }
 
     [HttpGet("orders")]
@@ -3104,7 +3221,113 @@ WHERE DocEntry = @docEntry;";
         if (string.IsNullOrWhiteSpace(fileName))
             return string.Empty;
 
+        // Nettoyage de caractères parasites possibles dans certains exports SAP
+        fileName = fileName.Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+
         return $"/api/sap/item-images/{Uri.EscapeDataString(fileName)}";
+    }
+
+    private string BuildItemImageUrl(string itemCode, string rawPictureName)
+    {
+        var safeItemCode = (itemCode ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(safeItemCode))
+            return $"/api/sap/item-images/by-item/{Uri.EscapeDataString(safeItemCode)}";
+
+        return NormalizeItemImageUrl(rawPictureName);
+    }
+
+    private async Task<int> ResolveDefaultPriceListAsync(CancellationToken cancellationToken)
+    {
+        if (int.TryParse(_configuration["SapB1:DefaultPriceList"], out var configured) && configured > 0)
+            return configured;
+
+        var configuredName = (_configuration["SapB1:DefaultPriceListName"] ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(configuredName))
+            return 1;
+
+        try
+        {
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is null)
+                return 1;
+
+            await using (conn)
+            await using (var cmd = new SqlCommand("SELECT TOP 1 ListNum FROM OPLN WHERE ListName = @name", conn))
+            {
+                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                cmd.Parameters.Add(new SqlParameter("@name", SqlDbType.NVarChar, 100) { Value = configuredName });
+                var obj = await cmd.ExecuteScalarAsync(cancellationToken);
+                if (obj is not null && obj != DBNull.Value)
+                {
+                    var parsed = Convert.ToInt32(obj);
+                    if (parsed > 0) return parsed;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Impossible de résoudre DefaultPriceListName={Name}", configuredName);
+        }
+
+        try
+        {
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is null)
+                throw new InvalidOperationException("Connexion SQL SAP indisponible pour résoudre la PriceList.");
+
+            await using (conn)
+            await using (var cmd = new SqlCommand(@"
+SELECT TOP 1 ListNum
+FROM OPLN
+WHERE ISNULL(ListName, '') <> ''
+  AND ListName NOT LIKE '%Last Evaluated%'
+  AND ListName NOT LIKE '%Last Purchase%'
+ORDER BY ListName ASC, ListNum ASC", conn))
+            {
+                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                var obj = await cmd.ExecuteScalarAsync(cancellationToken);
+                if (obj is not null && obj != DBNull.Value)
+                {
+                    var parsed = Convert.ToInt32(obj);
+                    if (parsed > 0) return parsed;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Impossible de résoudre une PriceList SAP par défaut.");
+            throw;
+        }
+
+        throw new InvalidOperationException("Aucune PriceList SAP exploitable trouvée.");
+    }
+
+    private async Task<string> ResolvePictureNameByItemCodeAsync(string itemCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(itemCode))
+            return string.Empty;
+
+        try
+        {
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is null)
+                return string.Empty;
+
+            await using (conn)
+            await using (var cmd = new SqlCommand("SELECT TOP 1 ISNULL(PicturName,'') FROM OITM WHERE ItemCode = @itemCode", conn))
+            {
+                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                cmd.Parameters.Add(new SqlParameter("@itemCode", SqlDbType.NVarChar, 50) { Value = itemCode });
+                var obj = await cmd.ExecuteScalarAsync(cancellationToken);
+                return obj?.ToString()?.Trim() ?? string.Empty;
+            }
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static string GetImageContentType(string imagePath)
@@ -3120,6 +3343,83 @@ WHERE DocEntry = @docEntry;";
             ".svg" => "image/svg+xml",
             _ => "application/octet-stream"
         };
+    }
+
+    private async Task<List<string>> GetItemPictureRootsAsync(CancellationToken cancellationToken)
+    {
+        var roots = new List<string>();
+        var rawConfiguredRoots = _configuration["SapB1:AttachmentsPicturesPath"] ?? string.Empty;
+        var configuredRoots = rawConfiguredRoots
+            .Split([';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var configuredRoot in configuredRoots)
+            roots.Add(configuredRoot);
+
+        // Source SAP native pour le dossier images
+        try
+        {
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is not null)
+            {
+                await using (conn)
+                await using (var cmd = new SqlCommand("SELECT TOP 1 BitmapPath FROM OADP WHERE ISNULL(BitmapPath,'') <> ''", conn))
+                {
+                    cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                    var bitmapPath = (await cmd.ExecuteScalarAsync(cancellationToken))?.ToString()?.Trim();
+                    if (!string.IsNullOrWhiteSpace(bitmapPath))
+                    {
+                        var normalized = bitmapPath.Trim('"', '\'').Replace('/', '\\');
+                        var folder = Path.GetDirectoryName(normalized);
+                        roots.Add(string.IsNullOrWhiteSpace(folder) ? normalized : folder);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Lecture OADP.BitmapPath impossible.");
+        }
+
+        // Fallbacks utiles si la config n'est pas alignée avec le serveur SAP.
+        roots.Add(@"C:\Images\");
+        roots.Add(@"C:\Users\stg1\Pictures\");
+        roots.Add(@"C:\Program Files (x86)\SAP\SAP Business One\Pictures\");
+        roots.Add(@"C:\Program Files\SAP\SAP Business One\Pictures\");
+        roots.Add(@"C:\SAP\Pictures\");
+
+        return roots
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IEnumerable<string> BuildImageFileNameCandidates(string fileName)
+    {
+        yield return fileName;
+
+        var ext = Path.GetExtension(fileName);
+        if (!string.IsNullOrWhiteSpace(ext))
+            yield break;
+
+        yield return fileName + ".jpg";
+        yield return fileName + ".jpeg";
+        yield return fileName + ".png";
+        yield return fileName + ".bmp";
+        yield return fileName + ".gif";
+        yield return fileName + ".webp";
+    }
+
+    private static string GuessPictureFileNameFromItemName(string itemName)
+    {
+        if (string.IsNullOrWhiteSpace(itemName))
+            return string.Empty;
+
+        var compact = new string(itemName.Where(c => char.IsLetterOrDigit(c)).ToArray());
+        if (string.IsNullOrWhiteSpace(compact))
+            return string.Empty;
+
+        return compact + ".jpg";
     }
 
     private static decimal GetDecimal(JsonElement node, string name)
