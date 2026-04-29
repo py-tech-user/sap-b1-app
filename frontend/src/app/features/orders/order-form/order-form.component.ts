@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule, FormArray } from '@angular/forms';
 import { CurrencyPipe } from '@angular/common';
@@ -13,7 +13,7 @@ import { Customer } from '../../../core/models/models';
   imports: [ReactiveFormsModule, RouterLink, CurrencyPipe],
   template: `
     <div class="page-header">
-      <a routerLink="/orders" class="back-btn">← Retour</a>
+      <a routerLink="/orders" class="back-btn">Retour</a>
       <div>
         <h1>Nouvelle commande</h1>
         <p>Saisie d'une commande client</p>
@@ -24,7 +24,7 @@ import { Customer } from '../../../core/models/models';
       <div class="top-grid">
         <!-- Header fields -->
         <div class="card">
-          <h3>En-tête</h3>
+          <h3>En-tete</h3>
           <div class="header-fields">
             <div class="form-group col-2">
               <label>Client *</label>
@@ -32,7 +32,7 @@ import { Customer } from '../../../core/models/models';
               <select formControlName="customerId">
                 <option [ngValue]="null" disabled>Sélectionner un client</option>
                 @for (c of filteredCustomers(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.cardCode }} — {{ c.cardName }}</option>
+                  <option [ngValue]="c.id">{{ c.cardCode }} - {{ c.cardName }}</option>
                 }
               </select>
             </div>
@@ -43,7 +43,7 @@ import { Customer } from '../../../core/models/models';
             <div class="form-group">
               <label>Devise</label>
               <select formControlName="currency">
-                <option value="EUR">EUR €</option>
+                <option value="EUR">EUR</option>
                 <option value="USD">USD $</option>
               </select>
             </div>
@@ -56,7 +56,7 @@ import { Customer } from '../../../core/models/models';
 
         <!-- Totals card -->
         <div class="card totals-card">
-          <h3>Récapitulatif</h3>
+          <h3>Recapitulatif</h3>
           <div class="totals-content">
             <div class="total-row">
               <span>Sous-total HT</span>
@@ -73,7 +73,7 @@ import { Customer } from '../../../core/models/models';
             </div>
             <button type="submit" class="btn-primary save-btn"
                     [disabled]="form.invalid || lines.length === 0 || saving()">
-              {{ saving() ? 'Création...' : '💾 Créer la commande' }}
+              {{ saving() ? 'Création...' : 'Créer la commande' }}
             </button>
           </div>
         </div>
@@ -88,7 +88,7 @@ import { Customer } from '../../../core/models/models';
 
         @if (lines.length === 0) {
           <div class="empty-lines">
-            🛒 Aucune ligne. Cliquez sur "Ajouter".
+            Aucune ligne. Cliquez sur "Ajouter".
           </div>
         }
 
@@ -103,7 +103,7 @@ import { Customer } from '../../../core/models/models';
                         (change)="onProductSelect(+$any($event.target).value, i)">
                   <option [ngValue]="null" disabled>Choisir...</option>
                   @for (p of products(); track p.id) {
-                    <option [ngValue]="p.id">{{ p.itemCode }} — {{ p.itemName }}</option>
+                    <option [ngValue]="p.id">{{ p.itemCode }} - {{ p.itemName }}</option>
                   }
                 </select>
               </div>
@@ -127,7 +127,7 @@ import { Customer } from '../../../core/models/models';
                 {{ lineTotal(i) | currency:'EUR' }}
               </div>
 
-              <button type="button" class="btn-remove" (click)="removeLine(i)">✕</button>
+              <button type="button" class="btn-remove" (click)="removeLine(i)">X</button>
             </div>
           }
         </div>
@@ -391,3 +391,5 @@ export class OrderFormComponent implements OnInit {
     });
   }
 }
+
+

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReportingApiService } from '../../../core/services/reporting-api.service';
@@ -14,7 +14,7 @@ import { TopProductsComponent } from '../top-products/top-products.component';
   template: `
     <div class="reporting-page">
       <div class="header">
-        <h1>📊 Reporting avancé</h1>
+        <h1>ðY“S Reporting avance</h1>
       </div>
 
       @if (loading()) {
@@ -26,7 +26,7 @@ import { TopProductsComponent } from '../top-products/top-products.component';
         <!-- KPI Cards -->
         <div class="kpi-grid">
           <div class="kpi-card blue">
-            <div class="kpi-icon">👥</div>
+            <div class="kpi-icon">ðY‘¥</div>
             <div class="kpi-body">
               <div class="kpi-value">{{ d().totalCustomers }}</div>
               <div class="kpi-label">Total Clients</div>
@@ -34,21 +34,21 @@ import { TopProductsComponent } from '../top-products/top-products.component';
             </div>
           </div>
           <div class="kpi-card indigo">
-            <div class="kpi-icon">🛒</div>
+            <div class="kpi-icon">ðY›’</div>
             <div class="kpi-body">
               <div class="kpi-value">{{ d().totalOrders }}</div>
               <div class="kpi-label">Total Commandes</div>
             </div>
           </div>
           <div class="kpi-card green">
-            <div class="kpi-icon">💰</div>
+            <div class="kpi-icon">ðY’°</div>
             <div class="kpi-body">
               <div class="kpi-value">{{ d().totalRevenue | number:'1.2-2' }}</div>
               <div class="kpi-label">CA Total (MAD)</div>
             </div>
           </div>
           <div class="kpi-card teal">
-            <div class="kpi-icon">📈</div>
+            <div class="kpi-icon">ðY“ˆ</div>
             <div class="kpi-body">
               <div class="kpi-value">{{ d().revenueThisMonth | number:'1.2-2' }}</div>
               <div class="kpi-label">CA ce mois (MAD)</div>
@@ -83,8 +83,8 @@ import { TopProductsComponent } from '../top-products/top-products.component';
         <!-- Recent Orders -->
         <div class="recent-card">
           <div class="recent-header">
-            <h3>🕐 Dernières commandes</h3>
-            <a routerLink="/orders" class="view-all">Voir tout →</a>
+            <h3>ðY• Dernieres commandes</h3>
+            <a routerLink="/orders" class="view-all">Voir tout a†’</a>
           </div>
           <div class="recent-list">
             @for (o of d().recentOrders; track o.id) {
@@ -100,14 +100,14 @@ import { TopProductsComponent } from '../top-products/top-products.component';
                 </div>
               </div>
             } @empty {
-              <div class="empty">Aucune commande récente.</div>
+              <div class="empty">Aucune commande recente.</div>
             }
           </div>
         </div>
       }
 
       @if (errorMsg()) {
-        <div class="error-banner">❌ {{ errorMsg() }}</div>
+        <div class="error-banner">aŒ {{ errorMsg() }}</div>
       }
     </div>
   `,
@@ -228,3 +228,5 @@ export class ReportingDashboardComponent implements OnInit {
     });
   }
 }
+
+

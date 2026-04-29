@@ -1,4 +1,4 @@
-import { Injectable, signal, OnDestroy, inject } from '@angular/core';
+﻿import { Injectable, signal, OnDestroy, inject } from '@angular/core';
 import { Observable, Subject, interval, Subscription, switchMap, of } from 'rxjs';
 import { TrackingApiService } from './tracking-api.service';
 
@@ -8,7 +8,7 @@ export interface GeoPosition {
   accuracy: number;
 }
 
-/** Position par défaut — Casablanca */
+/** Position par defaut - Casablanca */
 const DEFAULT_POSITION: GeoPosition = {
   latitude: 33.593283,
   longitude: -7.603535,
@@ -22,7 +22,7 @@ export class GeolocationService implements OnDestroy {
   /** Position courante (signal pour zoneless) */
   currentPosition = signal<GeoPosition | null>(null);
 
-  /** Erreur éventuelle */
+  /** Erreur eventuelle */
   error = signal<string | null>(null);
 
   /** Tracking auto actif ? */
@@ -32,15 +32,15 @@ export class GeolocationService implements OnDestroy {
   private autoSendSub: Subscription | null = null;
   private destroy$ = new Subject<void>();
 
-  /** Vérifier si la géolocalisation est disponible */
+  /** Verifier si la geolocalisation est disponible */
   get isSupported(): boolean {
     return typeof navigator !== 'undefined' && 'geolocation' in navigator;
   }
 
   /**
    * Obtenir la position actuelle (one-shot).
-   * Stratégie : GPS haute précision → GPS basse précision → position en cache → position par défaut.
-   * Ne produit JAMAIS d'erreur — retourne toujours une position.
+   * Strategie : GPS haute precision a†’ GPS basse precision a†’ position en cache a†’ position par defaut.
+   * Ne produit JAMAIS d'erreur - retourne toujours une position.
    */
   getCurrentPosition(): Observable<GeoPosition> {
     return new Observable(observer => {
@@ -52,13 +52,13 @@ export class GeolocationService implements OnDestroy {
       };
 
       const useFallback = () => {
-        // Utiliser la dernière position connue ou la position par défaut
+        // Utiliser la derniere position connue ou la position par defaut
         const cached = this.currentPosition();
         if (cached) {
-          console.warn('[Geo] GPS échoué, utilisation de la dernière position connue.');
+          console.warn('[Geo] GPS echoue, utilisation de la derniere position connue.');
           emit(cached);
         } else {
-          console.warn('[Geo] GPS échoué, utilisation de la position par défaut (Casablanca).');
+          console.warn('[Geo] GPS echoue, utilisation de la position par defaut (Casablanca).');
           emit(DEFAULT_POSITION);
         }
       };
@@ -76,11 +76,11 @@ export class GeolocationService implements OnDestroy {
         });
       };
 
-      // 1ère tentative : haute précision, 15s, cache 60s
+      // 1ere tentative : haute precision, 15s, cache 60s
       navigator.geolocation.getCurrentPosition(
         onSuccess,
         () => {
-          // 2ème tentative : basse précision, 20s, cache 5min
+          // 2eme tentative : basse precision, 20s, cache 5min
           navigator.geolocation.getCurrentPosition(
             onSuccess,
             () => useFallback(),
@@ -92,12 +92,12 @@ export class GeolocationService implements OnDestroy {
     });
   }
 
-  /** Démarrer le tracking GPS automatique (envoi toutes les 30s) */
+  /** Demarrer le tracking GPS automatique (envoi toutes les 30s) */
   startAutoTracking(intervalMs = 30_000): void {
     if (this.isTracking()) return;
     this.isTracking.set(true);
 
-    // Watch position en continu (basse précision pour stabilité, cache 10s)
+    // Watch position en continu (basse precision pour stabilite, cache 10s)
     if (this.isSupported) {
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -113,7 +113,7 @@ export class GeolocationService implements OnDestroy {
       );
     }
 
-    // Envoi périodique au serveur
+    // Envoi periodique au serveur
     this.autoSendSub = interval(intervalMs).pipe(
       switchMap(() => {
         const pos = this.currentPosition();
@@ -128,7 +128,7 @@ export class GeolocationService implements OnDestroy {
     ).subscribe();
   }
 
-  /** Arrêter le tracking GPS automatique */
+  /** Arreter le tracking GPS automatique */
   stopAutoTracking(): void {
     if (this.watchId !== null) {
       navigator.geolocation.clearWatch(this.watchId);
@@ -148,13 +148,15 @@ export class GeolocationService implements OnDestroy {
   private formatError(err: GeolocationPositionError): string {
     switch (err.code) {
       case err.PERMISSION_DENIED:
-        return 'Permission de géolocalisation refusée. Veuillez l\'activer dans les paramètres du navigateur.';
+        return 'Permission de geolocalisation refusee. Veuillez l\'activer dans les parametres du navigateur.';
       case err.POSITION_UNAVAILABLE:
-        return 'Position indisponible. Vérifiez votre GPS.';
+        return 'Position indisponible. Verifiez votre GPS.';
       case err.TIMEOUT:
-        return 'Délai d\'attente de la position GPS dépassé.';
+        return 'Delai d\'attente de la position GPS depasse.';
       default:
-        return 'Erreur de géolocalisation inconnue.';
+        return 'Erreur de geolocalisation inconnue.';
     }
   }
 }
+
+

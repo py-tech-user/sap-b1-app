@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+﻿import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product, ProductApiService } from '../../../core/services/product-api.service';
 
@@ -26,7 +26,7 @@ import { Product, ProductApiService } from '../../../core/services/product-api.s
                 @if (product.imageUrl && !isImageBroken(product.id)) {
                   <img [src]="product.imageUrl" [alt]="product.itemName" class="product-image" (error)="markImageBroken(product.id)" />
                 } @else {
-                  <div class="product-image placeholder">📦</div>
+                  <div class="product-image placeholder">ðY“¦</div>
                 }
               </div>
 
@@ -98,3 +98,5 @@ export class ProductListComponent implements OnInit {
     this.brokenImageIds.set(next);
   }
 }
+
+

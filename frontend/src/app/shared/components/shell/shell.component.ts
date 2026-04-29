@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+﻿import { Component, inject, signal, computed } from '@angular/core';
 import { Router, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -10,7 +10,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
   imports: [RouterOutlet, RouterLinkActive],
   template: `
     <div class="shell-container">
-      <!-- ── Sidenav ── -->
+      <!-- a”€a”€ Sidenav a”€a”€ -->
       @if (sidenavOpen()) {
         <aside class="sidenav">
           <div class="brand">
@@ -23,23 +23,22 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
                       routerLinkActive="active-link"
                       [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
                       class="nav-item nav-btn">
-                <span class="nav-icon">{{ item.icon }}</span>
                 <span>{{ item.label }}</span>
               </button>
             }
           </nav>
 
           <div class="sidenav-footer">
-            <span>v1.0.0 • SAP B1</span>
+            <span>v1.0.0 SAP B1</span>
           </div>
         </aside>
       }
 
-      <!-- ── Main Content ── -->
+      <!-- a”€a”€ Main Content a”€a”€ -->
       <div class="main-content">
         <!-- Toolbar -->
         <header class="toolbar">
-          <button class="menu-btn" (click)="sidenavOpen.set(!sidenavOpen())">☰</button>
+          <button class="menu-btn" (click)="sidenavOpen.set(!sidenavOpen())">Menu</button>
 
           <div class="toolbar-center">
             @if (notification.visible()) {
@@ -51,7 +50,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
 
           <div class="user-section">
             <button class="user-btn" (click)="showUserMenu = !showUserMenu">
-              👤 {{ auth.currentUser()?.fullName ?? 'Utilisateur' }} ▾
+              {{ auth.currentUser()?.fullName ?? 'Utilisateur' }} v
             </button>
             @if (showUserMenu) {
               <div class="user-dropdown">
@@ -61,7 +60,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
                 </div>
                 <hr />
                 <button class="dropdown-item" (click)="auth.logout(); showUserMenu = false">
-                  🚪 Se déconnecter
+                  Se deconnecter
                 </button>
               </div>
             }
@@ -82,7 +81,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    /* ── Sidenav ── */
+    /* a”€a”€ Sidenav a”€a”€ */
     .sidenav {
       width: 260px;
       background: #1e2a3a;
@@ -136,7 +135,6 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       background: #1976d2;
       color: white;
     }
-    .nav-icon { font-size: 18px; width: 24px; text-align: center; }
 
     .sidenav-footer {
       padding: 12px 16px;
@@ -145,7 +143,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       border-top: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* ── Main ── */
+    /* a”€a”€ Main a”€a”€ */
     .main-content {
       flex: 1;
       display: flex;
@@ -153,7 +151,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       overflow: hidden;
     }
 
-    /* ── Toolbar ── */
+    /* a”€a”€ Toolbar a”€a”€ */
     .toolbar {
       display: flex;
       align-items: center;
@@ -246,7 +244,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
     }
     .dropdown-item:hover { background: #f5f5f5; }
 
-    /* ── Page ── */
+    /* a”€a”€ Page a”€a”€ */
     .page-wrapper {
       padding: 24px;
       flex: 1;
@@ -273,3 +271,5 @@ export class ShellComponent {
     this.router.navigateByUrl(route);
   }
 }
+
+

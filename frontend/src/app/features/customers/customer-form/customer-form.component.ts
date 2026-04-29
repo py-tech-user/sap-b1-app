@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
@@ -83,17 +83,17 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
         </div>
 
         <div class="form-group">
-          <label>Tél. 1</label>
+          <label>Tel. 1</label>
           <input [(ngModel)]="customer.phone1" name="phone1" placeholder="Ex: +212 5 22 00 00 00" />
         </div>
 
         <div class="form-group">
-          <label>Tél. 2</label>
+          <label>Tel. 2</label>
           <input [(ngModel)]="customer.phone2" name="phone2" placeholder="Ex: +212 5 22 11 11 11" />
         </div>
 
         <div class="form-group">
-          <label>Téléphone portable</label>
+          <label>Telephone portable</label>
           <input [(ngModel)]="customer.mobilePhone" name="mobilePhone" placeholder="Ex: +212 6 61 23 45 67" />
         </div>
 
@@ -118,7 +118,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
         </div>
 
         <div class="form-group">
-          <label>Limite crédit</label>
+          <label>Limite credit</label>
           <input [(ngModel)]="customer.creditLimit" name="creditLimit" type="number" min="0" step="0.01" placeholder="Ex: 50000" />
         </div>
 
@@ -128,12 +128,12 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
         </div>
 
         <div class="form-group">
-          <label>N identification supplémentaire</label>
+          <label>N identification supplementaire</label>
           <input [(ngModel)]="customer.additionalIdentificationNumber" name="additionalIdentificationNumber" placeholder="Ex: RC-123456" />
         </div>
 
         <div class="form-group">
-          <label>N identification fiscale unifié</label>
+          <label>N identification fiscale unifie</label>
           <input [(ngModel)]="customer.unifiedTaxIdentificationNumber" name="unifiedTaxIdentificationNumber" placeholder="Ex: IFU-99887766" />
         </div>
         
@@ -379,7 +379,7 @@ export class CustomerFormComponent implements OnInit {
 
     this.http.post<any>(`${environment.apiUrl}/sap/clients`, payload).subscribe({
       next: (res) => {
-        this.successMsg = res?.message || 'Client créé.';
+        this.successMsg = res?.message || 'Client cree.';
         this.notifications.showSuccess(this.successMsg);
         this.loading = false;
         this.cdr.markForCheck();
@@ -406,7 +406,7 @@ export class CustomerFormComponent implements OnInit {
     const message = String(err?.error?.message ?? '').trim();
     if (message && message.toLowerCase() !== 'erreur sap') return message;
 
-    return 'Création du client impossible.';
+    return 'Creation du client impossible.';
   }
 
   private saveLegacyCustomer(): void {
@@ -425,7 +425,7 @@ export class CustomerFormComponent implements OnInit {
           this.cdr.markForCheck();
           return;
         }
-        this.successMsg = res.message || 'Partenaire modifié.';
+        this.successMsg = res.message || 'Partenaire modifie.';
         this.notifications.showSuccess(this.successMsg);
         this.loading = false;
         this.cdr.markForCheck();
@@ -469,3 +469,5 @@ export class CustomerFormComponent implements OnInit {
     return [];
   }
 }
+
+

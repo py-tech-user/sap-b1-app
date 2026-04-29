@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+﻿import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -17,7 +17,7 @@ interface DashboardStats {
   imports: [CommonModule, RouterLink],
   template: `
     <div class="dashboard">
-      <h1>📊 Tableau de bord</h1>
+      <h1>Tableau de bord</h1>
 
       @if (loading()) {
         <div class="loading">Chargement des statistiques...</div>
@@ -25,7 +25,6 @@ interface DashboardStats {
 
       <div class="stats-grid">
         <a routerLink="/customers" class="stat-card">
-          <div class="stat-icon">👥</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalCustomers }}</span>
             <span class="stat-label">Partenaires</span>
@@ -33,7 +32,6 @@ interface DashboardStats {
         </a>
 
         <a routerLink="/orders" class="stat-card">
-          <div class="stat-icon">🛒</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalOrders }}</span>
             <span class="stat-label">Commandes</span>
@@ -41,7 +39,6 @@ interface DashboardStats {
         </a>
 
         <a routerLink="/products" class="stat-card">
-          <div class="stat-icon">🏷️</div>
           <div class="stat-info">
             <span class="stat-value">{{ stats().totalProducts }}</span>
             <span class="stat-label">Catalogue</span>
@@ -49,9 +46,8 @@ interface DashboardStats {
         </a>
 
         <a routerLink="/reporting" class="stat-card">
-          <div class="stat-icon">📈</div>
           <div class="stat-info">
-            <span class="stat-value">↗</span>
+            <span class="stat-value">a†—</span>
             <span class="stat-label">Reporting</span>
           </div>
         </a>
@@ -129,3 +125,5 @@ export class DashboardComponent implements OnInit {
     });
   }
 }
+
+

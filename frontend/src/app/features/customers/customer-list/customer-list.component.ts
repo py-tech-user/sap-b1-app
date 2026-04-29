@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+﻿import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -131,7 +131,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
             <h1>Partenaires</h1>
           </div>
           <div class="header-actions">
-            <a routerLink="/customers/new" class="btn-primary">+ Créer partenaire</a>
+            <a routerLink="/customers/new" class="btn-primary">+ Creer partenaire</a>
           </div>
         </div>
 
@@ -150,7 +150,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
           <input
             type="text"
             name="searchInput"
-            placeholder="Recherche (code, nom, email, téléphone...)"
+            placeholder="Recherche (code, nom, email, telephone...)"
             [(ngModel)]="searchInput"
             (ngModelChange)="onFilterInputChange()"
           />
@@ -166,10 +166,10 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
           <table>
           <thead>
             <tr>
-              <th>Détails</th>
+              <th>Details</th>
               <th>Code</th>
               <th>Raison social</th>
-              <th>Téléphone</th>
+              <th>Telephone</th>
               <th>Email</th>
               <th>Devise</th>
               <th>Type</th>
@@ -185,7 +185,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
               @for (customer of pagedCustomers(); track customer.code + '-' + $index) {
                 <tr>
                   <td>
-                    <button type="button" class="btn-detail" (click)="openDetails(customer)">Détails</button>
+                    <button type="button" class="btn-detail" (click)="openDetails(customer)">Details</button>
                   </td>
                   <td>{{ customer.code }}</td>
                   <td>{{ customer.name }}</td>
@@ -202,17 +202,17 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
         </div>
 
         <div class="pager">
-          <button type="button" class="btn-secondary" (click)="prev()" [disabled]="page() <= 1">← Précédent</button>
+          <button type="button" class="btn-secondary" (click)="prev()" [disabled]="page() <= 1">Précédent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
-          <button type="button" class="btn-secondary" (click)="next()" [disabled]="page() >= totalPages()">Suivant →</button>
+          <button type="button" class="btn-secondary" (click)="next()" [disabled]="page() >= totalPages()">Suivant</button>
         </div>
       }
 
       @if (selectedCustomer()) {
         <div class="drawer-backdrop" (click)="closeDetails()"></div>
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détails client">
+        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Details client">
           <div class="drawer-header">
-            <h3>Détails client {{ selectedCustomerName() }}</h3>
+            <h3>Details client {{ selectedCustomerName() }}</h3>
             <button type="button" class="btn-close" (click)="closeDetails()">Fermer</button>
           </div>
           <div class="drawer-body">
@@ -511,3 +511,5 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   }
 
 }
+
+

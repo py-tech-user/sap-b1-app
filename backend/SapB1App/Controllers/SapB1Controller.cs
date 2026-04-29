@@ -5,6 +5,8 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using SapB1App.Data;
 using SapB1App.DTOs;
 using SapB1App.Interfaces;
 
@@ -16,17 +18,20 @@ public class SapB1Controller : ControllerBase
 {
     private readonly ISapB1Service _sapService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly AppDbContext _db;
     private readonly IConfiguration _configuration;
     private readonly ILogger<SapB1Controller> _logger;
 
     public SapB1Controller(
         ISapB1Service sapService,
         ICurrentUserService currentUserService,
+        AppDbContext db,
         IConfiguration configuration,
         ILogger<SapB1Controller> logger)
     {
         _sapService = sapService;
         _currentUserService = currentUserService;
+        _db = db;
         _configuration = configuration;
         _logger = logger;
     }
@@ -534,19 +539,42 @@ ORDER BY I.ItemCode;";
         if (string.IsNullOrWhiteSpace(cardCode))
             return BadRequest(SapError("CardCode manquant pour l'encaissement."));
 
-        var sapCashSum = totalPaid;
-        var payload = new
+        var invoiceOpenAmount = ResolveOpenAmount(invoice);
+        var amountAppliedToInvoice = Math.Min(totalPaid, invoiceOpenAmount);
+        var walletCreditAdded = Math.Max(0m, totalPaid - amountAppliedToInvoice);
+
+        if (walletCreditAdded > 0)
         {
-            CardCode = cardCode,
-            DocDate = DateTime.Today.ToString("yyyy-MM-dd"),
-            DocCurrency = GetString(invoice, "DocCurrency"),
-            CashSum = sapCashSum,
-            PaymentInvoices = new[]
+            await AddWalletCreditAsync(cardCode, walletCreditAdded, cancellationToken);
+            await CreateSapAdvanceOnAccountAsync(cardCode, walletCreditAdded, cancellationToken);
+        }
+
+        if (amountAppliedToInvoice <= 0)
+        {
+            var walletOnlyBalance = await GetWalletBalanceAsync(cardCode, cancellationToken);
+            return Ok(new ApiResponse<object>(true, "Encaissement enregistre sur solde client.", new
+            {
+                payment = (object?)null,
+                invoice = (object?)null,
+                walletCreditAdded,
+                walletApplied = 0m,
+                walletRemaining = walletOnlyBalance
+            }));
+        }
+
+        var sapCashSum = amountAppliedToInvoice;
+        var payload = new Dictionary<string, object?>
+        {
+            ["CardCode"] = cardCode,
+            ["DocDate"] = DateTime.Today.ToString("yyyy-MM-dd"),
+            ["DocCurrency"] = GetString(invoice, "DocCurrency"),
+            ["CashSum"] = sapCashSum, // On utilise CashSum car c'est le mode le plus simple pour solder via Service Layer sans config bancaire complexe
+            ["PaymentInvoices"] = new[]
             {
                 new
                 {
                     DocEntry = invoiceDocEntry,
-                    SumApplied = totalPaid,
+                    SumApplied = amountAppliedToInvoice,
                     InvoiceType = "it_Invoice"
                 }
             }
@@ -576,10 +604,14 @@ ORDER BY I.ItemCode;";
         if (refreshedInvoice.Success && refreshedInvoice.Response.HasValue)
             invoiceStatus = NormalizeDocumentForFrontend(refreshedInvoice.Response.Value);
 
+        var walletBalance = await GetWalletBalanceAsync(cardCode, cancellationToken);
         return Ok(new ApiResponse<object>(true, "Encaissement enregistré.", new
         {
             payment = paymentResult.Response,
-            invoice = invoiceStatus
+            invoice = invoiceStatus,
+            walletCreditAdded,
+            walletApplied = 0m,
+            walletRemaining = walletBalance
         }));
     }
 
@@ -612,6 +644,13 @@ ORDER BY I.ItemCode;";
             .Select(g => g.First())
             .OrderBy(c => c.CardCode, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        var walletMap = await GetSapCustomerAdvanceBalancesAsync(clients.Select(c => c.CardCode), cancellationToken);
+        foreach (var client in clients)
+        {
+            if (walletMap.TryGetValue(client.CardCode, out var wallet))
+                client.AdvanceBalance = wallet;
+        }
 
         _logger.LogInformation("[ENCAISSEMENT] Customers loaded. Count={Count}", clients.Count);
         return Ok(new ApiResponse<IReadOnlyList<EncaissementClientDto>>(true, null, clients, clients.Count));
@@ -737,7 +776,7 @@ ORDER BY DocDate ASC, DocEntry ASC;";
             return BadRequest(SapError("PaymentMethodCode est obligatoire."));
 
         if (request.CashSum < 0)
-            return BadRequest(SapError("CashSum doit être >= 0."));
+            return BadRequest(SapError("Le montant Cash doit être >= 0."));
 
         if (request.Invoices.Count == 0)
             return BadRequest(SapError("Au moins une facture doit être sélectionnée."));
@@ -805,17 +844,8 @@ ORDER BY DocDate ASC, DocEntry ASC;";
 
         var totalSelected = orderedInvoices.Sum(i => i.OpenAmount);
         var totalPaid = request.CashSum;
-
-        if (totalPaid <= 0)
-            return BadRequest(SapError("CashSum doit être supérieur à 0."));
-
-        var requestedByDocEntry = request.Invoices
-            .GroupBy(i => i.DocEntry)
-            .ToDictionary(g => g.Key, g => Math.Max(0m, g.Sum(x => x.SumApplied)));
-
-        var hasExplicitAllocations = requestedByDocEntry.Values.Any(v => v > 0);
-
         var amountToApply = Math.Min(totalPaid, totalSelected);
+        var cashApplied = amountToApply;
 
         var remainingToApply = amountToApply;
         decimal totalAppliedBuilt = 0m;
@@ -824,15 +854,7 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         {
             if (remainingToApply <= 0) break;
 
-            var requested = requestedByDocEntry.TryGetValue(invoice.DocEntry, out var explicitAmount)
-                ? explicitAmount
-                : 0m;
-
-            var targetForInvoice = hasExplicitAllocations
-                ? Math.Min(invoice.OpenAmount, requested)
-                : invoice.OpenAmount;
-
-            var sumApplied = Math.Min(targetForInvoice, remainingToApply);
+            var sumApplied = Math.Min(invoice.OpenAmount, remainingToApply);
             remainingToApply -= sumApplied;
 
             if (sumApplied > 0)
@@ -855,7 +877,7 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         {
             ["CardCode"] = request.CardCode,
             ["DocDate"] = DateTime.Today.ToString("yyyy-MM-dd"),
-            ["CashSum"] = totalAppliedBuilt,
+            ["CashSum"] = cashApplied, // Uniquement l'argent frais. SAP appliquera le crédit BP automatiquement si besoin.
             ["PaymentInvoices"] = paymentInvoices
         };
 
@@ -868,14 +890,27 @@ ORDER BY DocDate ASC, DocEntry ASC;";
 
         _logger.LogInformation("[ENCAISSEMENT][TRACE][PAYLOAD] {@Payload}", payload);
 
-        var paymentResult = await _sapService.ServiceLayerPostAsync("IncomingPayments", payload, cancellationToken);
-        if (!paymentResult.Success)
+        JsonElement? paymentResponse = null;
+        if (cashApplied > 0)
         {
-            _logger.LogError("[ENCAISSEMENT] SAP payment registration failed. CardCode={CardCode}, Error={Error}", request.CardCode, paymentResult.ErrorMessage);
-            return StatusCode(paymentResult.StatusCode, SapError(paymentResult.ErrorMessage, paymentResult.Response));
+            var sapPayload = new Dictionary<string, object?>
+            {
+                ["CardCode"] = request.CardCode,
+                ["DocDate"] = DateTime.Today.ToString("yyyy-MM-dd"),
+                ["CashSum"] = cashApplied, 
+                ["PaymentInvoices"] = paymentInvoices
+            };
+            
+            var paymentResult = await _sapService.ServiceLayerPostAsync("IncomingPayments", sapPayload, cancellationToken);
+            if (!paymentResult.Success)
+            {
+                _logger.LogError("[ENCAISSEMENT] SAP payment registration failed. CardCode={CardCode}, Error={Error}", request.CardCode, paymentResult.ErrorMessage);
+                return StatusCode(paymentResult.StatusCode, SapError(paymentResult.ErrorMessage, paymentResult.Response));
+            }
+            paymentResponse = paymentResult.Response;
+            _logger.LogInformation("[ENCAISSEMENT] Payment registration succeeded. CardCode={CardCode}, InvoiceCount={InvoiceCount}", request.CardCode, request.Invoices.Count);
         }
 
-        _logger.LogInformation("[ENCAISSEMENT] Payment registration succeeded. CardCode={CardCode}, InvoiceCount={InvoiceCount}", request.CardCode, request.Invoices.Count);
 
         var refreshedInvoices = new List<object>();
         foreach (var invoice in orderedInvoices)
@@ -933,11 +968,59 @@ ORDER BY DocDate ASC, DocEntry ASC;";
 
         return Ok(new ApiResponse<object>(true, "Encaissement enregistré.", new
         {
-            payment = paymentResult.Response,
+            payment = paymentResponse,
             invoices = refreshedInvoices,
             totalSelected,
             cashSumApplied = totalAppliedBuilt
         }));
+    }
+
+    private async Task<Dictionary<string, decimal>> GetSapCustomerAdvanceBalancesAsync(IEnumerable<string> cardCodes, CancellationToken cancellationToken)
+    {
+        var normalized = cardCodes
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var result = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (normalized.Count == 0)
+            return result;
+
+        var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+        if (conn is null)
+            return result;
+
+        await using (conn)
+        {
+            var inSql = string.Join(",", normalized.Select((_, i) => $"@p{i}"));
+            var sql = $@"
+SELECT CardCode, ISNULL(Balance, 0) AS Balance
+FROM OCRD
+WHERE CardCode IN ({inSql});";
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+            for (var i = 0; i < normalized.Count; i++)
+                cmd.Parameters.AddWithValue($"@p{i}", normalized[i]);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var code = reader["CardCode"]?.ToString() ?? string.Empty;
+                var balance = reader["Balance"] is DBNull ? 0m : Convert.ToDecimal(reader["Balance"]);
+                // Sur un client, un solde negatif signifie un avoir/avance disponible.
+                result[code] = balance < 0 ? Math.Abs(balance) : 0m;
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<decimal> GetSapCustomerAdvanceBalanceAsync(string cardCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode))
+            return 0m;
+        var map = await GetSapCustomerAdvanceBalancesAsync(new[] { cardCode }, cancellationToken);
+        return map.TryGetValue(cardCode.Trim(), out var value) ? value : 0m;
     }
 
     [HttpPost("factures/from-delivery-note/{deliveryDocEntry:int}")]
@@ -3464,14 +3547,224 @@ ORDER BY ListName ASC, ListNum ASC", conn))
         return null;
     }
 
+    private async Task<ActionResult<ApiResponse<object>>> CreateInvoiceWithWalletAsync(CreateSapDocumentRequest request, CancellationToken cancellationToken)
+    {
+        var created = await CreateCommercialDocumentAsync("Invoices", request, cancellationToken);
+        if (created.Result is not ObjectResult objectResult)
+            return created;
+
+        if (objectResult.Value is not ApiResponse<object> createdResponse || createdResponse.Data is null)
+            return created;
+
+        try
+        {
+            var node = JsonSerializer.SerializeToElement(createdResponse.Data);
+            var invoiceDocEntry = GetInt(node, "docEntry");
+            if (invoiceDocEntry <= 0)
+                invoiceDocEntry = GetInt(node, "DocEntry");
+            var cardCode = request.CardCode?.Trim();
+            if (invoiceDocEntry <= 0 || string.IsNullOrWhiteSpace(cardCode))
+                return created;
+
+            var walletBefore = await GetWalletBalanceAsync(cardCode, cancellationToken);
+            if (walletBefore <= 0)
+                return created;
+
+            var invoiceResult = await _sapService.ServiceLayerGetAsync($"Invoices({invoiceDocEntry})", cancellationToken);
+            if (!invoiceResult.Success || !invoiceResult.Response.HasValue)
+                return created;
+
+            var openAmount = ResolveOpenAmount(invoiceResult.Response.Value);
+            var walletApplied = Math.Min(walletBefore, openAmount);
+            if (walletApplied <= 0)
+                return created;
+
+            await ConsumeWalletCreditAsync(cardCode, walletApplied, cancellationToken);
+
+            var payload = new
+            {
+                CardCode = cardCode,
+                DocDate = DateTime.Today.ToString("yyyy-MM-dd"),
+                CashSum = walletApplied,
+                PaymentInvoices = new[]
+                {
+                    new
+                    {
+                        DocEntry = invoiceDocEntry,
+                        SumApplied = walletApplied,
+                        InvoiceType = "it_Invoice"
+                    }
+                }
+            };
+
+            var paymentResult = await _sapService.ServiceLayerPostAsync("IncomingPayments", payload, cancellationToken);
+            if (!paymentResult.Success)
+            {
+                await AddWalletCreditAsync(cardCode, walletApplied, cancellationToken);
+                return created;
+            }
+
+            var merged = new
+            {
+                created = createdResponse.Data,
+                walletApplied,
+                walletRemaining = await GetWalletBalanceAsync(cardCode, cancellationToken)
+            };
+            return StatusCode(objectResult.StatusCode ?? 200, new ApiResponse<object>(true, "Facture créée et solde client appliqué.", merged));
+        }
+        catch
+        {
+            return created;
+        }
+    }
+
+    private async Task EnsureWalletTableAsync(CancellationToken cancellationToken)
+    {
+        const string sql = @"
+IF OBJECT_ID(N'dbo.CustomerWalletBalances', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CustomerWalletBalances
+    (
+        CardCode NVARCHAR(50) NOT NULL PRIMARY KEY,
+        Balance DECIMAL(19,4) NOT NULL CONSTRAINT DF_CustomerWalletBalances_Balance DEFAULT(0),
+        UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_CustomerWalletBalances_UpdatedAt DEFAULT(SYSUTCDATETIME())
+    );
+END";
+        await _db.Database.ExecuteSqlRawAsync(sql);
+    }
+
+    private async Task<Dictionary<string, decimal>> GetWalletBalancesAsync(IEnumerable<string> cardCodes, CancellationToken cancellationToken)
+    {
+        await EnsureWalletTableAsync(cancellationToken);
+        var normalized = cardCodes
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (normalized.Count == 0) return new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        var result = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        await using var conn = OpenAppSqlConnection();
+        await conn.OpenAsync(cancellationToken);
+        var inSql = string.Join(",", normalized.Select((_, i) => $"@p{i}"));
+        var sql = $"SELECT CardCode, Balance FROM dbo.CustomerWalletBalances WHERE CardCode IN ({inSql});";
+        await using var cmd = new SqlCommand(sql, conn);
+        for (var i = 0; i < normalized.Count; i++)
+            cmd.Parameters.AddWithValue($"@p{i}", normalized[i]);
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            result[reader["CardCode"]?.ToString() ?? string.Empty] = reader["Balance"] is DBNull ? 0m : Convert.ToDecimal(reader["Balance"]);
+        return result;
+    }
+
+    private async Task<decimal> GetWalletBalanceAsync(string cardCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode)) return 0m;
+        var map = await GetWalletBalancesAsync(new[] { cardCode }, cancellationToken);
+        return map.TryGetValue(cardCode.Trim(), out var balance) ? Math.Max(0m, balance) : 0m;
+    }
+
+    private async Task AddWalletCreditAsync(string cardCode, decimal amount, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode) || amount <= 0) return;
+        await EnsureWalletTableAsync(cancellationToken);
+        await using var conn = OpenAppSqlConnection();
+        await conn.OpenAsync(cancellationToken);
+        const string sql = @"
+MERGE dbo.CustomerWalletBalances AS target
+USING (SELECT @cardCode AS CardCode) AS source
+ON target.CardCode = source.CardCode
+WHEN MATCHED THEN UPDATE SET Balance = Balance + @amount, UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN INSERT (CardCode, Balance, UpdatedAt) VALUES (@cardCode, @amount, SYSUTCDATETIME());";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@cardCode", cardCode.Trim());
+        cmd.Parameters.AddWithValue("@amount", amount);
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private async Task ConsumeWalletCreditAsync(string cardCode, decimal amount, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode) || amount <= 0) return;
+        await EnsureWalletTableAsync(cancellationToken);
+        await using var conn = OpenAppSqlConnection();
+        await conn.OpenAsync(cancellationToken);
+        const string sql = @"
+UPDATE dbo.CustomerWalletBalances
+SET Balance = CASE WHEN Balance >= @amount THEN Balance - @amount ELSE 0 END,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE CardCode = @cardCode;";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@cardCode", cardCode.Trim());
+        cmd.Parameters.AddWithValue("@amount", amount);
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private SqlConnection OpenAppSqlConnection()
+    {
+        var conn = _configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(conn))
+            throw new InvalidOperationException("DefaultConnection est manquante.");
+        return new SqlConnection(conn);
+    }
+
+    private async Task CreateSapAdvanceOnAccountAsync(string cardCode, decimal amount, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode) || amount <= 0) return;
+
+        var payload = new
+        {
+            CardCode = cardCode,
+            DocDate = DateTime.Today.ToString("yyyy-MM-dd"),
+            CashSum = amount
+        };
+
+        var result = await _sapService.ServiceLayerPostAsync("IncomingPayments", payload, cancellationToken);
+        if (!result.Success)
+        {
+            _logger.LogWarning("Echec creation avance SAP (on account). CardCode={CardCode}, Amount={Amount}, Error={Error}",
+                cardCode, amount, result.ErrorMessage);
+        }
+    }
+
+    private async Task<int> GetTransIdFromInvoiceAsync(int docEntry, CancellationToken cancellationToken)
+    {
+        var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+        if (conn == null) return 0;
+        await using (conn)
+        {
+            var sql = "SELECT TransId FROM OINV WHERE DocEntry = @de";
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@de", docEntry);
+            var res = await cmd.ExecuteScalarAsync(cancellationToken);
+            return res != null ? Convert.ToInt32(res) : 0;
+        }
+    }
+
     private static object SapError(string? error, JsonElement? sapResponse = null)
-        => new
+    {
+        var msg = error ?? "Erreur inconnue";
+        
+        // TRADUCTION SYSTÉMATIQUE ET EXHAUSTIVE
+        if (msg.Contains("Invalid session", StringComparison.OrdinalIgnoreCase)) msg = "Session SAP expirée. Veuillez vous reconnecter.";
+        if (msg.Contains("Insufficient permission", StringComparison.OrdinalIgnoreCase)) msg = "Permissions SAP insuffisantes.";
+        if (msg.Contains("Confirmation amount must be greater than zero", StringComparison.OrdinalIgnoreCase)) msg = "Le montant du paiement doit être supérieur à zéro. Veuillez saisir un montant cash.";
+        if (msg.Contains("Account for bank transfer has not been defined", StringComparison.OrdinalIgnoreCase)) msg = "Configuration SAP manquante : Le compte de virement bancaire n'est pas défini.";
+        if (msg.Contains("Internal error", StringComparison.OrdinalIgnoreCase)) msg = "Erreur interne SAP.";
+        if (msg.Contains("Object not found", StringComparison.OrdinalIgnoreCase)) msg = "Objet SAP introuvable.";
+        if (msg.Contains("Database connection failed", StringComparison.OrdinalIgnoreCase)) msg = "Échec de connexion à la base de données SAP.";
+        if (msg.Contains("Already exists", StringComparison.OrdinalIgnoreCase)) msg = "Cet enregistrement existe déjà dans SAP.";
+        if (msg.Contains("No matching records found", StringComparison.OrdinalIgnoreCase)) msg = "Aucun enregistrement correspondant trouvé dans SAP (Erreur ODBC -2028).";
+        if (msg.Contains("ODBC", StringComparison.OrdinalIgnoreCase)) msg = "Erreur de base de données SAP (ODBC).";
+        if (msg.Contains("Service Layer", StringComparison.OrdinalIgnoreCase)) msg = "Erreur de communication avec le Service Layer SAP.";
+        
+        return new
         {
             success = false,
             message = "Erreur SAP",
-            error = error ?? "Erreur inconnue",
+            error = msg,
             sapResponse
         };
+    }
 }
 
 public class CreateSapClientRequest
@@ -3508,6 +3801,7 @@ public class RegisterEncaissementRequest
     public string PaymentMethodCode { get; set; } = string.Empty;
     public decimal CashSum { get; set; }
     public decimal CreditSum { get; set; }
+    public bool UseAdvance { get; set; }
     public List<RegisterEncaissementInvoiceRequest> Invoices { get; set; } = [];
 }
 
@@ -3545,6 +3839,7 @@ public class EncaissementClientDto
     public string CardName { get; set; } = string.Empty;
     public string Currency { get; set; } = string.Empty;
     public decimal CreditLimit { get; set; }
+    public decimal AdvanceBalance { get; set; }
 }
 
 public class EncaissementInvoiceDto
@@ -3625,3 +3920,4 @@ public class SapItemWarehouseDto
     public string WarehouseCode { get; set; } = string.Empty;
     public decimal InStock { get; set; }
 }
+

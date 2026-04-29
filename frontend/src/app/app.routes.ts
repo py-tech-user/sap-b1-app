@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 
@@ -9,7 +9,7 @@ const MGR = ['Admin', 'Manager'];
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
 
-  // ── Public ────────────────────────────────────────────────────────────────
+  // a”€a”€ Public a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   {
     path: 'login',
     loadComponent: () =>
@@ -17,7 +17,7 @@ export const routes: Routes = [
         .then(m => m.LoginComponent)
   },
 
-  // ── Protected (Shell layout) ──────────────────────────────────────────────
+  // a”€a”€ Protected (Shell layout) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   {
     path: '',
     loadComponent: () =>
@@ -34,15 +34,7 @@ export const routes: Routes = [
             .then(m => m.DashboardComponent),
         data: { roles: ALL }
       },
-      {
-        path: 'commercial-dashboard',
-        loadComponent: () =>
-          import('./features/commercial/commercial-dashboard/commercial-dashboard.component')
-            .then(m => m.CommercialDashboardComponent),
-        data: { roles: ALL }
-      },
-
-      // ── Customers ──────────────────────────────────────────────────────
+      // a”€a”€ Customers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
       {
         path: 'customers',
         loadComponent: () =>
@@ -79,7 +71,7 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
 
-      // ── Documents commerciaux ──────────────────────────────────────────
+      // a”€a”€ Documents commerciaux a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
       {
         path: 'quotes',
         loadChildren: () =>
@@ -130,7 +122,7 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
 
-      // ── Products (Catalogue - Lecture seule) ───────────────────────────
+      // a”€a”€ Products (Catalogue - Lecture seule) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
       {
         path: 'products',
         loadComponent: () =>
@@ -139,16 +131,7 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
 
-      // ── Visits (Visites clients) ───────────────────────────────────────
-      {
-        path: 'visits',
-        loadComponent: () =>
-          import('./features/visits/visits.component')
-            .then(m => m.VisitsComponent),
-        data: { roles: ALL }
-      },
-
-      // ── Reporting (Rapports) ───────────────────────────────────────────
+      // a”€a”€ Reporting (Rapports) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
       {
         path: 'reporting',
         loadComponent: () =>
@@ -175,3 +158,5 @@ export const routes: Routes = [
 
   { path: '**', redirectTo: '/dashboard' }
 ];
+
+

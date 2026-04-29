@@ -4,6 +4,7 @@ import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { NotificationService } from '../../core/services/notification.service';
 
 interface ApiResponse<T> {
   success?: boolean;
@@ -16,6 +17,7 @@ interface EncaissementClient {
   cardName: string;
   currency: string;
   creditLimit: number;
+  advanceBalance: number;
   raw: Record<string, unknown>;
 }
 
@@ -45,13 +47,6 @@ interface InvoiceSelection {
     <div class="page">
       <h1>Encaissement</h1>
 
-      @if (error()) {
-        <div class="alert alert-error">{{ error() }}</div>
-      }
-
-      @if (success()) {
-        <div class="alert alert-success">{{ success() }}</div>
-      }
 
       <div class="card form-grid">
         <label>
@@ -68,6 +63,8 @@ interface InvoiceSelection {
           </datalist>
         </label>
 
+
+
         <label>
           Moyen de paiement
           <input [ngModel]="paymentMethodCode()" (ngModelChange)="paymentMethodCode.set($event)" placeholder="Ex: Virement" />
@@ -77,6 +74,7 @@ interface InvoiceSelection {
           CashSum
           <input type="number" min="0" step="0.01" [ngModel]="cashSum()" (ngModelChange)="onCashSumChange($event)" />
         </label>
+
       </div>
 
       <div class="card">
@@ -100,15 +98,15 @@ interface InvoiceSelection {
             <thead>
               <tr>
                 <th></th>
-                <th>N° entrée</th>
-                <th>N° document</th>
+                <th>No entrée</th>
+                <th>No document</th>
                 <th>Date</th>
-                <th>Date d'échéance</th>
+                <th>Date échéance</th>
                 <th>Total</th>
                 <th>Payé</th>
                 <th>Reste</th>
                 <th>Statut</th>
-                <th>Affecté auto</th>
+                <th>Affecte auto</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -149,7 +147,7 @@ interface InvoiceSelection {
 
       @if (selectedInvoice()) {
         <div class="drawer-backdrop" (click)="closeInvoiceDetails()"></div>
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détail facture">
+        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Detail facture">
           <div class="drawer-header">
             <h3>Facture #{{ selectedInvoice()!.docNum || selectedInvoice()!.docEntry }}</h3>
             <button type="button" class="btn-secondary" (click)="closeInvoiceDetails()">Fermer</button>
@@ -173,12 +171,6 @@ interface InvoiceSelection {
 
       <div class="actions">
         <button type="button" class="btn-primary" (click)="submit()" [disabled]="saving()">{{ saving() ? 'Enregistrement...' : 'Enregistrer encaissement' }}</button>
-        @if (error()) {
-          <span class="action-feedback error">{{ error() }}</span>
-        }
-        @if (success()) {
-          <span class="action-feedback success">{{ success() }}</span>
-        }
       </div>
     </div>
   `,
@@ -233,7 +225,6 @@ export class EncaissementComponent {
   readonly cashSum = signal(0);
   readonly totalSelectedAmount = computed(() =>
     this.selectedInvoicesOrdered().reduce((sum, invoice) => sum + invoice.openAmount, 0));
-
   readonly loadingInvoices = signal(false);
   readonly saving = signal(false);
   readonly loadingClients = signal(false);
@@ -241,7 +232,11 @@ export class EncaissementComponent {
   readonly error = signal('');
   readonly success = signal('');
 
-  constructor(private readonly http: HttpClient, private readonly route: ActivatedRoute) {
+  constructor(
+    private readonly http: HttpClient,
+    private readonly route: ActivatedRoute,
+    private readonly notifications: NotificationService
+  ) {
     this.readPrefillFromQuery();
     this.loadClients();
   }
@@ -379,6 +374,7 @@ export class EncaissementComponent {
     if (!invoice) return;
     if (!this.canSelect(invoice)) {
       this.error.set('Facture invalide: DocEntry manquant.');
+      this.notifications.showError(this.error());
       return;
     }
     this.toggleInvoice(invoice.docEntry, true);
@@ -395,18 +391,21 @@ export class EncaissementComponent {
     const cardCode = this.selectedCardCode().trim();
     if (!cardCode) {
       this.error.set('Partenaire obligatoire.');
+      this.notifications.showError(this.error());
       return;
     }
 
     const paymentMethodCode = this.paymentMethodCode().trim();
     if (!paymentMethodCode) {
       this.error.set('Mode de paiement obligatoire.');
+      this.notifications.showError(this.error());
       return;
     }
 
     const selectedInvoices = this.selectedInvoicesOrdered();
     if (selectedInvoices.length === 0) {
-      this.error.set('Sélectionnez au moins une facture.');
+      this.error.set('Selectionnez au moins une facture.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -414,6 +413,7 @@ export class EncaissementComponent {
 
     if (cashSum <= 0) {
       this.error.set('CashSum doit être supérieur à 0.');
+      this.notifications.showError(this.error());
       return;
     }
 
@@ -425,7 +425,7 @@ export class EncaissementComponent {
       cashSum,
       invoices: selectedInvoices.map(x => ({
         docEntry: x.docEntry,
-        sumApplied: allocations.get(x.docEntry) ?? 0
+        sumApplied: (allocations.get(x.docEntry) ?? 0)
       }))
     };
 
@@ -436,18 +436,21 @@ export class EncaissementComponent {
       next: (res) => {
         this.saving.set(false);
         if (res?.success === false) {
-          this.error.set(res.message || 'Encaissement refusé.');
+          this.error.set(res.message || 'Encaissement refuse.');
+          this.notifications.showError(this.error());
           console.error('[encaissement] payment failed', res);
           return;
         }
 
-        this.success.set('Encaissement enregistré avec succès.');
+        this.success.set(`Encaissement enregistré avec succès.`);
+        this.notifications.showSuccess(this.success());
         console.log('[encaissement] payment success', res);
         this.loadOpenInvoices();
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.error || err?.error?.message || err?.error?.title || err?.message || 'Erreur lors de l\'encaissement.');
+        this.error.set(err?.error?.error || err?.error?.message || err?.error?.title || err?.message || 'Erreur lors de l encaissement.');
+        this.notifications.showError(this.error());
         console.error('[encaissement] payment error', err);
       }
     });
@@ -470,6 +473,7 @@ export class EncaissementComponent {
       error: (err) => {
         this.loadingClients.set(false);
         this.error.set(err?.error?.error || err?.error?.message || err?.error?.title || err?.message || 'Impossible de charger les partenaires.');
+        this.notifications.showError(this.error());
         console.error('[encaissement] clients loading failed', err);
       }
     });
@@ -524,6 +528,7 @@ export class EncaissementComponent {
         this.selections.set([]);
         this.selectedInvoice.set(null);
         this.error.set(err?.error?.error || err?.error?.message || err?.error?.title || err?.message || 'Impossible de charger les factures ouvertes.');
+        this.notifications.showError(this.error());
         console.error('[encaissement] open invoices loading failed', { cardCode, err });
       }
     });
@@ -544,12 +549,14 @@ export class EncaissementComponent {
     const cardName = String(row?.cardName ?? row?.CardName ?? row?.name ?? '').trim();
     const currency = String(row?.currency ?? row?.Currency ?? 'MAD').trim();
     const creditLimit = this.toNumber(row?.creditLimit ?? row?.CreditLimit ?? row?.CreditLine ?? 0);
+    const advanceBalance = this.toNumber(row?.advanceBalance ?? row?.AdvanceBalance ?? row?.walletBalance ?? row?.WalletBalance ?? 0);
 
     return {
       cardCode,
       cardName,
       currency,
       creditLimit,
+      advanceBalance,
       raw: row ?? {}
     };
   }
@@ -685,3 +692,7 @@ export class EncaissementComponent {
     this.cashSum.set(this.totalSelectedAmount());
   }
 }
+
+
+
+

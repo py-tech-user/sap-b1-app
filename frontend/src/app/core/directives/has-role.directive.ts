@@ -1,4 +1,4 @@
-import { Directive, Input, TemplateRef, ViewContainerRef, inject, effect } from '@angular/core';
+﻿import { Directive, Input, TemplateRef, ViewContainerRef, inject, effect } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -47,3 +47,5 @@ export class HasRoleDirective {
     }
   }
 }
+
+

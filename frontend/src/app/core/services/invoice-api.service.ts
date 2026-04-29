@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   ApiResponse,
@@ -46,3 +46,5 @@ export class InvoiceApiService {
     return this.commercialApi.addInvoicePayment(invoiceId, dto);
   }
 }
+
+

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Component, OnInit, OnDestroy, inject, signal,
   ElementRef, viewChild, afterNextRender, ChangeDetectorRef
 } from '@angular/core';
@@ -16,39 +16,39 @@ import * as L from 'leaflet';
   template: `
     <div class="live-map-page">
       <div class="header">
-        <h1>🗺️ Carte en temps réel</h1>
+        <h1>ðY—ºi¸ Carte en temps reel</h1>
         <div class="header-actions">
           <button class="btn-track" [class.active]="geo.isTracking()" (click)="toggleTracking()">
-            {{ geo.isTracking() ? '⏹ Arrêter le suivi' : '▶ Démarrer le suivi' }}
+            {{ geo.isTracking() ? 'a¹ Arreter le suivi' : 'a–¶ Demarrer le suivi' }}
           </button>
-          <button class="btn-refresh" (click)="refreshPositions()">🔄 Actualiser</button>
+          <button class="btn-refresh" (click)="refreshPositions()">ðY”„ Actualiser</button>
         </div>
       </div>
 
       @if (geo.error()) {
-        <div class="alert alert-error">⚠️ {{ geo.error() }}</div>
+        <div class="alert alert-error">as i¸ {{ geo.error() }}</div>
       }
 
       <div class="map-container">
         <div #mapEl class="map"></div>
       </div>
 
-      <!-- Légende / liste commerciaux -->
+      <!-- Legende / liste commerciaux -->
       <div class="user-list">
-        <h3>👥 Commerciaux en ligne ({{ positions().length }})</h3>
+        <h3>ðY‘¥ Commerciaux en ligne ({{ positions().length }})</h3>
         @for (pos of positions(); track pos.userId) {
           <div class="user-card" (click)="centerOnUser(pos)">
-            <div class="user-avatar">📍</div>
+            <div class="user-avatar">ðY“</div>
             <div class="user-info">
               <strong>{{ pos.userName }}</strong>
               <small>
                 @if (pos.currentCustomerName) {
                   Chez {{ pos.currentCustomerName }}
                 } @else {
-                  En déplacement
+                  En deplacement
                 }
               </small>
-              <small class="text-muted">Dernière MAJ : {{ pos.lastUpdate | date:'HH:mm:ss' }}</small>
+              <small class="text-muted">Derniere MAJ : {{ pos.lastUpdate | date:'HH:mm:ss' }}</small>
             </div>
           </div>
         } @empty {
@@ -119,13 +119,13 @@ export class LiveMapComponent implements OnInit, OnDestroy {
   private mapReady = false;
 
   constructor() {
-    // Leaflet needs DOM — use afterNextRender for SSR safety
+    // Leaflet needs DOM - use afterNextRender for SSR safety
     afterNextRender(() => this.initMap());
   }
 
   ngOnInit(): void {
     this.refreshPositions();
-    // Rafraîchir les positions toutes les 15 secondes
+    // Rafraichir les positions toutes les 15 secondes
     this.refreshSub = interval(15_000).pipe(
       switchMap(() => this.trackingApi.getLivePositions())
     ).subscribe({
@@ -185,12 +185,12 @@ export class LiveMapComponent implements OnInit, OnDestroy {
     this.map = L.map(el).setView([33.5933, -7.6035], 12); // Casablanca
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: 'A© OpenStreetMap contributors'
     }).addTo(this.map);
 
     this.mapReady = true;
 
-    // Placer les marqueurs déjà chargés
+    // Placer les marqueurs deja charges
     if (this.positions().length > 0) {
       this.updateMarkers(this.positions());
     }
@@ -208,11 +208,11 @@ export class LiveMapComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Ajouter / mettre à jour les marqueurs
+    // Ajouter / mettre a jour les marqueurs
     for (const pos of positions) {
       const existing = this.markers.get(pos.userId);
       const popupContent = `<strong>${pos.userName}</strong><br/>` +
-        (pos.currentCustomerName ? `Chez ${pos.currentCustomerName}` : 'En déplacement');
+        (pos.currentCustomerName ? `Chez ${pos.currentCustomerName}` : 'En deplacement');
 
       if (existing) {
         existing.setLatLng([pos.latitude, pos.longitude]);
@@ -232,3 +232,5 @@ export class LiveMapComponent implements OnInit, OnDestroy {
     }
   }
 }
+
+

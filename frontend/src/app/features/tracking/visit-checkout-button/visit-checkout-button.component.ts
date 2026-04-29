@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+﻿import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TrackingApiService } from '../../../core/services/tracking-api.service';
@@ -12,19 +12,19 @@ import { switchMap } from 'rxjs';
   template: `
     @if (!showNotes()) {
       <button class="btn-checkout" [disabled]="loading()" (click)="showNotes.set(true)">
-        🏁 Check-out
+        ðY Check-out
       </button>
     } @else {
       <div class="checkout-form">
         <input type="text" [(ngModel)]="notes" placeholder="Notes de fin de visite..." class="notes-input" />
         <button class="btn-checkout-confirm" [disabled]="loading()" (click)="doCheckOut()">
           @if (loading()) {
-            ⏳ Envoi...
+            a³ Envoi...
           } @else {
-            ✅ Confirmer
+            aœ… Confirmer
           }
         </button>
-        <button class="btn-cancel" (click)="showNotes.set(false)">✕</button>
+        <button class="btn-cancel" (click)="showNotes.set(false)">aœ•</button>
       </div>
     }
     @if (error()) {
@@ -65,7 +65,7 @@ export class VisitCheckoutButtonComponent {
   /** ID de la visite (input signal) */
   visitId = input.required<number>();
 
-  /** Événement émis après un check-out réussi */
+  /** A‰venement emis apres un check-out reussi */
   checkedOut = output<void>();
 
   loading = signal(false);
@@ -105,3 +105,5 @@ export class VisitCheckoutButtonComponent {
     });
   }
 }
+
+

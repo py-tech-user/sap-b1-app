@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+﻿import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -91,9 +91,9 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         </table>
 
         <div class="pager">
-          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Precedent</button>
+          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">Précédent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
-          <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant →</button>
+          <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant</button>
         </div>
       }
     </div>
@@ -477,3 +477,5 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     return parentData ?? 'orders';
   }
 }
+
+

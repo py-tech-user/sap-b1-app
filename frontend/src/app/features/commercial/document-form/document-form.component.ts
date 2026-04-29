@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -17,16 +17,16 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
     <div class="page">
-      <a [routerLink]="['/', resource()]" class="btn-sm">← Retour</a>
+      <a [routerLink]="['/', resource()]" class="btn-sm">Retour</a>
 
-      <h1>{{ meta().icon }} {{ isEdit() ? 'Editer' : 'Créer' }} {{ meta().singular }}</h1>
+      <h1>{{ meta().icon }} {{ isEdit() ? 'Éditer' : 'Créer' }} {{ meta().singular }}</h1>
 
       <form [formGroup]="form" (ngSubmit)="save()" class="card">
         <div class="top-grid">
           <div class="field field-wide">
             <label>Client *</label>
             <select formControlName="customerId">
-              <option [ngValue]="null" disabled>Sélectionner un client</option>
+                <option [ngValue]="null" disabled>Sélectionner un client</option>
               @for (c of filteredCustomers(); track c.id) {
                 <option [ngValue]="c.id">{{ c.cardName }} ({{ c.cardCode }})</option>
               }
@@ -38,7 +38,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
             <input type="date" formControlName="docDate" />
           </div>
           <div class="field">
-            <label>Echéance</label>
+            <label>Échéance</label>
             <input type="date" formControlName="dueDate" />
           </div>
           <div class="field">
@@ -63,7 +63,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         <div class="line-row line-row-header" aria-hidden="true">
           <span>Article</span>
           <span>Code</span>
-          <span>Quantite</span>
+          <span>Quantité</span>
           <span>Prix unitaire</span>
           <span>TVA (%)</span>
           <span>Action</span>
@@ -228,7 +228,7 @@ export class DocumentFormComponent implements OnInit {
 
     const hasLineWithoutProduct = this.lines.controls.some(c => !c.get('productId')?.value);
     if (hasLineWithoutProduct) {
-      this.error.set('Chaque ligne doit avoir un article sélectionné.');
+      this.error.set('Chaque ligne doit avoir un article selectionne.');
       this.notifications.showError(this.error());
       return;
     }
@@ -427,3 +427,5 @@ export class DocumentFormComponent implements OnInit {
     return parentData ?? 'orders';
   }
 }
+
+

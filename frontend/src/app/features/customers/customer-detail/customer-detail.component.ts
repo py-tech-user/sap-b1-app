@@ -121,3 +121,5 @@ export class CustomerDetailComponent implements OnInit {
     return CURRENCY_LABELS[code] || code;
   }
 }
+
+

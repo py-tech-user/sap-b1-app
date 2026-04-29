@@ -1,4 +1,4 @@
-import { CommercialResource } from '../../core/models/models';
+﻿import { CommercialResource } from '../../core/models/models';
 
 export interface CommercialMeta {
   title: string;
@@ -12,37 +12,37 @@ export const COMMERCIAL_META: Record<CommercialResource, CommercialMeta> = {
     title: 'Devis',
     singular: 'devis',
     createLabel: 'Nouveau devis',
-    icon: '🧾'
+    icon: ''
   },
   orders: {
     title: 'Bons de commande',
     singular: 'bon de commande',
     createLabel: 'Nouveau BC',
-    icon: '🛒'
+    icon: ''
   },
   deliverynotes: {
     title: 'Bons de livraison',
     singular: 'bon de livraison',
     createLabel: 'Nouveau BL',
-    icon: '🚚'
+    icon: ''
   },
   invoices: {
     title: 'Factures',
     singular: 'facture',
     createLabel: 'Nouvelle facture',
-    icon: '🧾'
+    icon: ''
   },
   creditnotes: {
     title: 'Avoirs',
     singular: 'avoir',
     createLabel: 'Nouvel avoir',
-    icon: '↩️'
+    icon: ''
   },
   returns: {
     title: 'Retours',
     singular: 'retour',
     createLabel: 'Nouveau retour',
-    icon: '📦'
+    icon: ''
   }
 };
 
@@ -54,17 +54,19 @@ export const STATUS_ACTIONS: Record<CommercialResource, { from: string; to: stri
   orders: [
     // Les statuts BC viennent de l'API; on expose des transitions usuelles.
     { from: 'pending', to: 'confirmed', label: 'Confirmer' },
-    { from: 'confirmed', to: 'inPreparation', label: 'Mettre en préparation' },
-    { from: 'inPreparation', to: 'ready', label: 'Marquer prêt' }
+    { from: 'confirmed', to: 'inPreparation', label: 'Mettre en preparation' },
+    { from: 'inPreparation', to: 'ready', label: 'Marquer pret' }
   ],
   deliverynotes: [
-    { from: 'inprogress', to: 'delivered', label: 'Marquer livré' }
+    { from: 'inprogress', to: 'delivered', label: 'Marquer livre' }
   ],
   invoices: [
-    { from: 'unpaid', to: 'paid', label: 'Marquer payée' }
+    { from: 'unpaid', to: 'paid', label: 'Marquer payee' }
   ],
   creditnotes: [],
   returns: [
     { from: 'pending', to: 'validated', label: 'Valider retour' }
   ]
 };
+
+

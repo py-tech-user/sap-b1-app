@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface Product {
@@ -39,8 +39,7 @@ export class ProductApiService {
       .set('pageSize', pageSize.toString());
 
     return this.http.get<any>(this.apiUrl, { params }).pipe(
-      map((res) => this.normalizeList(res, page, pageSize)),
-      catchError(() => of({ items: [], totalCount: 0 }))
+      map((res) => this.normalizeList(res, page, pageSize))
     );
   }
 
@@ -149,3 +148,5 @@ export class ProductApiService {
     return `${environment.apiUrl}/sap/item-images/${encodeURIComponent(fileName)}`;
   }
 }
+
+

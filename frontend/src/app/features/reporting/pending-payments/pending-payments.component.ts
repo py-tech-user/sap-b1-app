@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReportingApiService } from '../../../core/services/reporting-api.service';
@@ -12,8 +12,8 @@ import { PendingPayment } from '../../../core/models/models';
     <div class="pending-payments-page">
       <div class="header">
         <div>
-          <a routerLink="/reporting" class="back-link">← Retour au reporting</a>
-          <h1>💳 Paiements en attente</h1>
+          <a routerLink="/reporting" class="back-link">a† Retour au reporting</a>
+          <h1>ðY’³ Paiements en attente</h1>
         </div>
       </div>
 
@@ -28,7 +28,7 @@ import { PendingPayment } from '../../../core/models/models';
           </div>
           <div class="summary-card">
             <div class="summary-value">{{ data().length }}</div>
-            <div class="summary-label">Commandes concernées</div>
+            <div class="summary-label">Commandes concernees</div>
           </div>
           <div class="summary-card warning">
             <div class="summary-value">{{ criticalCount() }}</div>
@@ -52,7 +52,7 @@ import { PendingPayment } from '../../../core/models/models';
                 <th>Commande</th>
                 <th>Client</th>
                 <th class="num">Total cmd</th>
-                <th class="num">Payé</th>
+                <th class="num">Paye</th>
                 <th class="num">Reste</th>
                 <th>Retard</th>
               </tr>
@@ -74,7 +74,7 @@ import { PendingPayment } from '../../../core/models/models';
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="6" class="empty">Aucun paiement en attente 🎉</td></tr>
+                <tr><td colspan="6" class="empty">Aucun paiement en attente ðYZ‰</td></tr>
               }
             </tbody>
           </table>
@@ -145,3 +145,5 @@ export class PendingPaymentsComponent implements OnInit {
     });
   }
 }
+
+

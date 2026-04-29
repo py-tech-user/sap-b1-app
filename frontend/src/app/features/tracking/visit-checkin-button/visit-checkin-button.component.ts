@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+﻿import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TrackingApiService } from '../../../core/services/tracking-api.service';
 import { GeolocationService } from '../../../core/services/geolocation.service';
@@ -11,9 +11,9 @@ import { switchMap } from 'rxjs';
   template: `
     <button class="btn-checkin" [disabled]="loading()" (click)="doCheckIn()">
       @if (loading()) {
-        ⏳ Localisation...
+        a³ Localisation...
       } @else {
-        📍 Check-in
+        ðY“ Check-in
       }
     </button>
     @if (error()) {
@@ -38,7 +38,7 @@ export class VisitCheckinButtonComponent {
   /** ID de la visite (input signal) */
   visitId = input.required<number>();
 
-  /** Événement émis après un check-in réussi */
+  /** A‰venement emis apres un check-in reussi */
   checkedIn = output<void>();
 
   loading = signal(false);
@@ -73,3 +73,5 @@ export class VisitCheckinButtonComponent {
     });
   }
 }
+
+

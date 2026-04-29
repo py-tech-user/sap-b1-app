@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, input } from '@angular/core';
+﻿import { Component, OnInit, inject, signal, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportingApiService } from '../../../core/services/reporting-api.service';
 import { TopCustomer } from '../../../core/models/models';
@@ -9,7 +9,7 @@ import { TopCustomer } from '../../../core/models/models';
   imports: [CommonModule],
   template: `
     <div class="card">
-      <h3>🏆 Top {{ data().length }} Clients</h3>
+      <h3>ðY† Top {{ data().length }} Clients</h3>
       @if (loading()) {
         <div class="loading">Chargement...</div>
       } @else {
@@ -28,9 +28,9 @@ import { TopCustomer } from '../../../core/models/models';
               <tr>
                 <td class="rank">
                   @switch (i) {
-                    @case (0) { 🥇 }
-                    @case (1) { 🥈 }
-                    @case (2) { 🥉 }
+                    @case (0) { ðY¥‡ }
+                    @case (1) { ðY¥ˆ }
+                    @case (2) { ðY¥‰ }
                     @default { {{ i + 1 }} }
                   }
                 </td>
@@ -43,7 +43,7 @@ import { TopCustomer } from '../../../core/models/models';
                 <td class="num">{{ c.avgOrderValue | number:'1.0-0' }} MAD</td>
               </tr>
             } @empty {
-              <tr><td colspan="5" class="empty">Aucune donnée.</td></tr>
+              <tr><td colspan="5" class="empty">Aucune donnee.</td></tr>
             }
           </tbody>
         </table>
@@ -86,3 +86,5 @@ export class TopCustomersComponent implements OnInit {
     }
   }
 }
+
+

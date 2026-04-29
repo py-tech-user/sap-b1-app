@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
@@ -303,7 +303,7 @@ export class CommercialApiService {
   ): Observable<ApiResponse<CommercialDocument>> {
     const exec = attempts[index];
     if (!exec) {
-      return throwError(() => new Error('Impossible de clôturer le document: aucune route compatible.'));
+      return throwError(() => new Error('Impossible de cloturer le document: aucune route compatible.'));
     }
 
     return exec().pipe(
@@ -388,29 +388,29 @@ export class CommercialApiService {
     const label = this.getEntityLabel(resource);
 
     return action === 'create'
-      ? `${label.charAt(0).toUpperCase() + label.slice(1)} créé avec succès.`
+      ? `${label.charAt(0).toUpperCase() + label.slice(1)} cree avec succes.`
       : action === 'update'
-        ? `${label.charAt(0).toUpperCase() + label.slice(1)} modifié avec succès.`
+        ? `${label.charAt(0).toUpperCase() + label.slice(1)} modifie avec succes.`
         : action === 'delete'
           ? (resource === 'orders' || resource === 'quotes'
-            ? `${label.charAt(0).toUpperCase() + label.slice(1)} annulé avec succès.`
-            : `${label.charAt(0).toUpperCase() + label.slice(1)} supprimé avec succès.`)
+            ? `${label.charAt(0).toUpperCase() + label.slice(1)} annule avec succes.`
+            : `${label.charAt(0).toUpperCase() + label.slice(1)} supprime avec succes.`)
           : action === 'close'
-            ? `${label.charAt(0).toUpperCase() + label.slice(1)} clôturé avec succès.`
-            : `Statut du ${label} mis à jour.`;
+            ? `${label.charAt(0).toUpperCase() + label.slice(1)} cloture avec succes.`
+            : `Statut du ${label} mis a jour.`;
   }
 
   private getMutationErrorMessage(resource: CommercialResource, action: 'create' | 'update' | 'delete' | 'close' | 'status'): string {
     const label = this.getEntityLabel(resource);
     return action === 'create'
-      ? `Erreur lors de la création du ${label}.`
+      ? `Erreur lors de la creation du ${label}.`
       : action === 'update'
         ? `Erreur lors de la modification du ${label}.`
         : action === 'delete'
           ? `Erreur lors de l'annulation du ${label}.`
           : action === 'close'
-            ? `Erreur lors de la clôture du ${label}.`
-            : `Erreur lors de la mise à jour du statut du ${label}.`;
+            ? `Erreur lors de la cloture du ${label}.`
+            : `Erreur lors de la mise a jour du statut du ${label}.`;
   }
 
   generateOrderFromQuote(quoteId: number, selectedLineNums?: number[]): Observable<ApiResponse<CommercialDocument>> {
@@ -961,3 +961,5 @@ export class CommercialApiService {
     return raw;
   }
 }
+
+

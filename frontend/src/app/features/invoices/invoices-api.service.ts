@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { SapApiService } from '../../core/services/sap-api.service';
@@ -174,3 +174,5 @@ export class InvoicesApiService {
     return Math.max(0, Math.floor(Number.isFinite(fallback) ? fallback : 0));
   }
 }
+
+

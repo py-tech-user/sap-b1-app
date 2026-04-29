@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -19,7 +19,7 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
           <button type="button" class="btn-outline" (click)="reload()" [disabled]="loading()">
             {{ loading() ? 'Chargement...' : 'Actualiser' }}
           </button>
-          <a routerLink="/customers/new" class="btn-primary">+ Créer un partenaire</a>
+          <a routerLink="/customers/new" class="btn-primary">+ Creer un partenaire</a>
         </div>
       </div>
 
@@ -33,7 +33,7 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
         <div class="filters">
           <input
             type="text"
-            placeholder="Recherche (code, nom, email, téléphone...)"
+            placeholder="Recherche (code, nom, email, telephone...)"
             [(ngModel)]="search"
             (ngModelChange)="onFilterChanged()"
           />
@@ -52,7 +52,7 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
               <th>Raison social</th>
               <th>Type</th>
               <th>Devise</th>
-              <th>Téléphone</th>
+              <th>Telephone</th>
               <th>Email</th>
               <th>Action</th>
             </tr>
@@ -66,26 +66,26 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
                 <td>{{ p.Currency || '-' }}</td>
                 <td>{{ p.Cellular || p.Phone1 || '-' }}</td>
                 <td>{{ p.EmailAddress || '-' }}</td>
-                <td><button type="button" class="btn-outline" (click)="openDetails(p)">Détails</button></td>
+                <td><button type="button" class="btn-outline" (click)="openDetails(p)">Details</button></td>
               </tr>
             } @empty {
-              <tr><td colspan="7" class="empty">Aucune donnée</td></tr>
+              <tr><td colspan="7" class="empty">Aucune donnee</td></tr>
             }
           </tbody>
         </table>
 
         <div class="pager">
-          <button class="btn-outline" (click)="prev()" [disabled]="page() <= 1">← Précédent</button>
+        <button class="btn-outline" (click)="prev()" [disabled]="page() <= 1">Précédent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
-          <button class="btn-outline" (click)="next()" [disabled]="page() >= totalPages()">Suivant →</button>
+        <button class="btn-outline" (click)="next()" [disabled]="page() >= totalPages()">Suivant</button>
         </div>
       }
 
       @if (selectedPartner()) {
         <div class="drawer-backdrop" (click)="closeDetails()"></div>
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détails partenaire">
+        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Details partenaire">
           <div class="drawer-header">
-            <h3>Détails partenaire {{ selectedPartnerName() }}</h3>
+            <h3>Details partenaire {{ selectedPartnerName() }}</h3>
             <button type="button" class="btn-outline" (click)="closeDetails()">Fermer</button>
           </div>
           <div class="drawer-body">
@@ -286,3 +286,5 @@ export class PartnerListComponent implements OnInit {
     }));
   }
 }
+
+

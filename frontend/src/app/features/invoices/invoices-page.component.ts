@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+﻿import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -12,7 +12,7 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
   template: `
     <div class="page">
       <div class="header">
-        <h1>🧾 Factures</h1>
+      <h1>Factures</h1>
         <a class="btn-primary" [routerLink]="['/factures/new']">+ Nouvelle facture</a>
       </div>
 
@@ -68,9 +68,9 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
         </table>
 
         <div class="pager">
-          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">← Precedent</button>
+          <button class="btn-outline" type="button" (click)="prevPage()" [disabled]="page() <= 1">Précédent</button>
           <span>Page {{ page() }} / {{ totalPages() }}</span>
-          <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant →</button>
+          <button class="btn-outline" type="button" (click)="nextPage()" [disabled]="page() >= totalPages()">Suivant</button>
         </div>
       }
     </div>
@@ -313,3 +313,5 @@ export class InvoicesPageComponent implements OnInit {
     return this.isOpenStatus(status) ? 'En attente' : 'Cloturee';
   }
 }
+
+

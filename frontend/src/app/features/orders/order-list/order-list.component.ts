@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+﻿import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -18,7 +18,7 @@ import { environment } from '../../../../environments/environment';
       <table>
         <thead>
           <tr>
-            <th>N° Doc</th>
+            <th>Ndeg Doc</th>
             <th>Client</th>
             <th>Date</th>
             <th>Total</th>
@@ -75,3 +75,5 @@ export class OrderListComponent implements OnInit {
     });
   }
 }
+
+

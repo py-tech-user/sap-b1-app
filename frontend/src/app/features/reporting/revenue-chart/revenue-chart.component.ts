@@ -1,4 +1,4 @@
-import { Component, input, signal, OnInit, inject } from '@angular/core';
+﻿import { Component, input, signal, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartType } from 'chart.js';
@@ -18,7 +18,7 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
   template: `
     <div class="chart-card">
       <div class="chart-header">
-        <h3>📈 Évolution du chiffre d'affaires</h3>
+        <h3>ðY“ˆ A‰volution du chiffre d'affaires</h3>
         <div class="period-selector">
           <button [class.active]="period() === 'daily'" (click)="switchPeriod('daily')">30 jours</button>
           <button [class.active]="period() === 'monthly'" (click)="switchPeriod('monthly')">12 mois</button>
@@ -58,7 +58,7 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
 export class RevenueChartComponent implements OnInit {
   private reportingApi = inject(ReportingApiService);
 
-  /** Données passées en input (optionnel, sinon charge seul) */
+  /** Donnees passees en input (optionnel, sinon charge seul) */
   externalData = input<RevenueEvolution[]>();
 
   period = signal<'monthly' | 'daily'>('monthly');
@@ -137,3 +137,5 @@ export class RevenueChartComponent implements OnInit {
     });
   }
 }
+
+

@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+﻿import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,7 +12,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
   imports: [CommonModule, RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule],
   template: `
     <div class="page">
-      <a [routerLink]="['/', resource()]" class="btn-sm">← Retour</a>
+      <a [routerLink]="['/', resource()]" class="btn-sm">Retour</a>
 
       @if (loading()) {
         <div class="loading">Chargement...</div>
@@ -77,7 +77,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
             <div class="empty">Aucun document source.</div>
           }
 
-          <h4>Documents générés</h4>
+          <h4>Documents generes</h4>
           @if (generatedDocuments().length > 0) {
             <ul class="links">
               @for (l of generatedDocuments(); track l.label) {
@@ -85,13 +85,13 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
               }
             </ul>
           } @else {
-            <div class="empty">Aucun document généré.</div>
+            <div class="empty">Aucun document genere.</div>
           }
         </div>
 
         @if (resource() === 'quotes') {
           <div class="card action-card">
-            <h3>Génération</h3>
+            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateOrder()" [disabled]="!canGenerateOrderFromQuote()">Créer BC depuis Devis</button>
             @if (!canGenerateOrderFromQuote()) {
               <div class="action-hint">{{ generationHint('orders') }}</div>
@@ -101,7 +101,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
 
         @if (resource() === 'orders') {
           <div class="card action-card">
-            <h3>Génération</h3>
+            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateDelivery()" [disabled]="!canGenerateDeliveryFromOrder()">Créer BL depuis BC</button>
             @if (!canGenerateDeliveryFromOrder()) {
               <div class="action-hint">{{ generationHint('deliverynotes') }}</div>
@@ -111,7 +111,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
 
         @if (resource() === 'deliverynotes') {
           <div class="card action-card">
-            <h3>Génération</h3>
+            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateInvoice()" [disabled]="!canGenerateInvoiceFromDelivery()">Créer Facture depuis BL</button>
             @if (!canGenerateInvoiceFromDelivery()) {
               <div class="action-hint">{{ generationHint('invoices') }}</div>
@@ -126,7 +126,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
               <input type="number" formControlName="amount" min="0.01" step="0.01" placeholder="Montant" />
               <input type="date" formControlName="paymentDate" />
               <input formControlName="paymentMethod" placeholder="Moyen de paiement" />
-              <input formControlName="reference" placeholder="Référence" />
+              <input formControlName="reference" placeholder="Reference" />
               <button class="btn-primary" [disabled]="paymentForm.invalid" type="submit">Enregistrer paiement</button>
             </form>
           </div>
@@ -227,9 +227,9 @@ export class DocumentDetailComponent {
 
   generationHint(target: CommercialResource): string {
     const d = this.doc();
-    if (!d) return 'Document non chargé.';
-    if (!this.isOpenStatus(d.status)) return 'Action indisponible: le document est fermé.';
-    if (this.hasGeneratedType(target)) return 'Action déjà effectuée: document cible déjà généré.';
+    if (!d) return 'Document non charge.';
+    if (!this.isOpenStatus(d.status)) return 'Action indisponible: le document est ferme.';
+    if (this.hasGeneratedType(target)) return 'Action deja effectuee: document cible deja genere.';
     return 'Action indisponible pour le statut actuel.';
   }
 
@@ -316,7 +316,7 @@ export class DocumentDetailComponent {
             this.error.set(res.message || 'Echec de changement de statut.');
             return;
           }
-          this.toast.set('Statut mis à jour.');
+          this.toast.set('Statut mis a jour.');
           this.load();
           this.clearToastLater();
         },
@@ -330,11 +330,11 @@ export class DocumentDetailComponent {
       .subscribe({
         next: (res) => {
           if (res.success === false) {
-            this.error.set(res.message || 'Echec de génération BC.');
+            this.error.set(res.message || 'Echec de generation BC.');
             return;
           }
           const created = res.data;
-          this.toast.set('BC créé depuis devis.');
+          this.toast.set('BC cree depuis devis.');
           this.clearToastLater();
           if (created?.id) {
             this.router.navigate(['/orders', created.id]);
@@ -342,7 +342,7 @@ export class DocumentDetailComponent {
           }
           this.load();
         },
-        error: () => this.error.set('Erreur lors de la génération BC.')
+        error: () => this.error.set('Erreur lors de la generation BC.')
       });
   }
 
@@ -352,11 +352,11 @@ export class DocumentDetailComponent {
       .subscribe({
         next: (res) => {
           if (res.success === false) {
-            this.error.set(res.message || 'Echec de génération BL.');
+            this.error.set(res.message || 'Echec de generation BL.');
             return;
           }
           const created = res.data;
-          this.toast.set('BL créé depuis BC.');
+          this.toast.set('BL cree depuis BC.');
           this.clearToastLater();
           if (created?.id) {
             this.router.navigate(['/deliverynotes', created.id]);
@@ -364,7 +364,7 @@ export class DocumentDetailComponent {
           }
           this.load();
         },
-        error: () => this.error.set('Erreur lors de la génération BL.')
+        error: () => this.error.set('Erreur lors de la generation BL.')
       });
   }
 
@@ -374,19 +374,19 @@ export class DocumentDetailComponent {
       .subscribe({
         next: (res) => {
           if (res.success === false) {
-            this.error.set(res.message || 'Echec de génération facture.');
+            this.error.set(res.message || 'Echec de generation facture.');
             return;
           }
           const created = res.data;
-          this.toast.set('Facture créée depuis BL.');
+          this.toast.set('Facture creee depuis BL.');
           this.clearToastLater();
           if (created?.id) {
-            this.router.navigate(['/invoices', created.id]);
+            this.router.navigate(['/factures', created.id]);
             return;
           }
           this.load();
         },
-        error: () => this.error.set('Erreur lors de la génération facture.')
+        error: () => this.error.set('Erreur lors de la generation facture.')
       });
   }
 
@@ -403,10 +403,10 @@ export class DocumentDetailComponent {
       .subscribe({
         next: (res) => {
           if (res.success === false) {
-            this.error.set(res.message || 'Encaissement refusé.');
+            this.error.set(res.message || 'Encaissement refuse.');
             return;
           }
-          this.toast.set('Paiement enregistré.');
+          this.toast.set('Paiement enregistre.');
           this.clearToastLater();
           this.load();
         },
@@ -426,7 +426,7 @@ export class DocumentDetailComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Impossible de charger le détail.');
+          this.error.set('Impossible de charger le detail.');
           this.loading.set(false);
         }
       });
@@ -453,9 +453,11 @@ export class DocumentDetailComponent {
     if (normalized.includes('quote') || normalized.includes('devis')) return ['/quotes', String(id)];
     if (normalized.includes('order') || normalized.includes('commande') || normalized === 'bc') return ['/orders', String(id)];
     if (normalized.includes('deliverynote') || normalized.includes('bonlivraison') || normalized === 'bl') return ['/deliverynotes', String(id)];
-    if (normalized.includes('invoice') || normalized.includes('facture')) return ['/invoices', String(id)];
+    if (normalized.includes('invoice') || normalized.includes('facture')) return ['/factures', String(id)];
     if (normalized.includes('creditnote') || normalized.includes('avoir')) return ['/creditnotes', String(id)];
     if (normalized.includes('return') || normalized.includes('retour')) return ['/returns', String(id)];
     return null;
   }
 }
+
+

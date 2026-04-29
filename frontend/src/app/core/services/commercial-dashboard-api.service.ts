@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiResponse, CommercialDashboard } from '../models/models';
 import { CommercialApiService } from './commercial-api.service';
@@ -11,3 +11,5 @@ export class CommercialDashboardApiService {
     return this.commercialApi.getCommercialDashboard();
   }
 }
+
+

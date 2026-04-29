@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 import { DocumentListComponent } from './document-list/document-list.component';
 import { DocumentFormComponent } from './document-form-page.component';
 import { DocumentDetailComponent } from './document-detail-page.component';
@@ -61,3 +61,5 @@ export const RETURNS_ROUTES: Routes = [
     children: COMMERCIAL_DOCUMENT_CHILDREN
   }
 ];
+
+

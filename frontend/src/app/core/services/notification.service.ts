@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+﻿import { Injectable, signal } from '@angular/core';
 
 type NotificationKind = 'success' | 'error';
 
@@ -58,3 +58,4 @@ export class NotificationService {
     }, 4000);
   }
 }
+

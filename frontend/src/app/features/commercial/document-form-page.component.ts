@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -18,9 +18,9 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
     <div class="page">
-      <a [routerLink]="backRoute()" class="btn-sm">← Retour</a>
+      <a [routerLink]="backRoute()" class="btn-sm">Retour</a>
 
-      <h1>{{ meta().icon }} {{ isEdit() ? 'Editer' : 'Créer' }} {{ meta().singular }}</h1>
+      <h1>{{ meta().icon }} {{ isEdit() ? 'Éditer' : 'Créer' }} {{ meta().singular }}</h1>
 
       <form [formGroup]="form" (ngSubmit)="save()" class="card">
         <div class="top-grid">
@@ -92,7 +92,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
                 <input formControlName="lineStatus" placeholder="Statut" aria-label="Statut ligne" readonly />
 
                 <input type="number" formControlName="unitPrice" min="0" step="0.01" placeholder="Prix HT" aria-label="Prix unitaire HT" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
-                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qte" aria-label="Quantite" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
                 <input type="number" formControlName="subtotalHt" placeholder="Sous-total HT" aria-label="Sous-total HT" readonly />
                 <input type="number" formControlName="discountPct" min="0" max="100" step="0.01" placeholder="Remise %" aria-label="Remise" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
                 <input type="number" formControlName="vatPct" min="0" step="0.01" placeholder="TVA %" aria-label="TVA" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
@@ -140,7 +140,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         </div>
 
         @if (isEdit() && !canModify()) {
-          <div class="error">Modification autorisée uniquement pour un devis/BC en statut Open.</div>
+          <div class="error">Modification autorisee uniquement pour un devis/BC en statut Open.</div>
         }
       </form>
 
@@ -243,7 +243,7 @@ export class DocumentFormComponent implements OnInit {
   addLine(line?: Partial<CommercialDocumentLine>): void {
     const statusToken = this.normalizeLineStatusToken((line as any)?.lineStatus ?? (line as any)?.LineStatus ?? 'Open');
     const lineStatus = this.isClosedLineStatus(statusToken)
-      ? 'Clôturée'
+      ? 'Cloturee'
       : 'En attente';
 
     const group = this.fb.group({
@@ -350,7 +350,7 @@ export class DocumentFormComponent implements OnInit {
 
   removeLine(i: number): void {
     if (!this.canEditLine(i)) {
-      this.error.set('Ligne fermée: suppression impossible.');
+      this.error.set('Ligne fermee: suppression impossible.');
       return;
     }
     this.lines.removeAt(i);
@@ -379,10 +379,14 @@ export class DocumentFormComponent implements OnInit {
   }
 
   save(): void {
+    if (this.saving()) {
+      return;
+    }
+
     const isEditMode = this.isEdit();
 
     if (isEditMode && !this.canModify()) {
-      this.error.set('Modification autorisée uniquement pour un devis/BC en statut Open.');
+      this.error.set('Modification autorisee uniquement pour un devis/BC en statut Open.');
       this.notifications.showError(this.error());
       return;
     }
@@ -449,7 +453,7 @@ export class DocumentFormComponent implements OnInit {
 
     payload.cardCode = this.extractCardCode(payload.cardCode);
 
-    console.debug('[SAP FORM] payload envoyé', payload);
+    console.debug('[SAP FORM] payload envoye', payload);
 
     const request$ = isEditMode
       ? this.api.update(this.resource(), this.id()!, payload)
@@ -457,21 +461,21 @@ export class DocumentFormComponent implements OnInit {
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
-        console.debug('[SAP FORM] réponse backend', res);
+        console.debug('[SAP FORM] reponse backend', res);
         if (res.success === false || !res.data) {
           this.error.set(res.message || 'Echec d\'enregistrement.');
           this.saving.set(false);
           return;
         }
         const saved = res.data;
-        this.success.set(isEditMode ? 'Document mis à jour avec succès' : 'Document créé avec succès');
-        setTimeout(() => this.refreshListAfterMutation(saved, isEditMode), 400);
+        this.success.set(isEditMode ? 'Document mis a jour avec succes' : 'Document cree avec succes');
+        this.refreshListAfterMutation(saved, isEditMode);
       },
       error: (err) => {
         this.error.set(this.extractError(err));
         this.saving.set(false);
       },
-      complete: () => this.saving.set(false)
+      complete: () => {}
     });
   }
 
@@ -524,7 +528,7 @@ export class DocumentFormComponent implements OnInit {
                 }));
                 this.customers.set(items);
                 if (items.length === 0) {
-                  this.error.set('Aucun client disponible depuis SAP. Vérifiez les routes /sap/partners ou /sap/clients.');
+                  this.error.set('Aucun client disponible depuis SAP. Verifiez les routes /sap/partners ou /sap/clients.');
                 }
                 this.patchCardCodeForEdit(items);
                 finalizeOne();
@@ -547,7 +551,7 @@ export class DocumentFormComponent implements OnInit {
                 }));
                 this.customers.set(items);
                 if (items.length === 0) {
-                  this.error.set('Aucun client disponible depuis SAP. Vérifiez les routes /sap/partners ou /sap/clients.');
+                  this.error.set('Aucun client disponible depuis SAP. Verifiez les routes /sap/partners ou /sap/clients.');
                 }
                 this.patchCardCodeForEdit(items);
                 finalizeOne();
@@ -776,11 +780,11 @@ export class DocumentFormComponent implements OnInit {
     }
 
     if (err?.status === 400) {
-      return err?.error?.error || err?.error?.message || 'Requête invalide (400). Vérifier CardCode et DocumentLines.';
+      return err?.error?.error || err?.error?.message || 'Requete invalide (400). Verifier CardCode et DocumentLines.';
     }
 
     if (err?.status === 401) {
-      return err?.error?.error || err?.error?.message || 'Accès non autorisé (401).';
+      return err?.error?.error || err?.error?.message || 'Acces non autorise (401).';
     }
 
     if (err?.status === 500) {
@@ -830,13 +834,17 @@ export class DocumentFormComponent implements OnInit {
             return;
           }
 
-          this.router.navigate(['/', this.resource()]);
+          this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
         },
         error: () => {
-          this.router.navigate(['/', this.resource(), saved.id]);
+          this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
         }
         });
         }
+
+  private routeSegmentForResource(): string {
+    return this.resource() === 'invoices' ? 'factures' : this.resource();
+  }
 
   private normalizeLineStatusToken(value: unknown): string {
     return String(value ?? '')
@@ -883,3 +891,6 @@ export class DocumentFormComponent implements OnInit {
     return null;
   }
 }
+
+
+

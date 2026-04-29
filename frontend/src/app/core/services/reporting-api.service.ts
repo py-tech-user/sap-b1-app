@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -19,12 +19,12 @@ export class ReportingApiService {
 
   constructor(private http: HttpClient) {}
 
-  /** GET /reporting/dashboard — Dashboard complet */
+  /** GET /reporting/dashboard - Dashboard complet */
   getDashboard(): Observable<ApiResponse<AdvancedDashboard>> {
     return this.http.get<ApiResponse<AdvancedDashboard>>(`${this.api}/dashboard`);
   }
 
-  /** GET /reporting/kpis — KPIs simplifiés du jour */
+  /** GET /reporting/kpis - KPIs simplifies du jour */
   getKpis(): Observable<ApiResponse<DailyKpis>> {
     return this.http.get<ApiResponse<DailyKpis>>(`${this.api}/kpis`);
   }
@@ -64,3 +64,5 @@ export class ReportingApiService {
     return this.http.get<ApiResponse<LateOrder[]>>(`${this.api}/late-orders`, { params });
   }
 }
+
+

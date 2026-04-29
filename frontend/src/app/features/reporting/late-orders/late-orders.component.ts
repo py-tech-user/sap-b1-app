@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -13,8 +13,8 @@ import { LateOrder } from '../../../core/models/models';
     <div class="late-orders-page">
       <div class="header">
         <div>
-          <a routerLink="/reporting" class="back-link">← Retour au reporting</a>
-          <h1>⏰ Commandes en retard</h1>
+          <a routerLink="/reporting" class="back-link">a† Retour au reporting</a>
+          <h1>a° Commandes en retard</h1>
         </div>
         <div class="filter">
           <label>Seuil (jours) :</label>
@@ -55,7 +55,7 @@ import { LateOrder } from '../../../core/models/models';
                 <th>Client</th>
                 <th>Montant</th>
                 <th>Date cmd</th>
-                <th>Date prévue</th>
+                <th>Date prevue</th>
                 <th>Retard</th>
                 <th>Statut</th>
               </tr>
@@ -81,7 +81,7 @@ import { LateOrder } from '../../../core/models/models';
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="empty">Aucune commande en retard 🎉</td></tr>
+                <tr><td colspan="7" class="empty">Aucune commande en retard ðYZ‰</td></tr>
               }
             </tbody>
           </table>
@@ -157,3 +157,5 @@ export class LateOrdersComponent implements OnInit {
     });
   }
 }
+
+

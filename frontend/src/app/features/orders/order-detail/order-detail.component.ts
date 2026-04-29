@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -40,7 +40,7 @@ import { environment } from '../../../../environments/environment';
           <thead>
             <tr>
               <th>Produit</th>
-              <th>Quantité</th>
+              <th>Quantite</th>
               <th>Prix unitaire</th>
               <th>Total ligne</th>
             </tr>
@@ -91,3 +91,5 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 }
+
+
