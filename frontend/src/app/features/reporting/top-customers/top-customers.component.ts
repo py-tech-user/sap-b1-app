@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, inject, signal, input } from '@angular/core';
+import { Component, OnInit, inject, signal, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportingApiService } from '../../../core/services/reporting-api.service';
 import { TopCustomer } from '../../../core/models/models';
@@ -9,7 +9,7 @@ import { TopCustomer } from '../../../core/models/models';
   imports: [CommonModule],
   template: `
     <div class="card">
-      <h3>ðY† Top {{ data().length }} Clients</h3>
+      <h3>Top {{ data().length }} Clients</h3>
       @if (loading()) {
         <div class="loading">Chargement...</div>
       } @else {
@@ -28,9 +28,9 @@ import { TopCustomer } from '../../../core/models/models';
               <tr>
                 <td class="rank">
                   @switch (i) {
-                    @case (0) { ðY¥‡ }
-                    @case (1) { ðY¥ˆ }
-                    @case (2) { ðY¥‰ }
+                    @case (0) { 1 }
+                    @case (1) { 2 }
+                    @case (2) { 3 }
                     @default { {{ i + 1 }} }
                   }
                 </td>
@@ -86,5 +86,6 @@ export class TopCustomersComponent implements OnInit {
     }
   }
 }
+
 
 

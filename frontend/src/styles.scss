@@ -156,3 +156,45 @@ th {
 .stat-card.pending {
   border-left: 4px solid #ff9800;
 }
+
+/* Demo Badge Styles */
+.demo-badge-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(90deg, #d32f2f 0%, #f44336 100%);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  font-weight: bold;
+  font-size: 12px;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+
+.demo-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blink {
+  animation: blink-animation 1s steps(5, start) infinite;
+  color: #ffeb3b;
+}
+
+@keyframes blink-animation {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Offset body if demo mode is active */
+body:has(.demo-badge-container) {
+  padding-top: 30px;
+}

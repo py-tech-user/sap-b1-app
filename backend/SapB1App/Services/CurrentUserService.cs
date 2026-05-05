@@ -48,6 +48,7 @@ public class CurrentUserService : ICurrentUserService
     public bool IsAdmin()
     {
         var role = GetRole();
-        return string.Equals(role, Roles.Admin, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(role, Roles.Admin, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(role, Roles.Manager, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -41,7 +41,6 @@ public class DashboardController : ControllerBase
         var recentOrders = await _db.Orders
             .Include(o => o.Customer)
             .OrderByDescending(o => o.CreatedAt)
-            .Take(5)
             .Select(o => new RecentOrderDto
             {
                 Id           = o.Id,
@@ -69,7 +68,6 @@ public class DashboardController : ControllerBase
                 TotalRevenue  = g.Sum(l => l.LineTotal)
             })
             .OrderByDescending(p => p.TotalRevenue)
-            .Take(5)
             .ToListAsync();
 
         var dashboard = new DashboardDto

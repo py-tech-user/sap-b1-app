@@ -12,8 +12,8 @@ import { PendingPayment } from '../../../core/models/models';
     <div class="pending-payments-page">
       <div class="header">
         <div>
-          <a routerLink="/reporting" class="back-link">a† Retour au reporting</a>
-          <h1>ðY’³ Paiements en attente</h1>
+          <a routerLink="/reporting" class="back-link">Retour au reporting</a>
+          <h1>Paiements en attente</h1>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ import { PendingPayment } from '../../../core/models/models';
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="6" class="empty">Aucun paiement en attente ðYZ‰</td></tr>
+                <tr><td colspan="6" class="empty">Aucun paiement en attente.</td></tr>
               }
             </tbody>
           </table>

@@ -1,3 +1,6 @@
-﻿<router-outlet />
-
-
+<div *ngIf="isDemoMode()" class="demo-badge-container">
+  <div class="demo-badge">
+    <span class="blink">●</span> MODE DÉMO ACTIF (DONNÉES SIMULÉES)
+  </div>
+</div>
+<router-outlet />

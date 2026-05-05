@@ -11,6 +11,7 @@ namespace SapB1App.Controllers;
 [Authorize]
 public class ReportingController : ControllerBase
 {
+    private const string MaxTop = "2000";
     private readonly IReportingService _reportingService;
     private readonly ISapB1Service _sapService;
     private readonly ILogger<ReportingController> _logger;
@@ -39,21 +40,21 @@ public class ReportingController : ControllerBase
 
     private async Task<AdvancedDashboardDto> BuildSapDashboardAsync()
     {
-        var customersResult = await _sapService.ServiceLayerGetAsync(
-            "BusinessPartners?$select=CardCode&$filter=CardType eq 'cCustomer'",
+        var customerRows = await FetchAllRowsAsync(
+            $"BusinessPartners?$select=CardCode&$filter=CardType eq 'cCustomer'&$orderby=CardCode asc&$top={MaxTop}",
             HttpContext.RequestAborted);
 
-        var invoicesResult = await _sapService.ServiceLayerGetAsync(
-            "Invoices?$select=DocEntry,DocNum,CardCode,CardName,DocDate,DocDueDate,DocTotal,PaidToDate,DocumentStatus&$top=500",
+        var invoiceRows = await FetchAllRowsAsync(
+            $"Invoices?$select=DocEntry,DocNum,CardCode,CardName,DocDate,DocDueDate,DocTotal,PaidToDate,DocumentStatus,SalesPersonCode&$orderby=DocEntry asc&$top={MaxTop}",
             HttpContext.RequestAborted);
 
-        var itemsResult = await _sapService.ServiceLayerGetAsync(
-            "Items?$select=ItemCode,ItemName,OnHand,AvgPrice&$top=50",
+        var orderRows = await FetchAllRowsAsync(
+            $"Orders?$select=DocEntry&$orderby=DocEntry asc&$top={MaxTop}",
             HttpContext.RequestAborted);
 
-        var customerRows = ExtractArray(customersResult.Response);
-        var invoiceRows = ExtractArray(invoicesResult.Response);
-        var itemRows = ExtractArray(itemsResult.Response);
+        var itemRows = await FetchAllRowsAsync(
+            $"Items?$select=ItemCode,ItemName&$orderby=ItemCode asc&$top={MaxTop}",
+            HttpContext.RequestAborted);
 
         var now = DateTime.UtcNow;
         var startOfMonth = new DateTime(now.Year, now.Month, 1);
@@ -68,7 +69,8 @@ public class ReportingController : ControllerBase
             DocDueDate = GetDate(x, "DocDueDate"),
             DocTotal = GetDecimal(x, "DocTotal"),
             PaidToDate = GetDecimal(x, "PaidToDate"),
-            Status = GetString(x, "DocumentStatus")
+            Status = GetString(x, "DocumentStatus"),
+            SalesPersonCode = GetInt(x, "SalesPersonCode")
         }).ToList();
 
         var totalRevenue = invoiceData.Sum(x => x.DocTotal);
@@ -91,7 +93,6 @@ public class ReportingController : ControllerBase
                 Status = x.Status
             })
             .OrderByDescending(x => x.RemainingAmount)
-            .Take(10)
             .ToList();
 
         var topCustomers = invoiceData
@@ -107,7 +108,6 @@ public class ReportingController : ControllerBase
                 LastOrderDate = g.Max(x => x.DocDate)
             })
             .OrderByDescending(x => x.TotalRevenue)
-            .Take(10)
             .ToList();
 
         var topProducts = itemRows
@@ -116,17 +116,28 @@ public class ReportingController : ControllerBase
                 ProductId = 0,
                 ItemCode = GetString(x, "ItemCode"),
                 ItemName = GetString(x, "ItemName"),
-                TotalQuantity = (int)GetDecimal(x, "OnHand"),
-                TotalRevenue = GetDecimal(x, "AvgPrice") * GetDecimal(x, "OnHand"),
+                TotalQuantity = 0,
+                TotalRevenue = 0,
                 OrderCount = 0
             })
+            .OrderBy(x => x.ItemCode)
+            .ToList();
+
+        var topSalesPersons = invoiceData
+            .Where(x => x.SalesPersonCode > 0)
+            .GroupBy(x => x.SalesPersonCode)
+            .Select(g => new TopSalesPersonDto
+            {
+                SalesPersonCode = g.Key,
+                SalesPersonName = $"Commercial #{g.Key}",
+                TotalRevenue = g.Sum(x => x.DocTotal),
+                DocumentCount = g.Count()
+            })
             .OrderByDescending(x => x.TotalRevenue)
-            .Take(10)
             .ToList();
 
         var recentOrders = invoiceData
             .OrderByDescending(x => x.DocDate)
-            .Take(10)
             .Select(x => new RecentOrderDto
             {
                 Id = x.DocEntry,
@@ -169,14 +180,13 @@ public class ReportingController : ControllerBase
                 Status = x.Status
             })
             .OrderByDescending(x => x.DaysLate)
-            .Take(10)
             .ToList();
 
         return new AdvancedDashboardDto
         {
             TotalCustomers = customerRows.Count,
             ActiveCustomers = customerRows.Count,
-            TotalOrders = invoiceData.Count,
+            TotalOrders = orderRows.Count,
             TotalRevenue = totalRevenue,
             RevenueThisMonth = revenueThisMonth,
             GrowthPercent = 0,
@@ -185,11 +195,111 @@ public class ReportingController : ControllerBase
             PendingPaymentsAmount = pendingPayments.Sum(x => x.RemainingAmount),
             TopCustomers = topCustomers,
             TopProducts = topProducts,
+            TopSalesPersons = topSalesPersons,
             RevenueEvolution = revenueByMonth,
             RecentOrders = recentOrders,
             LateOrders = lateOrders,
             PendingPayments = pendingPayments
         };
+    }
+
+    private async Task<List<JsonElement>> FetchAllRowsAsync(string relativeUrl, CancellationToken cancellationToken)
+    {
+        var allRows = new List<JsonElement>();
+        var nextUrl = relativeUrl;
+        var guard = 0;
+        var skip = 0;
+        var pageSize = ExtractTopValue(relativeUrl) ?? 200;
+        var knownIds = new HashSet<string>(StringComparer.Ordinal);
+        var stagnantIterations = 0;
+
+        while (!string.IsNullOrWhiteSpace(nextUrl) && guard++ < 2000)
+        {
+            var result = await _sapService.ServiceLayerGetAsync(nextUrl, cancellationToken);
+            if (!result.Success)
+                break;
+
+            var batch = ExtractArray(result.Response);
+            var addedThisRound = 0;
+            foreach (var row in batch)
+            {
+                var id = BuildRowIdentity(row);
+                if (knownIds.Add(id))
+                {
+                    allRows.Add(row);
+                    addedThisRound++;
+                }
+            }
+
+            var explicitNext = ExtractServiceLayerNextLink(result.Response);
+            if (!string.IsNullOrWhiteSpace(explicitNext))
+            {
+                nextUrl = explicitNext;
+                continue;
+            }
+
+            // Fallback pagination for SAP environments that do not return @odata.nextLink.
+            if (batch.Count == 0)
+                break;
+
+            if (addedThisRound == 0)
+            {
+                stagnantIterations++;
+                if (stagnantIterations >= 3)
+                    break;
+            }
+            else
+            {
+                stagnantIterations = 0;
+            }
+
+            skip += batch.Count;
+            nextUrl = UpsertSkip(relativeUrl, skip);
+        }
+
+        return allRows;
+    }
+
+    private static int? ExtractTopValue(string relativeUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl))
+            return null;
+
+        var match = System.Text.RegularExpressions.Regex.Match(relativeUrl, @"(?:\?|&)\$top=(\d+)");
+        if (!match.Success)
+            return null;
+
+        return int.TryParse(match.Groups[1].Value, out var value) && value > 0 ? value : null;
+    }
+
+    private static string UpsertSkip(string relativeUrl, int skip)
+    {
+        if (string.IsNullOrWhiteSpace(relativeUrl))
+            return relativeUrl;
+
+        var hasQuery = relativeUrl.Contains('?', StringComparison.Ordinal);
+        if (!hasQuery)
+            return $"{relativeUrl}?$skip={skip}";
+
+        if (System.Text.RegularExpressions.Regex.IsMatch(relativeUrl, @"(?:\?|&)\$skip=\d+"))
+            return System.Text.RegularExpressions.Regex.Replace(relativeUrl, @"(\$skip=)\d+", $"$1{skip}");
+
+        return $"{relativeUrl}&$skip={skip}";
+    }
+
+    private static string BuildRowIdentity(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            if (node.TryGetProperty("DocEntry", out var docEntry))
+                return $"DocEntry:{docEntry}";
+            if (node.TryGetProperty("CardCode", out var cardCode))
+                return $"CardCode:{cardCode}";
+            if (node.TryGetProperty("ItemCode", out var itemCode))
+                return $"ItemCode:{itemCode}";
+        }
+
+        return node.ToString();
     }
 
     private static List<JsonElement> ExtractArray(JsonElement? response)
@@ -201,6 +311,32 @@ public class ReportingController : ControllerBase
         }
 
         return values.EnumerateArray().Select(x => x).ToList();
+    }
+
+    private static string? ExtractServiceLayerNextLink(JsonElement? response)
+    {
+        if (!response.HasValue || response.Value.ValueKind != JsonValueKind.Object)
+            return null;
+
+        if (!response.Value.TryGetProperty("odata.nextLink", out var nextLinkNode) &&
+            !response.Value.TryGetProperty("@odata.nextLink", out nextLinkNode))
+            return null;
+
+        var raw = nextLinkNode.GetString();
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var marker = "/b1s/v1/";
+        var idx = raw.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            return raw[(idx + marker.Length)..];
+
+        marker = "/b1s/v2/";
+        idx = raw.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            return raw[(idx + marker.Length)..];
+
+        return raw.TrimStart('/');
     }
 
     private static string GetString(JsonElement node, string name)
@@ -261,9 +397,8 @@ public class ReportingController : ControllerBase
     {
         try
         {
-            var safeLimit = Math.Clamp(limit, 1, 100);
             var dashboard = await BuildSapDashboardAsync();
-            var data = dashboard.TopCustomers.Take(safeLimit).ToList();
+            var data = dashboard.TopCustomers;
             return Ok(new ApiResponse<List<TopCustomerDto>>(true, null, data, data.Count));
         }
         catch (Exception ex)
@@ -278,9 +413,8 @@ public class ReportingController : ControllerBase
     {
         try
         {
-            var safeLimit = Math.Clamp(limit, 1, 100);
             var dashboard = await BuildSapDashboardAsync();
-            var data = dashboard.TopProducts.Take(safeLimit).ToList();
+            var data = dashboard.TopProducts;
             return Ok(new ApiResponse<List<TopProductDto>>(true, null, data, data.Count));
         }
         catch (Exception ex)
@@ -361,9 +495,8 @@ public class ReportingController : ControllerBase
     {
         try
         {
-            var safeThreshold = Math.Clamp(daysThreshold, 1, 365);
             var dashboard = await BuildSapDashboardAsync();
-            var data = dashboard.LateOrders.Where(x => x.DaysLate >= safeThreshold).ToList();
+            var data = dashboard.LateOrders;
             return Ok(new ApiResponse<List<LateOrderDto>>(true, null, data, data.Count));
         }
         catch (Exception ex)

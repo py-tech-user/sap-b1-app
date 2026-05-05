@@ -140,7 +140,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         </div>
 
         @if (isEdit() && !canModify()) {
-          <div class="error">Modification autorisee uniquement pour un devis/BC en statut Open.</div>
+          <div class="error">Modification autorisee uniquement pour un document en statut Open.</div>
         }
       </form>
 
@@ -200,7 +200,7 @@ export class DocumentFormComponent implements OnInit {
   readonly success = signal('');
   readonly loadingLookups = signal(true);
   readonly loadedDocStatus = signal<'Open' | 'Closed'>('Open');
-  readonly supportsLineStatusGuard = computed(() => this.resource() === 'quotes' || this.resource() === 'orders');
+  readonly supportsLineStatusGuard = computed(() => true);
   readonly canModify = computed(() => !this.isEdit() || (this.supportsLineStatusGuard() && this.loadedDocStatus() === 'Open'));
 
   readonly customers = signal<Customer[]>([]);
@@ -386,7 +386,7 @@ export class DocumentFormComponent implements OnInit {
     const isEditMode = this.isEdit();
 
     if (isEditMode && !this.canModify()) {
-      this.error.set('Modification autorisee uniquement pour un devis/BC en statut Open.');
+      this.error.set('Modification autorisee uniquement pour un document en statut Open.');
       this.notifications.showError(this.error());
       return;
     }
@@ -435,8 +435,9 @@ export class DocumentFormComponent implements OnInit {
       paymentMethod: raw.paymentMethod || undefined,
       lines: this.lines.controls.map(c => {
         const value = c.getRawValue();
+        const rawLineNum = Number(value.lineNum);
         return {
-          lineNum: Number(value.lineNum ?? 0) || undefined,
+          lineNum: Number.isFinite(rawLineNum) && rawLineNum >= 0 ? rawLineNum : undefined,
           itemCode: String(value.itemCode || '').trim(),
           lineStatus: String(value.lineStatus || 'En attente').trim(),
           warehouseCode: String(value.warehouseCode || '').trim(),

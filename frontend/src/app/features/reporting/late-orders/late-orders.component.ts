@@ -1,6 +1,5 @@
 ﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ReportingApiService } from '../../../core/services/reporting-api.service';
 import { LateOrder } from '../../../core/models/models';
@@ -8,22 +7,13 @@ import { LateOrder } from '../../../core/models/models';
 @Component({
   selector: 'app-late-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="late-orders-page">
       <div class="header">
         <div>
-          <a routerLink="/reporting" class="back-link">a† Retour au reporting</a>
-          <h1>a° Commandes en retard</h1>
-        </div>
-        <div class="filter">
-          <label>Seuil (jours) :</label>
-          <select [(ngModel)]="threshold" (ngModelChange)="load()">
-            <option [ngValue]="3">3 jours</option>
-            <option [ngValue]="7">7 jours</option>
-            <option [ngValue]="14">14 jours</option>
-            <option [ngValue]="30">30 jours</option>
-          </select>
+          <a routerLink="/reporting" class="back-link">Retour au reporting</a>
+          <h1>Commandes en retard</h1>
         </div>
       </div>
 
@@ -81,7 +71,7 @@ import { LateOrder } from '../../../core/models/models';
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="empty">Aucune commande en retard ðYZ‰</td></tr>
+                <tr><td colspan="7" class="empty">Aucune commande en retard.</td></tr>
               }
             </tbody>
           </table>
@@ -95,10 +85,6 @@ import { LateOrder } from '../../../core/models/models';
     .header h1 { font-size: 1.5rem; font-weight: 700; color: #1e2a3a; margin: 0.25rem 0 0; }
     .back-link { color: #667eea; text-decoration: none; font-size: 0.9rem; }
     .back-link:hover { text-decoration: underline; }
-
-    .filter { display: flex; align-items: center; gap: 0.5rem; }
-    .filter label { font-size: 0.85rem; color: #555; font-weight: 500; }
-    .filter select { padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; }
 
     .loading { text-align: center; padding: 3rem; color: #999; }
 
@@ -137,7 +123,6 @@ export class LateOrdersComponent implements OnInit {
   loading = signal(true);
   totalAmount = signal(0);
   avgDaysLate = signal(0);
-  threshold = 7;
 
   ngOnInit(): void {
     this.load();
@@ -145,7 +130,7 @@ export class LateOrdersComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.reportingApi.getLateOrders(this.threshold).subscribe({
+    this.reportingApi.getLateOrders(1).subscribe({
       next: (res) => {
         const items = res.data ?? [];
         this.data.set(items);

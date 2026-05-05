@@ -457,6 +457,12 @@ public class SapB1Service : ISapB1Service
         object? payload,
         CancellationToken cancellationToken)
     {
+        if (_config.GetValue<bool>("IsDemoMode"))
+        {
+            _logger.LogInformation("[MODE DEMO] Bypassing real SAP call: {Method} {Url}", method, relativeUrl);
+            return (false, null, (int)HttpStatusCode.ServiceUnavailable, "Appel Service Layer bloqué en mode démo.");
+        }
+
         var (serviceLayerUrl, _, _, _, ignoreSslErrors, configError) = GetServiceLayerSettings();
         if (configError is not null)
         {
@@ -493,6 +499,13 @@ public class SapB1Service : ISapB1Service
         bool forceRefresh,
         CancellationToken cancellationToken)
     {
+        if (_config.GetValue<bool>("IsDemoMode"))
+        {
+            _cachedSessionId = "DEMO_SESSION_ID";
+            _cachedSessionExpiresAtUtc = DateTime.UtcNow.AddYears(1);
+            return (true, null, (int)HttpStatusCode.OK, null);
+        }
+
         if (!forceRefresh &&
             !string.IsNullOrWhiteSpace(_cachedSessionId) &&
             DateTime.UtcNow < _cachedSessionExpiresAtUtc)

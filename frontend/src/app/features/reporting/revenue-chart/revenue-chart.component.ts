@@ -18,7 +18,7 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
   template: `
     <div class="chart-card">
       <div class="chart-header">
-        <h3>ðY“ˆ A‰volution du chiffre d'affaires</h3>
+        <h3>Evolution du chiffre d'affaires</h3>
         <div class="period-selector">
           <button [class.active]="period() === 'daily'" (click)="switchPeriod('daily')">30 jours</button>
           <button [class.active]="period() === 'monthly'" (click)="switchPeriod('monthly')">12 mois</button>

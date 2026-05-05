@@ -166,6 +166,7 @@ public class AdvancedDashboardDto
     // Top 10
     public List<TopCustomerDto> TopCustomers { get; set; } = new();
     public List<TopProductDto>  TopProducts  { get; set; } = new();
+    public List<TopSalesPersonDto> TopSalesPersons { get; set; } = new();
 
     // Évolution
     public List<RevenueEvolutionDto> RevenueEvolution { get; set; } = new();
@@ -174,6 +175,14 @@ public class AdvancedDashboardDto
     public List<RecentOrderDto>    RecentOrders    { get; set; } = new();
     public List<LateOrderDto>      LateOrders      { get; set; } = new();
     public List<PendingPaymentDto> PendingPayments { get; set; } = new();
+}
+
+public class TopSalesPersonDto
+{
+    public int SalesPersonCode { get; set; }
+    public string SalesPersonName { get; set; } = string.Empty;
+    public decimal TotalRevenue { get; set; }
+    public int DocumentCount { get; set; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -302,10 +302,18 @@ export interface AdvancedDashboard {
   pendingPaymentsAmount: number;
   topCustomers: TopCustomer[];
   topProducts: TopProduct[];
+  topSalesPersons: TopSalesPerson[];
   revenueEvolution: RevenueEvolution[];
   recentOrders: RecentOrder[];
   lateOrders: LateOrder[];
   pendingPayments: PendingPayment[];
+}
+
+export interface TopSalesPerson {
+  salesPersonCode: number;
+  salesPersonName: string;
+  totalRevenue: number;
+  documentCount: number;
 }
 
 export interface DailyKpis {

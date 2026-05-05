@@ -45,13 +45,6 @@ interface DashboardStats {
           </div>
         </a>
 
-        <a routerLink="/reporting" class="stat-card">
-          <div class="stat-info">
-            <span class="stat-value">a†—</span>
-            <span class="stat-label">Reporting</span>
-          </div>
-        </a>
-
       </div>
     </div>
   `,

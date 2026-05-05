@@ -1,0 +1,117 @@
+# SAP B1 App - Documentation Technique
+
+## 1. Objectif
+Cette application centralise la gestion commerciale (devis, commandes, livraisons, factures, avoirs, retours), le reporting et le suivi terrain, avec SAP Business One comme source principale des documents commerciaux.
+
+## 2. Architecture
+### 2.1 Frontend
+- Stack: Angular standalone components.
+- Emplacement: `frontend/src/app`.
+- Rendu: shell + routes proteges par roles.
+- Services API: `frontend/src/app/core/services`.
+
+### 2.2 Backend
+- Stack: ASP.NET Core Web API.
+- Emplacement: `backend/SapB1App`.
+- Couche HTTP: controllers.
+- Couche metier: services.
+- Integration SAP B1: Service Layer + SQL lecture.
+
+### 2.3 Integration SAP B1
+- Ecriture: prioritairement via Service Layer.
+- Lecture commerciale: mode hybride possible (lecture SQL pour performance).
+- Session SAP: geree cote backend avec cache de session.
+
+## 3. Modules Fonctionnels
+- Authentification et roles.
+- Clients/partenaires.
+- Catalogue produits.
+- Documents commerciaux:
+- Devis (`Quotations`)
+- BC (`Orders`)
+- BL (`DeliveryNotes`)
+- Factures (`Invoices`)
+- Avoirs (`CreditNotes`)
+- Retours (`Returns`)
+- Reporting.
+- Encaissement.
+- Tracking.
+
+## 4. Routes Principales Frontend
+- `/dashboard`
+- `/customers`
+- `/quotes`
+- `/orders`
+- `/deliverynotes`
+- `/factures`
+- `/encaissement`
+- `/creditnotes`
+- `/returns`
+- `/reporting`
+- `/reporting/pending-payments`
+- `/reporting/late-orders`
+
+## 5. API Reporting
+Base route: `GET /api/reporting`
+
+- `/dashboard`: dashboard consolide.
+- `/kpis`: KPIs resumes.
+- `/top-customers?limit=10`
+- `/top-products?limit=10`
+- `/revenue/monthly?months=12`
+- `/revenue/daily?days=30`
+- `/pending-payments`
+- `/late-orders?daysThreshold=7`
+
+## 6. Cycle Documentaire et Regles
+### 6.1 Creation en chaine
+Si un document X est cree depuis un document Y, les lignes de Y consommees sont cloturees.
+
+### 6.2 Annulation et coherence
+Si X est annule/supprime, les lignes de Y sont reouvertes conditionnellement si elles ne sont plus utilisees par un autre document actif.
+
+### 6.3 Protection des lignes cloturees
+Lors d'une modification d'un document mixte (lignes ouvertes + cloturees):
+- les lignes cloturees ne sont pas modifiables.
+- les lignes ouvertes restent modifiables.
+
+## 7. Reporting - Base Minimale Recommandee
+La page reporting doit exposer au minimum:
+- KPIs:
+- nombre de clients actifs
+- nombre de commandes
+- chiffre d'affaires total
+- chiffre d'affaires du mois
+- montant des impayes
+- Alertes:
+- commandes en retard
+- paiements en attente
+- Analyse:
+- evolution du CA (mensuelle et journaliere)
+- top clients
+- top produits
+- Detail operationnel:
+- tableau paiements en attente
+- tableau commandes en retard
+- activite recente (dernieres commandes)
+- Filtres:
+- recherche client/code document
+- severite retard
+- severite impaye
+
+## 8. Observabilite et Logs
+- Prefixes recommandés:
+- `[HYBRID-MODE]` pour lecture SQL
+- `[ENCAISSEMENT]` pour flux paiement
+- `[CANCEL-REOPEN]` pour reouverture de lignes source
+- Niveau:
+- `Information` pour flux nominal
+- `Warning` pour fallback ou incoherence metier
+- `Error` pour echec API/SQL/SAP
+
+## 9. Securite
+- Auth JWT.
+- Endpoints proteges via `[Authorize]`.
+- Restriction front via guard role.
+- Ne jamais exposer credentiels SAP dans le frontend.
+

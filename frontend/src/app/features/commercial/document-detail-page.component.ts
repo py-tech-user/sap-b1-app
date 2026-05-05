@@ -507,10 +507,6 @@ export class DocumentDetailComponent {
       return this.hasGeneratedType('deliverynotes') || (d.deliveryNoteId ?? 0) > 0;
     }
 
-    if (this.resource() === 'deliverynotes') {
-      return this.hasGeneratedType('invoices') || (d.invoiceId ?? 0) > 0;
-    }
-
     return false;
   }
 

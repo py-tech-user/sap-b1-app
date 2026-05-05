@@ -357,10 +357,15 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<object>>> CreateDeliveryNote([FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
         => CreateCommercialDocumentAsync("DeliveryNotes", request, cancellationToken, defaultDocStatus: "bost_Open");
 
+    [HttpPut("delivery-notes/{docEntry:int}")]
+    [AllowAnonymous]
+    public Task<ActionResult<ApiResponse<object>>> UpdateDeliveryNote(int docEntry, [FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
+        => UpdateCommercialDocumentByDocEntryAsync("DeliveryNotes", docEntry, request, cancellationToken);
+
     [HttpDelete("delivery-notes/{docEntry:int}")]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<object>>> DeleteDeliveryNote(int docEntry, CancellationToken cancellationToken)
-        => Task.FromResult<ActionResult<ApiResponse<object>>>(BadRequest(SapError("Annulation autorisée uniquement pour les devis et bons de commande ouverts.")));
+        => DeleteDocumentByDocEntryAsync("DeliveryNotes", docEntry, cancellationToken, requireOpenStatus: true);
 
     [HttpPost("delivery-notes/{docEntry:int}/close")]
     [AllowAnonymous]
@@ -396,6 +401,11 @@ ORDER BY I.ItemCode;";
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<object>>> CreateBonLivraison([FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
         => CreateDeliveryNote(request, cancellationToken);
+
+    [HttpPut("bl/{docEntry:int}")]
+    [AllowAnonymous]
+    public Task<ActionResult<ApiResponse<object>>> UpdateBonLivraison(int docEntry, [FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
+        => UpdateDeliveryNote(docEntry, request, cancellationToken);
 
     [HttpPost("bl/{docEntry:int}/close")]
     [AllowAnonymous]
@@ -503,7 +513,12 @@ ORDER BY I.ItemCode;";
     [HttpDelete("factures/{docEntry:int}")]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<object>>> DeleteInvoice(int docEntry, CancellationToken cancellationToken)
-        => Task.FromResult<ActionResult<ApiResponse<object>>>(BadRequest(SapError("Annulation autorisée uniquement pour les devis et bons de commande ouverts.")));
+        => DeleteDocumentByDocEntryAsync("Invoices", docEntry, cancellationToken, requireOpenStatus: true);
+
+    [HttpPut("factures/{docEntry:int}")]
+    [AllowAnonymous]
+    public Task<ActionResult<ApiResponse<object>>> UpdateInvoice(int docEntry, [FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
+        => UpdateCommercialDocumentByDocEntryAsync("Invoices", docEntry, request, cancellationToken);
 
     [HttpPost("factures/{invoiceDocEntry:int}/payments")]
     [AllowAnonymous]
@@ -645,7 +660,7 @@ ORDER BY I.ItemCode;";
             .OrderBy(c => c.CardCode, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var walletMap = await GetSapCustomerAdvanceBalancesAsync(clients.Select(c => c.CardCode), cancellationToken);
+            var walletMap = await GetWalletBalancesAsync(clients.Select(c => c.CardCode), cancellationToken);
         foreach (var client in clients)
         {
             if (walletMap.TryGetValue(client.CardCode, out var wallet))
@@ -761,6 +776,24 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         }
     }
 
+    [HttpGet("encaissement/clients/{cardCode}/balance")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<object>>> GetEncaissementClientBalance(
+        string cardCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cardCode))
+            return BadRequest(SapError("CardCode est obligatoire."));
+
+        var normalized = cardCode.Trim();
+        var balance = await GetWalletBalanceAsync(normalized, cancellationToken);
+        return Ok(new ApiResponse<object>(true, null, new
+        {
+            cardCode = normalized,
+            advanceBalance = balance
+        }));
+    }
+
     [HttpPost("encaissement")]
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<object>>> RegisterEncaissement(
@@ -843,9 +876,12 @@ ORDER BY DocDate ASC, DocEntry ASC;";
             .ToList();
 
         var totalSelected = orderedInvoices.Sum(i => i.OpenAmount);
-        var totalPaid = request.CashSum;
-        var amountToApply = Math.Min(totalPaid, totalSelected);
-        var cashApplied = amountToApply;
+        var freshPaid = Math.Max(0m, request.CashSum) + Math.Max(0m, request.CreditSum);
+        var walletBefore = request.UseAdvance
+            ? await GetWalletBalanceAsync(request.CardCode, cancellationToken)
+            : 0m;
+        var totalAvailable = freshPaid + walletBefore;
+        var amountToApply = Math.Min(totalAvailable, totalSelected);
 
         var remainingToApply = amountToApply;
         decimal totalAppliedBuilt = 0m;
@@ -873,33 +909,30 @@ ORDER BY DocDate ASC, DocEntry ASC;";
         if (paymentInvoices.Count == 0)
             return BadRequest(SapError("Aucune somme n'a pu être affectée aux factures sélectionnées."));
 
-        var payload = new Dictionary<string, object?>
-        {
-            ["CardCode"] = request.CardCode,
-            ["DocDate"] = DateTime.Today.ToString("yyyy-MM-dd"),
-            ["CashSum"] = cashApplied, // Uniquement l'argent frais. SAP appliquera le crédit BP automatiquement si besoin.
-            ["PaymentInvoices"] = paymentInvoices
-        };
+        var walletApplied = Math.Max(0m, amountToApply - freshPaid);
+        var walletCreditAdded = Math.Max(0m, freshPaid - amountToApply);
 
         _logger.LogInformation(
-            "[ENCAISSEMENT] Posting payment to SAP. CardCode={CardCode}, PaymentMethodCode={PaymentMethodCode}, CashSum={CashSum}, TotalSelected={TotalSelected}",
+            "[ENCAISSEMENT] Posting payment to SAP. CardCode={CardCode}, PaymentMethodCode={PaymentMethodCode}, FreshPaid={FreshPaid}, WalletBefore={WalletBefore}, AmountToApply={AmountToApply}, TotalSelected={TotalSelected}",
             request.CardCode,
             request.PaymentMethodCode,
-            totalAppliedBuilt,
+            freshPaid,
+            walletBefore,
+            amountToApply,
             totalSelected);
 
-        _logger.LogInformation("[ENCAISSEMENT][TRACE][PAYLOAD] {@Payload}", payload);
-
         JsonElement? paymentResponse = null;
-        if (cashApplied > 0)
+        if (amountToApply > 0)
         {
             var sapPayload = new Dictionary<string, object?>
             {
                 ["CardCode"] = request.CardCode,
                 ["DocDate"] = DateTime.Today.ToString("yyyy-MM-dd"),
-                ["CashSum"] = cashApplied, 
+                // SAP recoit uniquement le montant applique aux factures.
+                ["CashSum"] = amountToApply,
                 ["PaymentInvoices"] = paymentInvoices
             };
+            _logger.LogInformation("[ENCAISSEMENT][TRACE][PAYLOAD] {@Payload}", sapPayload);
             
             var paymentResult = await _sapService.ServiceLayerPostAsync("IncomingPayments", sapPayload, cancellationToken);
             if (!paymentResult.Success)
@@ -907,6 +940,13 @@ ORDER BY DocDate ASC, DocEntry ASC;";
                 _logger.LogError("[ENCAISSEMENT] SAP payment registration failed. CardCode={CardCode}, Error={Error}", request.CardCode, paymentResult.ErrorMessage);
                 return StatusCode(paymentResult.StatusCode, SapError(paymentResult.ErrorMessage, paymentResult.Response));
             }
+
+            if (walletApplied > 0)
+                await ConsumeWalletCreditAsync(request.CardCode, walletApplied, cancellationToken);
+
+            if (walletCreditAdded > 0)
+                await AddWalletCreditAsync(request.CardCode, walletCreditAdded, cancellationToken);
+
             paymentResponse = paymentResult.Response;
             _logger.LogInformation("[ENCAISSEMENT] Payment registration succeeded. CardCode={CardCode}, InvoiceCount={InvoiceCount}", request.CardCode, request.Invoices.Count);
         }
@@ -971,7 +1011,11 @@ ORDER BY DocDate ASC, DocEntry ASC;";
             payment = paymentResponse,
             invoices = refreshedInvoices,
             totalSelected,
-            cashSumApplied = totalAppliedBuilt
+            cashSumApplied = totalAppliedBuilt,
+            walletBefore,
+            walletApplied,
+            walletCreditAdded,
+            walletRemaining = await GetWalletBalanceAsync(request.CardCode, cancellationToken)
         }));
     }
 
@@ -1058,10 +1102,15 @@ WHERE CardCode IN ({inSql});";
     public Task<ActionResult<ApiResponse<object>>> CreateCreditNote([FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
         => CreateCommercialDocumentAsync("CreditNotes", request, cancellationToken);
 
+    [HttpPut("credit-notes/{docEntry:int}")]
+    [AllowAnonymous]
+    public Task<ActionResult<ApiResponse<object>>> UpdateCreditNote(int docEntry, [FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
+        => UpdateCommercialDocumentByDocEntryAsync("CreditNotes", docEntry, request, cancellationToken);
+
     [HttpDelete("credit-notes/{docEntry:int}")]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<object>>> DeleteCreditNote(int docEntry, CancellationToken cancellationToken)
-        => Task.FromResult<ActionResult<ApiResponse<object>>>(BadRequest(SapError("Annulation autorisée uniquement pour les devis et bons de commande ouverts.")));
+        => DeleteDocumentByDocEntryAsync("CreditNotes", docEntry, cancellationToken, requireOpenStatus: true);
 
     [HttpGet("returns")]
     [AllowAnonymous]
@@ -1087,10 +1136,15 @@ WHERE CardCode IN ({inSql});";
     public Task<ActionResult<ApiResponse<object>>> CreateReturn([FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
         => CreateCommercialDocumentAsync("Returns", request, cancellationToken);
 
+    [HttpPut("returns/{docEntry:int}")]
+    [AllowAnonymous]
+    public Task<ActionResult<ApiResponse<object>>> UpdateReturn(int docEntry, [FromBody] CreateSapDocumentRequest request, CancellationToken cancellationToken)
+        => UpdateCommercialDocumentByDocEntryAsync("Returns", docEntry, request, cancellationToken);
+
     [HttpDelete("returns/{docEntry:int}")]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<object>>> DeleteReturn(int docEntry, CancellationToken cancellationToken)
-        => Task.FromResult<ActionResult<ApiResponse<object>>>(BadRequest(SapError("Annulation autorisée uniquement pour les devis et bons de commande ouverts.")));
+        => DeleteDocumentByDocEntryAsync("Returns", docEntry, cancellationToken, requireOpenStatus: true);
 
     private async Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDocumentsAsync(
         string relativeUrl,
@@ -2066,6 +2120,8 @@ WHERE L.BaseType = @baseType
                 cancelResult = await attempt();
                 if (cancelResult.Success)
                 {
+                    await ReopenSourceLinesConditionallyAfterCancellationAsync(current.Response.Value, docEntry, cancellationToken);
+
                     var refreshed = await _sapService.ServiceLayerGetAsync($"{sapEntity}({docEntry})", cancellationToken);
                     var responseData = refreshed.Success && refreshed.Response.HasValue
                         ? NormalizeDocumentForFrontend(refreshed.Response.Value)
@@ -2078,12 +2134,220 @@ WHERE L.BaseType = @baseType
             return StatusCode(cancelResult.StatusCode, SapError(cancelResult.ErrorMessage ?? "Annulation non supportée pour cet objet SAP.", cancelResult.Response));
         }
 
+        await ReopenSourceLinesConditionallyAfterCancellationAsync(sapEntity, docEntry, cancellationToken);
+
         var result = await _sapService.ServiceLayerDeleteAsync($"{sapEntity}({docEntry})", cancellationToken);
         if (!result.Success)
             return StatusCode(result.StatusCode, SapError(result.ErrorMessage, result.Response));
 
         return Ok(new ApiResponse<object>(true, "Suppression réussie.", result.Response));
     }
+
+    private async Task ReopenSourceLinesConditionallyAfterCancellationAsync(
+        string cancelledEntity,
+        int cancelledDocEntry,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cancelled = await _sapService.ServiceLayerGetAsync($"{cancelledEntity}({cancelledDocEntry})", cancellationToken);
+            if (!cancelled.Success || !cancelled.Response.HasValue)
+                return;
+
+            await ReopenSourceLinesConditionallyAfterCancellationAsync(cancelled.Response.Value, cancelledDocEntry, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[CANCEL-REOPEN] Echec de la reouverture conditionnelle apres annulation.");
+        }
+    }
+
+    private async Task ReopenSourceLinesConditionallyAfterCancellationAsync(
+        JsonElement cancelledDocument,
+        int cancelledDocEntry,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!cancelledDocument.TryGetProperty("DocumentLines", out var docLines) || docLines.ValueKind != JsonValueKind.Array)
+                return;
+
+            var baseRefs = docLines
+                .EnumerateArray()
+                .Select(l => new
+                {
+                    BaseType = GetStringAny(l, "BaseType"),
+                    BaseEntry = GetNullableInt(l, "BaseEntry"),
+                    BaseLine = GetNullableInt(l, "BaseLine")
+                })
+                .Where(x => x.BaseEntry.HasValue && x.BaseEntry.Value > 0 && x.BaseLine.HasValue && x.BaseLine.Value >= 0)
+                .Select(x => new
+                {
+                    BaseTypeKey = ResolveLinkedTypeFromObjectCode(x.BaseType),
+                    BaseEntry = x.BaseEntry!.Value,
+                    BaseLine = x.BaseLine!.Value
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.BaseTypeKey))
+                .GroupBy(x => new { x.BaseTypeKey, x.BaseEntry })
+                .ToList();
+
+            foreach (var source in baseRefs)
+            {
+                var sourceEntity = SourceTypeKeyToSapEntity(source.Key.BaseTypeKey);
+                if (string.IsNullOrWhiteSpace(sourceEntity))
+                    continue;
+
+                var baseLines = source.Select(x => x.BaseLine).Distinct().ToList();
+                var reopenableLines = await ResolveReopenableSourceLinesAsync(
+                    sourceEntity,
+                    source.Key.BaseEntry,
+                    baseLines,
+                    cancelledDocEntry,
+                    cancellationToken);
+
+                if (reopenableLines.Count == 0)
+                    continue;
+
+                // Reopen document first so eligible source lines can be re-used in next flow steps.
+                var reopenDoc = await _sapService.ServiceLayerPostAsync($"{sourceEntity}({source.Key.BaseEntry})/Reopen", new { }, cancellationToken);
+                if (!reopenDoc.Success)
+                {
+                    // Fallback: some SAP setups reject Reopen action but accept status patch.
+                    await _sapService.ServiceLayerPatchAsync($"{sourceEntity}({source.Key.BaseEntry})", new
+                    {
+                        DocumentStatus = "bost_Open",
+                        DocStatus = "O",
+                        Status = "open"
+                    }, cancellationToken);
+                }
+
+                var patchPayload = new
+                {
+                    DocumentLines = reopenableLines
+                        .Select(lineNum => new Dictionary<string, object?>
+                        {
+                            ["LineNum"] = lineNum,
+                            ["LineStatus"] = "bost_Open"
+                        })
+                        .ToList()
+                };
+
+                var patch = await _sapService.ServiceLayerPatchAsync($"{sourceEntity}({source.Key.BaseEntry})", patchPayload, cancellationToken);
+                if (!patch.Success)
+                {
+                    _logger.LogWarning(
+                        "[CANCEL-REOPEN] Reouverture partielle impossible. Source={SourceEntity} DocEntry={SourceDocEntry} Lines={Lines}. Error={Error}",
+                        sourceEntity,
+                        source.Key.BaseEntry,
+                        string.Join(",", reopenableLines),
+                        patch.ErrorMessage);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[CANCEL-REOPEN] Echec de la reouverture conditionnelle apres annulation.");
+        }
+    }
+
+    private async Task<List<int>> ResolveReopenableSourceLinesAsync(
+        string sourceEntity,
+        int sourceDocEntry,
+        IReadOnlyCollection<int> sourceLineNums,
+        int cancelledDocEntry,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<int>();
+        if (sourceDocEntry <= 0 || sourceLineNums.Count == 0)
+            return result;
+
+        if (!int.TryParse(ResolveDocObjectCode(sourceEntity), out var sourceObjectType))
+            return result;
+
+        var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+        if (conn is null)
+            return result;
+
+        await using (conn)
+        {
+            var candidates = sourceLineNums.Distinct().ToList();
+            var inSql = string.Join(",", candidates.Select((_, i) => $"@line{i}"));
+
+            var sql = $@"
+SELECT L.BaseLine, COUNT(1) AS ActiveCount
+FROM (
+    SELECT L.BaseLine
+    FROM RDR1 L INNER JOIN ORDR H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+    UNION ALL
+    SELECT L.BaseLine
+    FROM DLN1 L INNER JOIN ODLN H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+    UNION ALL
+    SELECT L.BaseLine
+    FROM INV1 L INNER JOIN OINV H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+    UNION ALL
+    SELECT L.BaseLine
+    FROM RIN1 L INNER JOIN ORIN H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+    UNION ALL
+    SELECT L.BaseLine
+    FROM RDN1 L INNER JOIN ORDN H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+    UNION ALL
+    SELECT L.BaseLine
+    FROM QUT1 L INNER JOIN OQUT H ON H.DocEntry = L.DocEntry
+    WHERE L.BaseType = @baseType AND L.BaseEntry = @baseEntry AND L.BaseLine IN ({inSql})
+      AND ISNULL(H.CANCELED, 'N') = 'N'
+      AND H.DocEntry <> @cancelledDocEntry
+) L
+GROUP BY L.BaseLine;";
+
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+            cmd.Parameters.Add(new SqlParameter("@baseType", SqlDbType.Int) { Value = sourceObjectType });
+            cmd.Parameters.Add(new SqlParameter("@baseEntry", SqlDbType.Int) { Value = sourceDocEntry });
+            cmd.Parameters.Add(new SqlParameter("@cancelledDocEntry", SqlDbType.Int) { Value = cancelledDocEntry });
+            for (var i = 0; i < candidates.Count; i++)
+                cmd.Parameters.Add(new SqlParameter($"@line{i}", SqlDbType.Int) { Value = candidates[i] });
+
+            var busy = new HashSet<int>();
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var lineNum = reader["BaseLine"] is DBNull ? -1 : Convert.ToInt32(reader["BaseLine"]);
+                var activeCount = reader["ActiveCount"] is DBNull ? 0 : Convert.ToInt32(reader["ActiveCount"]);
+                if (lineNum >= 0 && activeCount > 0)
+                    busy.Add(lineNum);
+            }
+
+            result.AddRange(candidates.Where(line => !busy.Contains(line)));
+        }
+
+        return result;
+    }
+
+    private static string SourceTypeKeyToSapEntity(string typeKey) => typeKey.ToLowerInvariant() switch
+    {
+        "quote" => "Quotations",
+        "order" => "Orders",
+        "deliverynote" => "DeliveryNotes",
+        "invoice" => "Invoices",
+        "creditnote" => "CreditNotes",
+        "return" => "Returns",
+        _ => string.Empty
+    };
 
     private static bool HasClosedDocumentLines(JsonElement document)
     {
@@ -2154,9 +2418,13 @@ WHERE L.BaseType = @baseType
             return BadRequest(SapError("DocEntry invalide."));
 
         if (!string.Equals(sapEntity, "Orders", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(sapEntity, "Quotations", StringComparison.OrdinalIgnoreCase))
+            !string.Equals(sapEntity, "Quotations", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sapEntity, "DeliveryNotes", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sapEntity, "Invoices", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sapEntity, "Returns", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(sapEntity, "CreditNotes", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(SapError("Modification autorisée uniquement pour les devis et bons de commande."));
+            return BadRequest(SapError("Modification non autorisee pour ce type de document."));
         }
 
         var validationError = ValidateDocumentRequest(request);
@@ -2170,7 +2438,9 @@ WHERE L.BaseType = @baseType
         var currentDoc = current.Response.Value;
         var rawStatus = GetRawDocumentStatus(currentDoc);
         if (!IsOpenStatusFilterValue(rawStatus))
-            return BadRequest(SapError("Modification refusée: seul un devis/BC en statut Open peut être modifié."));
+            return BadRequest(SapError("Modification refusee: seul un document en statut Open peut etre modifie."));
+
+        request.DocumentLines = EnsureClosedLinesPresent(currentDoc, request.DocumentLines);
 
         if (!ValidateClosedLinesNotModified(currentDoc, request.DocumentLines, out var closedLineError))
             return BadRequest(SapError(closedLineError));
@@ -2219,7 +2489,6 @@ WHERE L.BaseType = @baseType
             .Where(l => l.LineNum.HasValue)
             .ToDictionary(l => l.LineNum!.Value, l => l);
 
-        var index = 0;
         foreach (var sourceLine in sourceLines.EnumerateArray())
         {
             var sourceLineNum = GetNullableInt(sourceLine, "LineNum");
@@ -2227,37 +2496,85 @@ WHERE L.BaseType = @baseType
             var isClosed = IsClosedLineStatus(sourceStatus);
 
             if (!isClosed)
-            {
-                index++;
                 continue;
-            }
 
-            CreateSapDocumentLineRequest? candidate = null;
-            if (sourceLineNum.HasValue && incomingByLineNum.TryGetValue(sourceLineNum.Value, out var byLineNum))
+            if (!sourceLineNum.HasValue || !incomingByLineNum.TryGetValue(sourceLineNum.Value, out var candidate))
             {
-                candidate = byLineNum;
-            }
-            else if (index < incoming.Count)
-            {
-                candidate = incoming[index];
-            }
-
-            if (candidate is null)
-            {
-                error = $"Ligne fermée #{sourceLineNum ?? index}: suppression impossible.";
+                error = $"Ligne fermee #{sourceLineNum ?? -1}: suppression impossible.";
                 return false;
             }
 
             if (HasClosedLineChanged(sourceLine, candidate))
             {
-                error = $"Ligne fermée #{sourceLineNum ?? index}: modification interdite.";
+                error = $"Ligne fermee #{sourceLineNum ?? -1}: modification interdite.";
                 return false;
             }
-
-            index++;
         }
 
         return true;
+    }
+
+    private static List<CreateSapDocumentLineRequest> EnsureClosedLinesPresent(JsonElement currentDocument, IReadOnlyList<CreateSapDocumentLineRequest>? incomingLines)
+    {
+        var result = incomingLines?.ToList() ?? [];
+        static string FirstString(JsonElement node, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                var value = GetStringAny(node, name);
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+
+            return string.Empty;
+        }
+
+        if (!currentDocument.TryGetProperty("DocumentLines", out var sourceLines) || sourceLines.ValueKind != JsonValueKind.Array)
+            return result;
+
+        var incomingIndexByLineNum = result
+            .Select((line, index) => new { line, index })
+            .Where(x => x.line.LineNum.HasValue)
+            .ToDictionary(x => x.line.LineNum!.Value, x => x.index);
+
+        foreach (var sourceLine in sourceLines.EnumerateArray())
+        {
+            var sourceLineNum = GetNullableInt(sourceLine, "LineNum");
+            if (!sourceLineNum.HasValue)
+                continue;
+
+            var sourceStatus = GetStringAny(sourceLine, "LineStatus");
+            if (!IsClosedLineStatus(sourceStatus))
+                continue;
+
+            var frozenClosedLine = new CreateSapDocumentLineRequest
+            {
+                LineNum = sourceLineNum.Value,
+                LineStatus = sourceStatus,
+                ItemCode = FirstString(sourceLine, "ItemCode", "itemCode"),
+                Quantity = GetDecimal(sourceLine, "Quantity"),
+                WarehouseCode = FirstString(sourceLine, "WarehouseCode", "WhsCode", "warehouseCode", "whsCode"),
+                UnitPrice = GetDecimal(sourceLine, "UnitPrice") > 0 ? GetDecimal(sourceLine, "UnitPrice") : GetDecimal(sourceLine, "Price"),
+                Price = GetDecimal(sourceLine, "Price") > 0 ? GetDecimal(sourceLine, "Price") : GetDecimal(sourceLine, "UnitPrice"),
+                DiscountPercent = GetDecimal(sourceLine, "DiscountPercent"),
+                VatPercent = GetDecimal(sourceLine, "VatPercent") > 0 ? GetDecimal(sourceLine, "VatPercent") : GetDecimal(sourceLine, "TaxPercent"),
+                BaseType = FirstString(sourceLine, "BaseType", "baseType"),
+                BaseEntry = GetNullableInt(sourceLine, "BaseEntry"),
+                BaseLine = GetNullableInt(sourceLine, "BaseLine")
+            };
+
+            if (incomingIndexByLineNum.TryGetValue(sourceLineNum.Value, out var existingIndex))
+            {
+                // Always freeze closed lines to source values so only open lines can be effectively modified.
+                result[existingIndex] = frozenClosedLine;
+                continue;
+            }
+
+            result.Add(frozenClosedLine);
+            incomingIndexByLineNum[sourceLineNum.Value] = result.Count - 1;
+        }
+
+        return result;
     }
 
     private static bool HasClosedLineChanged(JsonElement sourceLine, CreateSapDocumentLineRequest incoming)
@@ -3263,7 +3580,22 @@ WHERE DocEntry = @docEntry;";
         data["Status"] = normalizedStatus;
         data["DocStatus"] = rawStatus;
         data["DocumentStatus"] = rawStatus;
-        data["IsCancelled"] = IsCancelled(source);
+        var isCancelled = IsCancelled(source);
+        data["IsCancelled"] = isCancelled;
+
+        if (isCancelled && source.TryGetProperty("DocumentLines", out var lines) && lines.ValueKind == JsonValueKind.Array)
+        {
+            var normalizedLines = new List<Dictionary<string, object?>>();
+            foreach (var line in lines.EnumerateArray())
+            {
+                var row = JsonSerializer.Deserialize<Dictionary<string, object?>>(line.GetRawText())
+                    ?? new Dictionary<string, object?>();
+                row["LineStatus"] = "annuler";
+                row["Status"] = "annuler";
+                normalizedLines.Add(row);
+            }
+            data["DocumentLines"] = normalizedLines;
+        }
 
         return data;
     }
@@ -3920,4 +4252,5 @@ public class SapItemWarehouseDto
     public string WarehouseCode { get; set; } = string.Empty;
     public decimal InStock { get; set; }
 }
+
 
