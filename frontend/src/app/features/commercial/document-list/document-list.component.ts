@@ -29,16 +29,32 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
       </div>
 
       <form [formGroup]="filtersForm" class="filters" (ngSubmit)="applyFilters()">
-        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" />
-        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" />
+        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" list="doc-search-suggestions" />
+        <datalist id="doc-search-suggestions">
+          @for (suggestion of searchSuggestions(); track suggestion) {
+            <option [value]="suggestion"></option>
+          }
+        </datalist>
+        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" list="doc-customer-suggestions" />
+        <datalist id="doc-customer-suggestions">
+          @for (suggestion of customerSuggestions(); track suggestion) {
+            <option [value]="suggestion"></option>
+          }
+        </datalist>
         <select formControlName="phase" (change)="onFiltersChanged()">
           <option value="all">Tous les statuts</option>
           <option value="open">En attente</option>
           <option value="closed">Clotures</option>
           <option value="cancelled">Annules</option>
         </select>
-        <input type="date" formControlName="dateFrom" (change)="onFiltersChanged()" />
-        <input type="date" formControlName="dateTo" (change)="onFiltersChanged()" />
+        <label class="date-field">
+          <span>Du</span>
+          <input type="date" formControlName="dateFrom" (change)="onFiltersChanged()" />
+        </label>
+        <label class="date-field">
+          <span>Au</span>
+          <input type="date" formControlName="dateTo" (change)="onFiltersChanged()" />
+        </label>
         <button type="submit" class="btn-primary">Filtrer</button>
         <button type="button" class="btn-outline" (click)="resetFilters()">Reinitialiser</button>
       </form>
@@ -103,6 +119,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
     .header-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .filters { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 0.5rem; align-items: center; }
     .filters input, .filters select { padding: 0.45rem 0.6rem; border: 1px solid #d7d7d7; border-radius: 6px; }
+    .date-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: #374151; }
     .loading, .error, .empty { text-align: center; padding: 1rem; }
     .error { color: #b00020; }
     .alert { border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
@@ -140,6 +157,14 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   readonly pageSize = signal(15);
   readonly totalCount = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
+  readonly customerSuggestions = computed(() =>
+    [...new Set(this.items().map(doc => this.partnerNameOf(doc)).filter(v => v && v !== '-'))].slice(0, 30)
+  );
+  readonly searchSuggestions = computed(() => {
+    const numbers = this.items().map(doc => this.numberOf(doc)).filter(v => v && v !== '-');
+    const clients = this.items().map(doc => this.partnerNameOf(doc)).filter(v => v && v !== '-');
+    return [...new Set([...numbers, ...clients])].slice(0, 40);
+  });
   private readonly pageCache = new Map<string, CommercialDocument[]>();
   private readonly totalCountCache = new Map<string, number>();
 

@@ -153,7 +153,13 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
             placeholder="Recherche (code, nom, email, telephone...)"
             [(ngModel)]="searchInput"
             (ngModelChange)="onFilterInputChange()"
+            list="partner-search-suggestions"
           />
+          <datalist id="partner-search-suggestions">
+            @for (suggestion of partnerSuggestions(); track suggestion) {
+              <option [value]="suggestion"></option>
+            }
+          </datalist>
           <select name="typeInput" [(ngModel)]="typeInput" (ngModelChange)="onFilterInputChange()">
             <option value="">Tous les types</option>
             <option value="client">Client</option>
@@ -300,6 +306,18 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   pagedCustomers = computed(() => {
     const start = (this.page() - 1) * this.pageSize();
     return this.filteredCustomers().slice(start, start + this.pageSize());
+  });
+  partnerSuggestions = computed(() => {
+    const values: string[] = [];
+    for (const customer of this.customers()) {
+      if (customer.name && customer.name !== '-') values.push(customer.name);
+      if (customer.code && customer.code !== '-') values.push(customer.code);
+      if (customer.email && customer.email !== '-') values.push(customer.email);
+      if (customer.phone1 && customer.phone1 !== '-') values.push(customer.phone1);
+      const label = `${customer.name} (${customer.code})`;
+      values.push(label);
+    }
+    return [...new Set(values)].slice(0, 80);
   });
   selectedCustomer = signal<SapCustomerResponse | null>(null);
   loading = signal(false);
