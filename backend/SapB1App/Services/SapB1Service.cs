@@ -29,6 +29,7 @@ public class SapB1Service : ISapB1Service
     private readonly IConfiguration _config;
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<SapB1Service> _logger;
 
     private bool _mockConnected;
@@ -40,11 +41,13 @@ public class SapB1Service : ISapB1Service
         IConfiguration config,
         AppDbContext db,
         ICurrentUserService currentUserService,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<SapB1Service> logger)
     {
         _config = config;
         _db = db;
         _currentUserService = currentUserService;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -716,6 +719,13 @@ public class SapB1Service : ISapB1Service
     private string BuildRequestRelativeUrl(HttpMethod method, string relativeUrl)
     {
         if (method != HttpMethod.Get || string.IsNullOrWhiteSpace(relativeUrl))
+        {
+            return relativeUrl;
+        }
+
+        // Reporting must read global data (no per-commercial filter).
+        var requestPath = _httpContextAccessor.HttpContext?.Request?.Path.Value ?? string.Empty;
+        if (requestPath.StartsWith("/api/reporting", StringComparison.OrdinalIgnoreCase))
         {
             return relativeUrl;
         }

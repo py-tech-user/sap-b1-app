@@ -1,68 +1,79 @@
-﻿import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import {
-  ApiResponse,
-  AdvancedDashboard,
-  DailyKpis,
-  TopCustomer,
-  TopProduct,
-  RevenueEvolution,
-  PendingPayment,
-  LateOrder
-} from '../models/models';
+import { SapApiService } from './sap-api.service';
+
+export interface ReportingKpis {
+  quotesCount: number;
+  quotesAmount: number;
+  ordersCount: number;
+  ordersAmount: number;
+  invoicesCount: number;
+  invoicesAmount: number;
+  unpaidInvoicesCount: number;
+  unpaidInvoicesAmount: number;
+  conversionRate: number;
+}
+
+export interface ReportingSalesPerson {
+  salesPersonCode: number;
+  salesPersonName: string;
+  quotesCount: number;
+  quotesAmount: number;
+  ordersCount: number;
+  ordersAmount: number;
+  invoicesCount: number;
+  invoicesAmount: number;
+  unpaidInvoicesCount: number;
+  unpaidInvoicesAmount: number;
+  conversionRate: number;
+}
+
+export interface ReportingRecentDocument {
+  type: string;
+  docEntry: number;
+  docNum: number;
+  cardCode: string;
+  cardName: string;
+  total: number;
+  date?: string;
+  salesPersonCode: number;
+}
+
+export interface ReportingSalesPersonInfo {
+  salesPersonCode: number;
+  salesPersonName: string;
+}
+
+export interface CommercialReportingPayload {
+  mode: 'Commercial' | 'Admin';
+  periodLabel: string;
+  selectedSalesPersonCode?: number;
+  selectedSalesPersonName?: string;
+  kpis: ReportingKpis;
+  teamPerformances: ReportingSalesPerson[];
+  recentDocuments: ReportingRecentDocument[];
+  teamMembers: ReportingSalesPersonInfo[];
+  inactiveSalesPersons: ReportingSalesPersonInfo[];
+  topSalesPerson?: ReportingSalesPerson;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message?: string | null;
+  data: T;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ReportingApiService {
-  private readonly api = `${environment.apiUrl}/reporting`;
+  private readonly api = inject(SapApiService);
 
-  constructor(private http: HttpClient) {}
+  getCommercialReporting(month: string, salesPersonCode?: number): Observable<ApiResponse<CommercialReportingPayload>> {
+    const query = new URLSearchParams();
+    query.set('month', month);
+    if (salesPersonCode && salesPersonCode > 0) {
+      query.set('salesPersonCode', String(salesPersonCode));
+    }
 
-  /** GET /reporting/dashboard - Dashboard complet */
-  getDashboard(): Observable<ApiResponse<AdvancedDashboard>> {
-    return this.http.get<ApiResponse<AdvancedDashboard>>(`${this.api}/dashboard`);
-  }
-
-  /** GET /reporting/kpis - KPIs simplifies du jour */
-  getKpis(): Observable<ApiResponse<DailyKpis>> {
-    return this.http.get<ApiResponse<DailyKpis>>(`${this.api}/kpis`);
-  }
-
-  /** GET /reporting/top-customers */
-  getTopCustomers(limit = 10): Observable<ApiResponse<TopCustomer[]>> {
-    const params = new HttpParams().set('limit', limit.toString());
-    return this.http.get<ApiResponse<TopCustomer[]>>(`${this.api}/top-customers`, { params });
-  }
-
-  /** GET /reporting/top-products */
-  getTopProducts(limit = 10): Observable<ApiResponse<TopProduct[]>> {
-    const params = new HttpParams().set('limit', limit.toString());
-    return this.http.get<ApiResponse<TopProduct[]>>(`${this.api}/top-products`, { params });
-  }
-
-  /** GET /reporting/revenue/monthly */
-  getRevenueMonthly(months = 12): Observable<ApiResponse<RevenueEvolution[]>> {
-    const params = new HttpParams().set('months', months.toString());
-    return this.http.get<ApiResponse<RevenueEvolution[]>>(`${this.api}/revenue/monthly`, { params });
-  }
-
-  /** GET /reporting/revenue/daily */
-  getRevenueDaily(days = 30): Observable<ApiResponse<RevenueEvolution[]>> {
-    const params = new HttpParams().set('days', days.toString());
-    return this.http.get<ApiResponse<RevenueEvolution[]>>(`${this.api}/revenue/daily`, { params });
-  }
-
-  /** GET /reporting/pending-payments */
-  getPendingPayments(): Observable<ApiResponse<PendingPayment[]>> {
-    return this.http.get<ApiResponse<PendingPayment[]>>(`${this.api}/pending-payments`);
-  }
-
-  /** GET /reporting/late-orders */
-  getLateOrders(daysThreshold = 7): Observable<ApiResponse<LateOrder[]>> {
-    const params = new HttpParams().set('daysThreshold', daysThreshold.toString());
-    return this.http.get<ApiResponse<LateOrder[]>>(`${this.api}/late-orders`, { params });
+    return this.api.get<ApiResponse<CommercialReportingPayload>>(`reporting/commercial?${query.toString()}`);
   }
 }
-
-

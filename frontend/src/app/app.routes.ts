@@ -1,4 +1,4 @@
-﻿import { Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 
@@ -32,6 +32,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/dashboard/dashboard.component')
             .then(m => m.DashboardComponent),
+        data: { roles: ALL }
+      },
+      {
+        path: 'reporting',
+        loadComponent: () =>
+          import('./features/reporting/reporting.component')
+            .then(m => m.ReportingComponent),
         data: { roles: ALL }
       },
       // a”€a”€ Customers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
@@ -131,28 +138,6 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
 
-      // a”€a”€ Reporting (Rapports) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
-      {
-        path: 'reporting',
-        loadComponent: () =>
-          import('./features/reporting/reporting-dashboard/reporting-dashboard.component')
-            .then(m => m.ReportingDashboardComponent),
-        data: { roles: MGR }
-      },
-      {
-        path: 'reporting/pending-payments',
-        loadComponent: () =>
-          import('./features/reporting/pending-payments/pending-payments.component')
-            .then(m => m.PendingPaymentsComponent),
-        data: { roles: MGR }
-      },
-      {
-        path: 'reporting/late-orders',
-        loadComponent: () =>
-          import('./features/reporting/late-orders/late-orders.component')
-            .then(m => m.LateOrdersComponent),
-        data: { roles: MGR }
-      }
     ]
   },
 

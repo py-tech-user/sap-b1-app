@@ -1,4 +1,4 @@
-﻿// a”€a”€ Generic wrappers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// a”€a”€ Generic wrappers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -226,105 +226,6 @@ export interface TrackPoint {
   longitude: number;
   timestamp: string;
   eventType: string;
-}
-
-// a”€a”€ Reporting a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
-
-export interface TopCustomer {
-  customerId: number;
-  cardCode: string;
-  cardName: string;
-  city?: string;
-  totalRevenue: number;
-  orderCount: number;
-  visitCount: number;
-  avgOrderValue: number;
-  lastOrderDate?: string;
-}
-
-export interface TopProduct {
-  productId: number;
-  itemCode: string;
-  itemName: string;
-  totalQuantity: number;
-  totalRevenue: number;
-  orderCount: number;
-}
-
-export interface RevenueEvolution {
-  period: string;
-  revenue: number;
-  orderCount: number;
-  avgOrderValue: number;
-  growthPercent?: number;
-}
-
-export interface PendingPayment {
-  orderId: number;
-  docNum: string;
-  customerId: number;
-  customerName: string;
-  orderTotal: number;
-  paidAmount: number;
-  remainingAmount: number;
-  daysOverdue: number;
-}
-
-export interface LateOrder {
-  orderId: number;
-  docNum: string;
-  customerName: string;
-  total: number;
-  orderDate: string;
-  expectedDate: string;
-  daysLate: number;
-  status: string;
-}
-
-export interface RecentOrder {
-  id: number;
-  docNum: string;
-  customerName: string;
-  docDate: string;
-  docTotal: number;
-  status: string;
-}
-
-export interface AdvancedDashboard {
-  totalCustomers: number;
-  activeCustomers: number;
-  totalOrders: number;
-  totalRevenue: number;
-  revenueThisMonth: number;
-  growthPercent: number;
-  pendingOrdersCount: number;
-  lateOrdersCount: number;
-  pendingPaymentsAmount: number;
-  topCustomers: TopCustomer[];
-  topProducts: TopProduct[];
-  topSalesPersons: TopSalesPerson[];
-  revenueEvolution: RevenueEvolution[];
-  recentOrders: RecentOrder[];
-  lateOrders: LateOrder[];
-  pendingPayments: PendingPayment[];
-}
-
-export interface TopSalesPerson {
-  salesPersonCode: number;
-  salesPersonName: string;
-  totalRevenue: number;
-  documentCount: number;
-}
-
-export interface DailyKpis {
-  totalCustomers: number;
-  totalOrders: number;
-  totalRevenue: number;
-  revenueThisMonth: number;
-  growthPercent: number;
-  pendingOrdersCount: number;
-  lateOrdersCount: number;
-  pendingPaymentsAmount: number;
 }
 
 // a”€a”€ Commercial (Devis / BC / BL / Facture / Avoir / Retour) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€

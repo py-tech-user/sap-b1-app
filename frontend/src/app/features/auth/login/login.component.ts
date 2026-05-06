@@ -138,7 +138,7 @@ export class LoginComponent implements OnInit {
 
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/reporting']);
       },
       error: (err) => {
         this.error.set(err.error?.message || 'Identifiants incorrects');
