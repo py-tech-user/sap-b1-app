@@ -44,7 +44,6 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
           <article class="kpi"><h3>Commandes</h3><p>{{ report.kpis.ordersCount }}</p><span>{{ formatMoney(report.kpis.ordersAmount) }}</span></article>
           <article class="kpi"><h3>Factures</h3><p>{{ report.kpis.invoicesCount }}</p><span>{{ formatMoney(report.kpis.invoicesAmount) }}</span></article>
           <article class="kpi alert"><h3>Impayes</h3><p>{{ report.kpis.unpaidInvoicesCount }}</p><span>{{ formatMoney(report.kpis.unpaidInvoicesAmount) }}</span></article>
-          <article class="kpi"><h3>Taux transformation</h3><p>{{ report.kpis.conversionRate | number:'1.0-2' }}%</p><span>Commandes / Devis</span></article>
         </div>
 
         @if (isAdminMode()) {
@@ -97,8 +96,8 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
     .filters { display: flex; gap: 1rem; background: #fff; border: 1px solid #dde3ea; border-radius: 12px; padding: .75rem; flex-wrap: wrap; }
     label { display: grid; gap: .3rem; font-weight: 600; color: #2f3a49; }
     input, select, button { border: 1px solid #cfd8e3; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; }
-    .kpi { background: linear-gradient(145deg, #fff, #f8fbff); border: 1px solid #dce6f2; border-radius: 12px; padding: .85rem; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: .8rem; }
+    .kpi { background: linear-gradient(145deg, #fff, #f8fbff); border: 1px solid #dce6f2; border-radius: 12px; padding: 1rem; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between; }
     .kpi.alert { border-color: #f1b2b2; background: linear-gradient(145deg, #fff, #fff6f6); }
     .kpi h3 { margin: 0; font-size: .9rem; color: #48607a; }
     .kpi p { margin: .4rem 0; font-size: 1.3rem; font-weight: 700; color: #152033; }
@@ -108,10 +107,18 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
     .name { font-weight: 600; color: #2b3a4b; }
     .amount { color: #304257; font-weight: 600; }
     .tag { margin-top: .6rem; font-size: .92rem; color: #2b3a4b; }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; }
     th, td { padding: .55rem; border-bottom: 1px solid #ecf0f5; text-align: left; font-size: .92rem; }
-    th { color: #56687e; font-weight: 600; }
+    th { color: #56687e; font-weight: 600; background: #f8fbff; }
     .btn-view { display: inline-block; padding: .35rem .6rem; border: 1px solid #cfd8e3; border-radius: 8px; text-decoration: none; color: #2f3a49; background: #fff; }
+    .btn-view:hover { background: #f8fbff; }
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      th, td { font-size: .86rem; padding: .45rem; }
+    }
   `]
 })
 export class ReportingComponent {
