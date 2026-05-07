@@ -267,6 +267,8 @@ export interface CommercialDocument {
   id: number;
   docNum?: string;
   documentNumber?: string;
+  salesPersonCode?: number;
+  salesPersonName?: string;
   customerId: number;
   cardCode?: string;
   customerName?: string;

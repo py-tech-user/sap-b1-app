@@ -30,6 +30,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
 
         <div class="info-grid">
           <div class="card"><label>Client</label><strong>{{ doc()!.customerName || '-' }}</strong></div>
+          <div class="card"><label>Commercial</label><strong>{{ salesPersonLabel(doc()!) }}</strong></div>
           <div class="card"><label>Date</label><strong>{{ dateOf(doc()!) | date:'dd/MM/yyyy' }}</strong></div>
           <div class="card">
             <label>Statut</label>
@@ -203,6 +204,12 @@ export class DocumentDetailComponent {
 
   totalOf(doc: CommercialDocument): number {
     return doc.docTotal ?? doc.totalAmount ?? 0;
+  }
+
+  salesPersonLabel(doc: CommercialDocument): string {
+    if (doc.salesPersonName && doc.salesPersonName.trim() !== '') return doc.salesPersonName;
+    if (doc.salesPersonCode && doc.salesPersonCode > 0) return `Code ${doc.salesPersonCode}`;
+    return '-';
   }
 
   statusPhase(status: string): 'Open' | 'Closed' {

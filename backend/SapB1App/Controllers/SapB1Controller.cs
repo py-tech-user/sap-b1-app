@@ -62,7 +62,7 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetClients(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 15,
+        [FromQuery] int pageSize = 100000,
         CancellationToken cancellationToken = default)
         => GetBusinessPartnersViaServiceLayerAsync(page, pageSize, cancellationToken);
 
@@ -70,7 +70,7 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetPartners(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 15,
+        [FromQuery] int pageSize = 100000,
         CancellationToken cancellationToken = default)
         => GetBusinessPartnersViaServiceLayerAsync(page, pageSize, cancellationToken);
 
@@ -259,7 +259,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetOrders(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -309,7 +309,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetBonCommandes(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -338,7 +338,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDeliveryNotes(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -388,7 +388,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetBonsLivraison(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -417,7 +417,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetQuotes(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -456,7 +456,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDevis(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -485,7 +485,7 @@ ORDER BY I.ItemCode;";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetInvoices(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -1083,7 +1083,7 @@ WHERE CardCode IN ({inSql});";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetCreditNotes(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -1117,7 +1117,7 @@ WHERE CardCode IN ({inSql});";
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetReturns(
         [FromQuery] bool openOnly,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
+        [FromQuery] int pageSize = 100000,
         [FromQuery] string? search = null,
         [FromQuery] string? customer = null,
         [FromQuery] string? status = null,
@@ -1165,12 +1165,12 @@ WHERE CardCode IN ({inSql});";
         CancellationToken cancellationToken)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 2000);
+        pageSize = Math.Max(1, pageSize);
         var allItems = new List<DocumentViewDto>();
-        var nextUrl = "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=2000";
+        var nextUrl = "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address&$orderby=CardCode desc&$top=10000";
         var guard = 0;
 
-        while (!string.IsNullOrWhiteSpace(nextUrl) && guard++ < 100)
+        while (!string.IsNullOrWhiteSpace(nextUrl) && guard++ < 1000)
         {
             var result = await _sapService.ServiceLayerGetAsync(nextUrl, cancellationToken);
             if (!result.Success)
@@ -1432,7 +1432,7 @@ ORDER BY SlpCode;";
     private async Task<List<CommercialRecentDocumentDto>> LoadReportingRecentDocumentsAsync(SqlConnection conn, DateTime start, DateTime end, int? salesPersonCode, CancellationToken cancellationToken)
     {
         var sql = @"
-SELECT TOP 20 SourceType, DocEntry, DocNum, CardCode, CardName, DocTotal, DocDate, SlpCode
+SELECT SourceType, DocEntry, DocNum, CardCode, CardName, DocTotal, DocDate, SlpCode
 FROM (
     SELECT 'Devis' AS SourceType, DocEntry, DocNum, CardCode, CardName, DocTotal, DocDate, SlpCode FROM OQUT
     UNION ALL
@@ -1481,7 +1481,7 @@ ORDER BY DocDate DESC, DocEntry DESC;";
         CancellationToken cancellationToken)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 200);
+        pageSize = Math.Max(1, pageSize);
         var isInvoiceTable = string.Equals(tableName, "OINV", StringComparison.OrdinalIgnoreCase);
         var normalizedSearch = (search ?? string.Empty).Trim();
         var normalizedCustomer = (customer ?? string.Empty).Trim();
@@ -2054,10 +2054,10 @@ WHERE (@openOnly = 0 OR {openCondition})
             {
 
                 var headerSql = isInvoice
-                    ? $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, PaidToDate, DocStatus, CANCELED, Comments, DocCur
+                    ? $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, PaidToDate, DocStatus, CANCELED, Comments, DocCur, SlpCode
 FROM {headerTable}
 WHERE DocEntry = @docEntry;"
-                    : $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, DocStatus, CANCELED, Comments, DocCur
+                    : $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, DocStatus, CANCELED, Comments, DocCur, SlpCode
 FROM {headerTable}
 WHERE DocEntry = @docEntry;";
 
@@ -2069,6 +2069,7 @@ WHERE DocEntry = @docEntry;";
             if (!await headerReader.ReadAsync(cancellationToken))
                 return Ok(new ApiResponse<object>(true, null, null));
 
+            var salesPersonCode = headerReader["SlpCode"] is DBNull ? 0 : Convert.ToInt32(headerReader["SlpCode"]);
             var header = new Dictionary<string, object?>
             {
                 ["DocEntry"] = Convert.ToInt32(headerReader["DocEntry"]),
@@ -2083,10 +2084,21 @@ WHERE DocEntry = @docEntry;";
                 ["DocumentStatus"] = headerReader["DocStatus"]?.ToString() ?? string.Empty,
                 ["CANCELED"] = headerReader["CANCELED"]?.ToString() ?? string.Empty,
                 ["Comments"] = headerReader["Comments"]?.ToString() ?? string.Empty,
-                ["DocCurrency"] = headerReader["DocCur"]?.ToString() ?? string.Empty
+                ["DocCurrency"] = headerReader["DocCur"]?.ToString() ?? string.Empty,
+                ["SalesPersonCode"] = salesPersonCode > 0 ? salesPersonCode : null
             };
 
             await headerReader.CloseAsync();
+            if (salesPersonCode > 0)
+            {
+                var mappedUser = await _db.Users
+                    .AsNoTracking()
+                    .Where(u => u.IsActive && u.SapSalesPersonCode == salesPersonCode)
+                    .Select(u => u.FullName)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(mappedUser))
+                    header["SalesPersonName"] = mappedUser;
+            }
 
             var lines = new List<Dictionary<string, object?>>();
             var lineSql = $@"SELECT LineNum, ItemCode, Dscription, Quantity, Price, DiscPrcnt, VatPrcnt, WhsCode, LineStatus, LineTotal,

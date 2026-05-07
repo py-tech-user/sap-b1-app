@@ -43,6 +43,7 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
 
         <div class="info-grid">
           <div class="card"><label>Client</label><strong>{{ doc()!.customerName || '-' }}</strong></div>
+          <div class="card"><label>Commercial</label><strong>{{ salesPersonLabel(doc()!) }}</strong></div>
           <div class="card"><label>Date</label><strong>{{ dateOf(doc()!) | date:'dd/MM/yyyy' }}</strong></div>
           <div class="card">
             <label>Statut</label>
@@ -50,7 +51,6 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
               {{ statusLabel(doc()!.status) }}
             </strong>
           </div>
-          <div class="card"><label>Total</label><strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong></div>
         </div>
 
         <div class="card">
@@ -97,6 +97,11 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
               }
             </tbody>
           </table>
+        </div>
+
+        <div class="card total-card">
+          <label>Total</label>
+          <strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong>
         </div>
 
         <div class="card">
@@ -164,6 +169,9 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .action-hint { margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; }
     .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
     .card label { display: block; color: #666; font-size: 0.78rem; margin-bottom: 0.25rem; }
+    .total-card { display: flex; justify-content: flex-end; align-items: baseline; gap: 0.6rem; }
+    .total-card label { margin-bottom: 0; font-size: 0.9rem; color: #374151; }
+    .total-card strong { font-size: 1.1rem; }
     .status-badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.82rem; }
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }
     .status-badge.closed { background: #f3f4f6; color: #374151; }
@@ -305,6 +313,13 @@ export class DocumentDetailComponent {
 
   totalOf(doc: CommercialDocument): number {
     return doc.docTotal ?? doc.totalAmount ?? 0;
+  }
+
+  salesPersonLabel(doc: CommercialDocument): string {
+    const name = String(doc.salesPersonName ?? '').trim();
+    if (name) return name;
+    if ((doc.salesPersonCode ?? 0) > 0) return `Code ${doc.salesPersonCode}`;
+    return '-';
   }
 
   statusPhase(status: string): 'En attente' | 'Cloture' {

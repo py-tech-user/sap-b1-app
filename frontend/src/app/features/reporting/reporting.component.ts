@@ -1,19 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
+﻿import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ReportingApiService, CommercialReportingPayload } from '../../core/services/reporting-api.service';
 
 @Component({
   selector: 'app-reporting',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule, DatePipe, RouterLink],
   template: `
     <div class="reporting-page">
       <div class="header">
         <div>
+          <h2>Reporting</h2>
           <h1>{{ title() }}</h1>
-          <p class="subtitle">{{ subtitle() }}</p>
         </div>
       </div>
 
@@ -64,15 +65,23 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
         <section class="panel">
           <h2>Derniers documents</h2>
           <table>
-            <thead><tr><th>Type</th><th>N°</th><th>Client</th><th>Date</th><th>Montant</th></tr></thead>
+            <thead><tr><th>Type</th><th>N°</th><th>Client</th><th>Commercial</th><th>Date</th><th>Montant</th><th>Action</th></tr></thead>
             <tbody>
               @for (doc of report.recentDocuments; track doc.type + '-' + doc.docEntry) {
                 <tr>
                   <td>{{ doc.type }}</td>
                   <td>{{ doc.docNum }}</td>
                   <td>{{ doc.cardName }}</td>
+                  <td>{{ salesPersonNameByCode(doc.salesPersonCode) }}</td>
                   <td>{{ doc.date | date:'dd/MM/yyyy' }}</td>
                   <td>{{ formatMoney(doc.total) }}</td>
+                  <td>
+                    @if (documentDetailLink(doc.type, doc.docEntry); as link) {
+                      <a class="btn-view" [routerLink]="link">Voir</a>
+                    } @else {
+                      <span>-</span>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -102,6 +111,7 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: .55rem; border-bottom: 1px solid #ecf0f5; text-align: left; font-size: .92rem; }
     th { color: #56687e; font-weight: 600; }
+    .btn-view { display: inline-block; padding: .35rem .6rem; border: 1px solid #cfd8e3; border-radius: 8px; text-decoration: none; color: #2f3a49; background: #fff; }
   `]
 })
 export class ReportingComponent {
@@ -114,13 +124,17 @@ export class ReportingComponent {
   selectedSalesPersonCode = 0;
 
   isAdminMode = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
-  salesPeople = computed(() => this.data()?.teamMembers ?? []);
+  salesPeople = computed(() =>
+    (this.data()?.teamMembers ?? []).filter(sp => {
+      const name = String(sp.salesPersonName ?? '').trim().toLowerCase();
+      return name !== 'administrateur';
+    })
+  );
   showTopSalesPerson = computed(() => this.isAdminMode() && this.selectedSalesPersonCode === 0);
   sortedTeamPerformances = computed(() =>
     [...(this.data()?.teamPerformances ?? [])].sort((a, b) => (b.ordersAmount - a.ordersAmount) || (b.invoicesAmount - a.invoicesAmount))
   );
-  title = computed(() => this.isAdminMode() ? 'Reporting commercial global' : 'Mon reporting commercial');
-  subtitle = computed(() => this.data()?.periodLabel ? `Periode: ${this.data()!.periodLabel}` : 'Analyse mensuelle');
+  title = computed(() => this.data()?.periodLabel ? `Periode: ${this.data()!.periodLabel}` : 'Analyse mensuelle');
 
   constructor() {
     this.load();
@@ -150,6 +164,30 @@ export class ReportingComponent {
     const first = this.sortedTeamPerformances()[0];
     if (!top || !first) return false;
     return top.salesPersonCode === first.salesPersonCode;
+  }
+
+  documentDetailLink(type: string, docEntry: number): string[] | null {
+    const normalized = String(type ?? '').trim().toLowerCase();
+    if (!Number.isFinite(docEntry)) return null;
+
+    if (normalized.includes('devis') || normalized.includes('quote')) {
+      return ['/quotes', String(docEntry)];
+    }
+    if (normalized.includes('commande') || normalized.includes('order')) {
+      return ['/orders', String(docEntry)];
+    }
+    if (normalized.includes('facture') || normalized.includes('invoice')) {
+      return ['/factures', String(docEntry)];
+    }
+
+    return null;
+  }
+
+  salesPersonNameByCode(code: number): string {
+    const numericCode = Number(code);
+    if (!Number.isFinite(numericCode)) return '-';
+    const match = (this.data()?.teamMembers ?? []).find(sp => sp.salesPersonCode === numericCode);
+    return match?.salesPersonName || `#${numericCode}`;
   }
 
   private defaultMonth(): string {

@@ -863,6 +863,8 @@ export class CommercialApiService {
     return {
       id,
       docNum: String(doc.docNum ?? doc.DocNum ?? doc.documentNumber ?? id ?? ''),
+      salesPersonCode: Number(doc.salesPersonCode ?? doc.SalesPersonCode ?? doc.slpCode ?? doc.SlpCode ?? 0) || undefined,
+      salesPersonName: String(doc.salesPersonName ?? doc.SalesPersonName ?? doc.salesEmployeeName ?? doc.SalesEmployeeName ?? '').trim() || undefined,
       customerId: Number(doc.customerId ?? 0),
       cardCode: doc.cardCode ?? doc.CardCode ?? '',
       customerName: doc.cardName ?? doc.CardName ?? doc.customerName ?? doc.CustomerName ?? '-',
