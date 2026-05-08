@@ -314,7 +314,7 @@ export class EncaissementComponent {
       return;
     }
 
-    const exact = this.resolveClientFromInput(typed);
+    const exact = this.resolveCommittedClientFromInput(typed);
     if (!exact) {
       this.selectedCardCode.set('');
       return;
@@ -621,6 +621,17 @@ export class EncaissementComponent {
     if (!name) return code;
     if (!code) return name;
     return `${name} (${code})`;
+  }
+
+  private resolveCommittedClientFromInput(input: string): EncaissementClient | null {
+    const typed = String(input ?? '').trim().toLowerCase();
+    if (!typed) return null;
+
+    return this.clients().find((client) => {
+      const code = client.cardCode.toLowerCase();
+      const label = this.clientPickerValue(client).toLowerCase();
+      return typed === code || typed === label;
+    }) ?? null;
   }
 
   private resolveClientFromInput(input: string): EncaissementClient | null {

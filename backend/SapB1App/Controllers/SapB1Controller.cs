@@ -62,7 +62,7 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetClients(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 100000,
+        [FromQuery] int pageSize = 15,
         CancellationToken cancellationToken = default)
         => GetBusinessPartnersViaServiceLayerAsync(page, pageSize, cancellationToken);
 
@@ -70,7 +70,7 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetPartners(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 100000,
+        [FromQuery] int pageSize = 15,
         CancellationToken cancellationToken = default)
         => GetBusinessPartnersViaServiceLayerAsync(page, pageSize, cancellationToken);
 
