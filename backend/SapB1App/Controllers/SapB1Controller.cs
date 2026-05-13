@@ -101,11 +101,14 @@ public class SapB1Controller : ControllerBase
 SELECT
     I.ItemCode,
     I.ItemName,
+    ISNULL(I.ItmsGrpCod, 0) AS GroupCode,
+    ISNULL(G.ItmsGrpNam, '') AS GroupName,
     ISNULL(PL_CFG.Price, ISNULL(I.AvgPrice, 0)) AS Price,
     ISNULL(PL_CFG.Currency, '') AS PriceCurrency,
     ISNULL(I.OnHand, 0) AS OnHand,
     ISNULL(I.PicturName, '') AS PicturName
 FROM OITM I
+LEFT JOIN OITB G ON G.ItmsGrpCod = I.ItmsGrpCod
 LEFT JOIN ITM1 PL_CFG ON PL_CFG.ItemCode = I.ItemCode AND PL_CFG.PriceList = @priceList
 ORDER BY I.ItemCode;";
 
@@ -136,6 +139,8 @@ ORDER BY I.ItemCode;";
                     {
                         ItemCode = reader["ItemCode"]?.ToString() ?? string.Empty,
                         ItemName = reader["ItemName"]?.ToString() ?? string.Empty,
+                        GroupCode = reader["GroupCode"] is DBNull ? 0 : Convert.ToInt32(reader["GroupCode"]),
+                        GroupName = reader["GroupName"]?.ToString() ?? string.Empty,
                         ImageUrl = BuildItemImageUrl(reader["ItemCode"]?.ToString() ?? string.Empty, picture),
                         Price = reader["Price"] is DBNull ? 0m : Convert.ToDecimal(reader["Price"]),
                         Currency = reader["PriceCurrency"]?.ToString() ?? string.Empty,
@@ -152,6 +157,52 @@ ORDER BY I.ItemCode;";
         }
 
         return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, items.Count));
+    }
+
+    [HttpGet("item-groups")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<object>>> GetItemGroups(CancellationToken cancellationToken)
+    {
+        const string sql = @"
+SELECT
+    ISNULL(B.ItmsGrpCod, 0) AS GroupCode,
+    ISNULL(B.ItmsGrpNam, '') AS GroupName,
+    COUNT(1) AS ItemsCount
+FROM OITM I
+LEFT JOIN OITB B ON B.ItmsGrpCod = I.ItmsGrpCod
+GROUP BY B.ItmsGrpCod, B.ItmsGrpNam
+ORDER BY B.ItmsGrpNam, B.ItmsGrpCod;";
+
+        var groups = new List<object>();
+        try
+        {
+            var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+            if (conn is null)
+                return StatusCode(500, SapError("Connexion SQL SAP impossible pour les groupes d articles."));
+
+            await using (conn)
+            await using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    groups.Add(new
+                    {
+                        groupCode = reader["GroupCode"] is DBNull ? 0 : Convert.ToInt32(reader["GroupCode"]),
+                        groupName = reader["GroupName"]?.ToString() ?? string.Empty,
+                        itemsCount = reader["ItemsCount"] is DBNull ? 0 : Convert.ToInt32(reader["ItemsCount"])
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur SQL lors du chargement des groupes d articles SAP.");
+            return StatusCode(500, SapError("Erreur SQL lors du chargement des groupes d articles."));
+        }
+
+        return Ok(new ApiResponse<IReadOnlyList<object>>(true, null, groups, groups.Count));
     }
 
     [HttpGet("item-images/{*fileName}")]
@@ -5446,6 +5497,8 @@ public class SapItemDto
 {
     public string ItemCode { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
+    public int GroupCode { get; set; }
+    public string GroupName { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Currency { get; set; } = string.Empty;

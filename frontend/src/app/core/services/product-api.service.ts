@@ -14,6 +14,14 @@ export interface Product {
   unit?: string;
   isActive: boolean;
   warehouseCode?: string;
+  groupCode?: number;
+  groupName?: string;
+}
+
+export interface ProductGroup {
+  groupCode: number;
+  groupName: string;
+  itemsCount: number;
 }
 
 export interface CreateProductDto {
@@ -40,6 +48,19 @@ export class ProductApiService {
 
     return this.http.get<any>(this.apiUrl, { params }).pipe(
       map((res) => this.normalizeList(res, page, pageSize))
+    );
+  }
+
+  getGroups(): Observable<ProductGroup[]> {
+    return this.http.get<any>(`${environment.apiUrl}/sap/item-groups`).pipe(
+      map((res) => {
+        const rows = this.extractRows(res);
+        return rows.map((row: any) => ({
+          groupCode: Number(row?.groupCode ?? row?.GroupCode ?? 0),
+          groupName: String(row?.groupName ?? row?.GroupName ?? '').trim() || 'Sans categorie',
+          itemsCount: Number(row?.itemsCount ?? row?.ItemsCount ?? 0)
+        }));
+      })
     );
   }
 
@@ -119,6 +140,8 @@ export class ProductApiService {
       imageUrl: resolvedImageUrl,
       price,
       category: row?.category ?? row?.ItmsGrpNam ?? row?.ItemGroup,
+      groupCode: Number(row?.groupCode ?? row?.GroupCode ?? row?.ItmsGrpCod ?? 0),
+      groupName: String(row?.groupName ?? row?.GroupName ?? row?.ItmsGrpNam ?? row?.ItemGroup ?? '').trim() || undefined,
       stock: Number(row?.stock ?? row?.Stock ?? row?.stockTotal ?? row?.StockTotal ?? row?.OnHand ?? row?.InStock ?? 0),
       unit: row?.unit ?? row?.InventoryUOM ?? row?.UoM,
       isActive: String(row?.validFor ?? row?.ValidFor ?? 'Y').toUpperCase() !== 'N',

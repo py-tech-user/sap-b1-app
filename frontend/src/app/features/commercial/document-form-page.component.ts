@@ -9,6 +9,7 @@ import { CustomerApiService } from '../../core/services/customer-api.service';
 import { PartnerApiService } from '../../core/services/partner-api.service';
 import { Product, ProductApiService } from '../../core/services/product-api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CatalogCartService } from '../../core/services/catalog-cart.service';
 import { COMMERCIAL_META } from './commercial-meta';
 import { CommercialDocument, CommercialDocumentLine, CommercialListFilters, CommercialResource, Customer } from '../../core/models/models';
 
@@ -236,6 +237,7 @@ export class DocumentFormComponent implements OnInit {
   private readonly partnerApi = inject(PartnerApiService);
   private readonly productApi = inject(ProductApiService);
   private readonly auth = inject(AuthService);
+  private readonly catalogCart = inject(CatalogCartService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -284,7 +286,10 @@ export class DocumentFormComponent implements OnInit {
   ngOnInit(): void {
     this.loadLookups();
     if (this.isEdit()) this.load();
-    else this.addLine();
+    else {
+      this.hydrateFromCatalogCartIfNeeded();
+      if (this.lines.length === 0) this.addLine();
+    }
   }
 
   onCustomerSearch(event: Event): void {
@@ -662,6 +667,7 @@ export class DocumentFormComponent implements OnInit {
           const items = Array.isArray(payload?.items) ? payload.items : [];
           this.products.set(items);
           this.syncLineProductsByItemCode();
+          this.hydrateFromCatalogCartIfNeeded();
           this.preloadProductsInBackground();
           finalizeOne();
         },
@@ -712,9 +718,35 @@ export class DocumentFormComponent implements OnInit {
           if (items.length === 0) return;
           this.products.update((current) => this.mergeProducts(current, items));
           this.syncLineProductsByItemCode();
+          this.hydrateFromCatalogCartIfNeeded();
         },
         error: () => {}
       });
+  }
+
+  private hydrateFromCatalogCartIfNeeded(): void {
+    if (this.isEdit()) return;
+    if (this.resource() !== 'orders') return;
+    if (this.route.snapshot.queryParamMap.get('fromCatalog') !== '1') return;
+    if (this.lines.length > 0) return;
+
+    const cartLines = this.catalogCart.getLines();
+    if (cartLines.length === 0) return;
+
+    for (const cartLine of cartLines) {
+      const code = String(cartLine.itemCode ?? '').trim();
+      if (!code) continue;
+      this.addLine({
+        itemCode: code,
+        quantity: Math.max(1, Number(cartLine.quantity ?? 1)),
+        unitPrice: Math.max(0, Number(cartLine.unitPrice ?? 0)),
+        warehouseCode: String(cartLine.warehouseCode ?? '01').trim() || '01',
+        vatPct: 20
+      });
+    }
+
+    this.syncLineProductsByItemCode();
+    this.catalogCart.clear();
   }
 
   private mergeCustomers(existing: Customer[], incoming: Customer[]): Customer[] {
