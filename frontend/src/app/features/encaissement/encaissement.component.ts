@@ -11,17 +11,11 @@ interface ApiResponse<T> {
   message?: string;
   data?: T;
 }
-interface EncaissementBalanceResponse {
-  cardCode: string;
-  advanceBalance: number;
-}
-
 interface EncaissementClient {
   cardCode: string;
   cardName: string;
   currency: string;
   creditLimit: number;
-  advanceBalance: number;
   raw: Record<string, unknown>;
 }
 
@@ -77,11 +71,6 @@ interface InvoiceSelection {
         <label>
           CashSum
           <input type="number" min="0" step="0.01" [ngModel]="cashSum()" (ngModelChange)="onCashSumChange($event)" />
-        </label>
-
-        <label>
-          Solde
-          <input [value]="selectedClientBalanceDisplay()" readonly />
         </label>
 
       </div>
@@ -179,8 +168,7 @@ interface InvoiceSelection {
       }
 
       <div class="actions">
-        <button type="button" class="btn-secondary" (click)="submit(true)" [disabled]="saving()">{{ saving() ? 'Enregistrement...' : 'Payer avec solde' }}</button>
-        <button type="button" class="btn-primary" (click)="submit(false)" [disabled]="saving()">{{ saving() ? 'Enregistrement...' : 'Enregistrer encaissement' }}</button>
+        <button type="button" class="btn-primary" (click)="submit()" [disabled]="saving()">{{ saving() ? 'Enregistrement...' : 'Enregistrer encaissement' }}</button>
       </div>
     </div>
   `,
@@ -233,17 +221,9 @@ export class EncaissementComponent {
   readonly selectedClientInput = signal('');
   readonly paymentMethodCode = signal('Virement');
   readonly cashSum = signal(0);
-  readonly currentAdvanceBalance = signal(0);
   readonly selectedClient = computed(() =>
     this.clients().find(c => c.cardCode.toLowerCase() === this.selectedCardCode().toLowerCase()) ?? null
   );
-  readonly selectedClientAdvanceBalance = computed(() =>
-    this.currentAdvanceBalance() > 0 ? this.currentAdvanceBalance() : (this.selectedClient()?.advanceBalance ?? 0)
-  );
-  readonly selectedClientBalanceDisplay = computed(() => {
-    if (!this.selectedCardCode().trim()) return 'Selectionne client';
-    return this.selectedClientAdvanceBalance().toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  });
   readonly totalSelectedAmount = computed(() =>
     this.selectedInvoicesOrdered().reduce((sum, invoice) => sum + invoice.openAmount, 0));
   readonly loadingInvoices = signal(false);
@@ -298,9 +278,7 @@ export class EncaissementComponent {
     this.cashSum.set(0);
     this.error.set('');
     this.success.set('');
-    this.currentAdvanceBalance.set(0);
     console.log('[encaissement] selected partenaire', this.selectedCardCode());
-    this.refreshSelectedClientBalance(nextCode);
     this.loadOpenInvoices();
   }
 
@@ -403,7 +381,7 @@ export class EncaissementComponent {
     this.toggleInvoice(invoice.docEntry, true);
   }
 
-  submit(useAdvance: boolean): void {
+  submit(): void {
     this.error.set('');
     this.success.set('');
 
@@ -432,14 +410,16 @@ export class EncaissementComponent {
       return;
     }
 
-    const cashSum = useAdvance ? 0 : this.cashSum();
-    if (!useAdvance && cashSum <= 0) {
+    const cashSum = this.cashSum();
+    if (cashSum <= 0) {
       this.error.set('CashSum doit etre superieur a 0.');
       this.notifications.showError(this.error());
       return;
     }
-    if (useAdvance && this.selectedClientAdvanceBalance() <= 0) {
-      this.error.set('Aucun solde disponible pour ce client.');
+
+    const totalFacturesSelectionnees = this.totalSelectedAmount();
+    if (cashSum > totalFacturesSelectionnees) {
+      this.error.set('Le montant saisi depasse le total des factures selectionnees. Veuillez saisir un montant inferieur ou egal au total a encaisser.');
       this.notifications.showError(this.error());
       return;
     }
@@ -451,7 +431,6 @@ export class EncaissementComponent {
       paymentMethodCode,
       cashSum,
       creditSum: 0,
-      useAdvance,
       invoices: selectedInvoices.map(x => ({
         docEntry: x.docEntry,
         sumApplied: (allocations.get(x.docEntry) ?? 0)
@@ -474,7 +453,6 @@ export class EncaissementComponent {
         this.success.set(`Encaissement enregistré avec succès.`);
         this.notifications.showSuccess(this.success());
         console.log('[encaissement] payment success', res);
-        this.refreshSelectedClientBalance(cardCode);
         this.loadOpenInvoices();
       },
       error: (err) => {
@@ -505,30 +483,6 @@ export class EncaissementComponent {
         this.error.set(err?.error?.error || err?.error?.message || err?.error?.title || err?.message || 'Impossible de charger les partenaires.');
         this.notifications.showError(this.error());
         console.error('[encaissement] clients loading failed', err);
-      }
-    });
-  }
-
-  private refreshSelectedClientBalance(cardCode: string): void {
-    const rawCode = String(cardCode ?? '').trim();
-    if (!rawCode) return;
-    const code = rawCode.toLowerCase();
-
-    this.http.get<ApiResponse<EncaissementBalanceResponse>>(`${this.baseUrl}/clients/${encodeURIComponent(rawCode)}/balance`).subscribe({
-      next: (res) => {
-        const balance = this.toNumber(res?.data?.advanceBalance ?? 0);
-        this.currentAdvanceBalance.set(balance);
-
-        this.clients.update((current) => {
-          const idx = current.findIndex((client) => client.cardCode.toLowerCase() === code);
-          if (idx < 0) return current;
-          const next = [...current];
-          next[idx] = { ...next[idx], advanceBalance: balance };
-          return next;
-        });
-      },
-      error: (err) => {
-        console.warn('[encaissement] balance refresh failed', { cardCode, err });
       }
     });
   }
@@ -603,14 +557,11 @@ export class EncaissementComponent {
     const cardName = String(row?.cardName ?? row?.CardName ?? row?.name ?? '').trim();
     const currency = String(row?.currency ?? row?.Currency ?? 'MAD').trim();
     const creditLimit = this.toNumber(row?.creditLimit ?? row?.CreditLimit ?? row?.CreditLine ?? 0);
-    const advanceBalance = this.toNumber(row?.advanceBalance ?? row?.AdvanceBalance ?? row?.walletBalance ?? row?.WalletBalance ?? 0);
-
     return {
       cardCode,
       cardName,
       currency,
       creditLimit,
-      advanceBalance,
       raw: row ?? {}
     };
   }

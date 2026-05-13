@@ -45,7 +45,7 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
           </select>
         </div>
 
-        <table>
+        <table class="desktop-table">
           <thead>
             <tr>
               <th>Code</th>
@@ -73,6 +73,26 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
             }
           </tbody>
         </table>
+
+        <div class="mobile-list">
+          @for (p of pagedItems(); track p.CardCode) {
+            <article class="partner-card">
+              <div class="partner-card-header">
+                <div class="partner-name">{{ p.CardName || '-' }}</div>
+                <div class="partner-code">{{ p.CardCode || '-' }}</div>
+              </div>
+              <div class="partner-card-grid">
+                <div><span>Type</span><strong>{{ p.CardType || '-' }}</strong></div>
+                <div><span>Devise</span><strong>{{ p.Currency || '-' }}</strong></div>
+                <div><span>Telephone</span><strong>{{ p.Cellular || p.Phone1 || '-' }}</strong></div>
+                <div><span>Email</span><strong>{{ p.EmailAddress || '-' }}</strong></div>
+              </div>
+              <button type="button" class="btn-outline mobile-action" (click)="openDetails(p)">Details</button>
+            </article>
+          } @empty {
+            <div class="empty">Aucune donnee</div>
+          }
+        </div>
 
         <div class="pager">
         <button class="btn-outline" (click)="prev()" [disabled]="page() <= 1">Précédent</button>
@@ -109,12 +129,22 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
     .subtitle { margin: 0.2rem 0 0; color: #666; }
     .filters { display: grid; grid-template-columns: 1fr 220px; gap: 0.6rem; }
     .filters input, .filters select { width: 100%; border: 1px solid #d0d7de; border-radius: 6px; padding: 0.45rem 0.6rem; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+    .desktop-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
     th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #eceff4; }
     th { background: #f5f7fb; }
     .empty, .status { text-align: center; color: #666; padding: 1rem; }
     .error { color: #b00020; }
     .pager { display: flex; justify-content: space-between; align-items: center; }
+    .mobile-list { display: none; }
+    .partner-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .partner-card-header { display: flex; flex-direction: column; gap: 0.2rem; }
+    .partner-name { font-weight: 700; color: #111827; line-height: 1.2; }
+    .partner-code { font-size: 0.84rem; color: #4b5563; }
+    .partner-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .partner-card-grid div { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+    .partner-card-grid span { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.02em; }
+    .partner-card-grid strong { font-size: 0.88rem; color: #111827; overflow-wrap: anywhere; }
+    .mobile-action { width: 100%; }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
     .btn-primary { border: 1px solid #1976d2; background: #1976d2; color: #fff; border-radius: 4px; padding: 0.35rem 0.6rem; text-decoration: none; }
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 30; }
@@ -125,7 +155,22 @@ import { PartnerApiService } from '../../../core/services/partner-api.service';
     .details-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px dashed #e5e7eb; }
     .details-row dt { color: #374151; font-weight: 600; }
     .details-row dd { margin: 0; color: #111827; word-break: break-word; }
-    @media (max-width: 900px) { .filters { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) {
+      .header { flex-direction: column; align-items: stretch; }
+      .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+      .actions .btn-outline,
+      .actions .btn-primary { text-align: center; }
+      .filters { grid-template-columns: 1fr; }
+      .desktop-table { display: none; }
+      .mobile-list { display: grid; gap: 0.65rem; }
+      .pager { gap: 0.75rem; }
+    }
+    @media (max-width: 520px) {
+      .actions { grid-template-columns: 1fr; }
+      .pager { flex-direction: column; align-items: stretch; }
+      .pager .btn-outline { width: 100%; }
+      .partner-card-grid { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class PartnerListComponent implements OnInit {

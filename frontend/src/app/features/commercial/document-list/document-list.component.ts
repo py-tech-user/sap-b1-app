@@ -79,7 +79,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
             </tr>
           </thead>
           <tbody>
-            @for (doc of items(); track doc.id) {
+            @for (doc of visibleItems(); track doc.id) {
               <tr>
                 <td>{{ numberOf(doc) }}</td>
                 <td>{{ partnerNameOf(doc) }}</td>
@@ -174,6 +174,17 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     phase: ['all'],
     dateFrom: [''],
     dateTo: ['']
+  });
+  readonly visibleItems = computed(() => {
+    const customerRaw = String(this.filtersForm.getRawValue().customer ?? '').trim().toLowerCase();
+    if (!customerRaw) return this.items();
+
+    return this.items().filter((doc) => {
+      const raw = doc as any;
+      const cardCode = String(raw.cardCode ?? raw.CardCode ?? doc.cardCode ?? '').trim().toLowerCase();
+      const partner = this.partnerNameOf(doc).toLowerCase();
+      return partner.includes(customerRaw) || cardCode.includes(customerRaw);
+    });
   });
   private filterDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 

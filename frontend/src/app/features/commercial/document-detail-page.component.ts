@@ -21,6 +21,24 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
       } @else if (doc()) {
         <div class="header">
           <h1>{{ meta().icon }} {{ meta().singular | titlecase }} {{ numberOf(doc()!) }}</h1>
+          <div class="header-relations">
+            @if (sourceDocument()) {
+              <div class="header-rel-row">
+                <span class="rel-label">Source</span>
+                <a class="link-chip" [routerLink]="sourceDocument()!.route">{{ sourceDocument()!.label }}</a>
+              </div>
+            }
+            @if (generatedDocuments().length > 0) {
+              <div class="header-rel-row">
+                <span class="rel-label">Generes</span>
+                <div class="chips-wrap">
+                  @for (l of generatedDocuments(); track l.label) {
+                    <a class="link-chip" [routerLink]="l.route">{{ l.label }}</a>
+                  }
+                </div>
+              </div>
+            }
+          </div>
           <div class="header-actions">
             @if (resource() === 'quotes' || resource() === 'orders') {
               <a class="btn-primary" [routerLink]="['/', resource(), id(), 'edit']" [queryParams]="detailQueryParams()" [class.disabled-link]="!canEditDocument()">Modifier</a>
@@ -104,29 +122,6 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
           <strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong>
         </div>
 
-        <div class="card">
-          <h3>Relations documents</h3>
-          @if (sourceDocument()) {
-            <div class="source-doc">
-              <span class="rel-label">Document source:</span>
-              <a class="link-chip" [routerLink]="sourceDocument()!.route">{{ sourceDocument()!.label }}</a>
-            </div>
-          } @else {
-            <div class="empty">Aucun document source.</div>
-          }
-
-          <h4>Documents generes</h4>
-          @if (generatedDocuments().length > 0) {
-            <ul class="links">
-              @for (l of generatedDocuments(); track l.label) {
-                <li><a [routerLink]="l.route">{{ l.label }}</a></li>
-              }
-            </ul>
-          } @else {
-            <div class="empty">Aucun document genere.</div>
-          }
-        </div>
-
         @if (resource() === 'quotes') {
           <div class="card action-card">
             <h3>Generation</h3>
@@ -162,12 +157,16 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     </div>
   `,
   styles: [`
-    .page { display: flex; flex-direction: column; gap: 1rem; }
-    .header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    .page { display: flex; flex-direction: column; gap: 0.7rem; }
+    .header { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: start; }
+    .header h1 { margin: 0; font-size: 1.2rem; line-height: 1.25; }
+    .header-relations { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.35rem 0.5rem; background: #fcfcfd; min-height: 2.1rem; }
+    .header-rel-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .chips-wrap { display: flex; gap: 0.35rem; flex-wrap: wrap; }
     .header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card { background: #fff; border-radius: 8px; padding: 0.7rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .action-hint { margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; }
-    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; }
     .card label { display: block; color: #666; font-size: 0.78rem; margin-bottom: 0.25rem; }
     .total-card { display: flex; justify-content: flex-end; align-items: baseline; gap: 0.6rem; }
     .total-card label { margin-bottom: 0; font-size: 0.9rem; color: #374151; }
@@ -176,9 +175,8 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }
     .status-badge.closed { background: #f3f4f6; color: #374151; }
     .status-badge.cancelled { background: #fdecea; color: #c62828; }
-    .source-doc { margin-bottom: 0.75rem; }
     .rel-label { color: #666; margin-right: 0.45rem; }
-    .link-chip { display: inline-block; border: 1px solid #d0d7de; border-radius: 999px; padding: 0.2rem 0.55rem; text-decoration: none; }
+    .link-chip { display: inline-block; border: 1px solid #d0d7de; border-radius: 999px; padding: 0.1rem 0.45rem; text-decoration: none; font-size: 0.8rem; line-height: 1.2; }
     .link-chip:hover { background: #f6f8fa; text-decoration: none; }
     .disabled-link { pointer-events: none; opacity: 0.5; }
     .btn-danger { background: #c62828; border-color: #c62828; }
@@ -190,6 +188,7 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .error { color: #b00020; }
     .empty { color: #888; }
     @media (max-width: 1024px) {
+      .header { grid-template-columns: 1fr; }
       .info-grid { grid-template-columns: 1fr 1fr; }
     }
   `]

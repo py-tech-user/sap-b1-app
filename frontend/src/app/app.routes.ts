@@ -35,6 +35,27 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
       {
+        path: 'dashboard/documents',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-documents.component')
+            .then(m => m.DashboardDocumentsComponent),
+        data: { roles: ALL }
+      },
+      {
+        path: 'dashboard/partners-activity',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-partners-activity.component')
+            .then(m => m.DashboardPartnersActivityComponent),
+        data: { roles: ALL }
+      },
+      {
+        path: 'dashboard/commercials-performance',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-commercials-performance.component')
+            .then(m => m.DashboardCommercialsPerformanceComponent),
+        data: { roles: MGR }
+      },
+      {
         path: 'reporting',
         loadComponent: () =>
           import('./features/reporting/reporting.component')

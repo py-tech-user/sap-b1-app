@@ -8,10 +8,15 @@ import { NotificationService } from '../../core/services/notification.service';
 import { CustomerApiService } from '../../core/services/customer-api.service';
 import { PartnerApiService } from '../../core/services/partner-api.service';
 import { Product, ProductApiService } from '../../core/services/product-api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { COMMERCIAL_META } from './commercial-meta';
 import { CommercialDocument, CommercialDocumentLine, CommercialListFilters, CommercialResource, Customer } from '../../core/models/models';
 
 const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
+const INITIAL_CUSTOMERS_PAGE_SIZE = 250;
+const INITIAL_PRODUCTS_PAGE_SIZE = 300;
+const BACKGROUND_CUSTOMERS_PAGE_SIZE = 1000;
+const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
 
 @Component({
   selector: 'app-document-form',
@@ -24,7 +29,7 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
 
       <form [formGroup]="form" (ngSubmit)="save()" class="card">
         <div class="top-grid">
-          <div class="field field-wide">
+          <div class="field field-client">
             <label>Client *</label>
             <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sélectionner client" />
             <datalist id="customer-options">
@@ -44,11 +49,11 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
               <input type="date" formControlName="dueDate" />
             </div>
           }
-          <div class="field field-wide">
+          <div class="field field-comments">
             <label>Commentaires</label>
-            <textarea rows="3" formControlName="comments"></textarea>
+            <textarea rows="2" formControlName="comments"></textarea>
           </div>
-          <div class="field field-wide">
+          <div class="field">
             <label>Mode de paiement *</label>
             <input formControlName="paymentMethod" placeholder="Ex: Virement" />
           </div>
@@ -63,23 +68,32 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
 
         <div class="lines-scroll">
           <div class="line-row line-row-header" aria-hidden="true">
-            <span>Article *</span>
-            <span>ItemCode *</span>
-            <span>Statut ligne</span>
-            <span>Prix HT</span>
+            <span>Code *</span>
+            <span>Designation *</span>
             <span>Quantite</span>
-            <span>Sous-total HT</span>
-            <span>Remise %</span>
-            <span>TVA %</span>
+            <span>Warehouse code *</span>
+            <span>Prix HT</span>
+            <span>Code TVA</span>
             <span>Montant TVA</span>
-            <span>Total TTC</span>
-            <span>WarehouseCode *</span>
+            <span>Remise %</span>
+            <span>Total</span>
+            <span>Statut</span>
             <span>Action</span>
           </div>
 
           <div formArrayName="lines">
             @for (line of lines.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="line-row">
+                <span class="mobile-label">Code</span>
+                <input
+                  formControlName="itemCode"
+                  list="product-code-options"
+                  placeholder="Ex: A00001"
+                  aria-label="ItemCode"
+                  (input)="onItemCodeInput(i, $event)"
+                  [readonly]="!canEditLine(i)" />
+
+                <span class="mobile-label">Designation</span>
                 <input
                   formControlName="productLookup"
                   list="product-options"
@@ -87,18 +101,23 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
                   (input)="onProductLookupInput(i, $event)"
                   [readonly]="!canEditLine(i)" />
 
-                <input formControlName="itemCode" placeholder="Ex: A00001" aria-label="ItemCode" readonly />
-
-                <input formControlName="lineStatus" placeholder="Statut" aria-label="Statut ligne" readonly />
-
-                <input type="number" formControlName="unitPrice" min="0" step="0.01" placeholder="Prix HT" aria-label="Prix unitaire HT" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <span class="mobile-label">Quantite</span>
                 <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
-                <input type="number" formControlName="subtotalHt" placeholder="Sous-total HT" aria-label="Sous-total HT" readonly />
-                <input type="number" formControlName="discountPct" min="0" max="100" step="0.01" placeholder="Remise %" aria-label="Remise" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
-                <input type="number" formControlName="vatPct" min="0" step="0.01" placeholder="TVA %" aria-label="TVA" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
-                <input type="number" formControlName="vatAmount" placeholder="Montant TVA" aria-label="Montant TVA" readonly />
-                <input type="number" formControlName="totalTtc" placeholder="Total TTC" aria-label="Total TTC" readonly />
+                <span class="mobile-label">Warehouse code</span>
                 <input formControlName="warehouseCode" placeholder="Ex: 01" aria-label="WarehouseCode" [readonly]="!canEditLine(i)" />
+                <span class="mobile-label">Prix HT</span>
+                <input type="number" formControlName="unitPrice" min="0" step="0.01" placeholder="Prix HT" aria-label="Prix unitaire HT" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <span class="mobile-label">Code TVA</span>
+                <input type="number" formControlName="vatPct" min="0" step="0.01" placeholder="Code TVA" aria-label="Code TVA" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <span class="mobile-label">Montant TVA</span>
+                <input type="number" formControlName="vatAmount" placeholder="Montant TVA" aria-label="Montant TVA" readonly />
+                <span class="mobile-label">Remise %</span>
+                <input type="number" formControlName="discountPct" min="0" max="100" step="0.01" placeholder="Remise %" aria-label="Remise" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <span class="mobile-label">Total</span>
+                <input type="number" formControlName="totalTtc" placeholder="Total TTC" aria-label="Total TTC" readonly />
+                <span class="mobile-label">Statut</span>
+                <input formControlName="lineStatus" placeholder="Statut" aria-label="Statut ligne" readonly />
+                <span class="mobile-label">Action</span>
                 <button type="button" class="btn-outline danger" (click)="removeLine(i)" [disabled]="!canEditLine(i)">Suppr.</button>
               </div>
             } @empty {
@@ -108,6 +127,11 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
           <datalist id="product-options">
             @for (p of products(); track p.id) {
               <option [value]="productLookupLabel(p)"></option>
+            }
+          </datalist>
+          <datalist id="product-code-options">
+            @for (p of products(); track p.id) {
+              <option [value]="p.itemCode"></option>
             }
           </datalist>
         </div>
@@ -148,18 +172,21 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
   `,
   styles: [`
     .page { display: flex; flex-direction: column; gap: 1rem; }
-    .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 1rem; }
-    .top-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+    .card { background: #fff; border-radius: 8px; padding: 0.65rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.6rem; }
+    .top-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem; }
     .field { display: flex; flex-direction: column; gap: 0.25rem; }
+    .field-client { grid-column: span 3; }
+    .field-comments { grid-column: span 2; }
     .field-wide { grid-column: 1 / -1; }
     .field input, .field textarea, .field select { border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.45rem 0.6rem; }
     .lines-head { display: flex; justify-content: space-between; align-items: center; }
     .lines-hint { margin: 0; color: #555; font-size: 0.86rem; }
-    .lines-scroll { overflow-x: auto; padding-bottom: 0.25rem; }
-    .line-row { display: grid; min-width: 1560px; grid-template-columns: 220px 150px 110px 120px 100px 130px 100px 90px 130px 130px 130px 92px; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+    .lines-scroll { overflow-x: auto; padding-bottom: 0.2rem; }
+    .line-row { display: grid; min-width: 1380px; grid-template-columns: 130px 220px 85px 100px 100px 85px 105px 90px 110px 100px 84px; gap: 0.4rem; margin-bottom: 0.4rem; align-items: center; }
     .line-row-header { margin-bottom: 0.25rem; color: #666; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
     .line-row-header span { padding: 0.1rem 0.2rem; }
-    .line-row input, .line-row select { width: 100%; border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.45rem 0.6rem; box-sizing: border-box; }
+    .mobile-label { display: none; }
+    .line-row input, .line-row select { width: 100%; border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.38rem 0.5rem; box-sizing: border-box; font-size: 0.9rem; }
     .totals-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
     .total-box { border: 1px solid #d7d7d7; border-radius: 8px; padding: 0.65rem 0.8rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.2rem; }
     .total-label { font-size: 0.78rem; color: #666; letter-spacing: 0.02em; }
@@ -173,8 +200,32 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
     .empty { color: #888; }
     @media (max-width: 1200px) {
       .top-grid { grid-template-columns: 1fr 1fr; }
-      .line-row-header { display: grid; }
+      .field-client, .field-comments { grid-column: 1 / -1; }
       .totals-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .top-grid { grid-template-columns: 1fr; }
+      .lines-scroll { overflow-x: hidden; }
+      .line-row-header { display: none; }
+      .mobile-label {
+        display: block;
+        font-size: 0.72rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        margin-top: 0.15rem;
+      }
+      .line-row {
+        min-width: 0;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.45rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.55rem;
+      }
+      .line-row .btn-outline.danger { grid-column: 1 / -1; }
+      .actions { justify-content: stretch; }
+      .actions .btn-primary { width: 100%; }
     }
   `]
 })
@@ -184,6 +235,7 @@ export class DocumentFormComponent implements OnInit {
   private readonly customerApi = inject(CustomerApiService);
   private readonly partnerApi = inject(PartnerApiService);
   private readonly productApi = inject(ProductApiService);
+  private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -276,7 +328,7 @@ export class DocumentFormComponent implements OnInit {
   }
 
   productLookupLabel(product: Product): string {
-    return `${product.itemCode || ''} - ${product.itemName || ''}`.trim();
+    return String(product.itemName || product.itemCode || '').trim();
   }
 
   onProductLookupInput(index: number, event: Event): void {
@@ -288,8 +340,7 @@ export class DocumentFormComponent implements OnInit {
     const product = this.products().find((p) => {
       const code = String(p.itemCode ?? '').trim().toLowerCase();
       const name = String(p.itemName ?? '').trim().toLowerCase();
-      const label = `${code} - ${name}`;
-      return normalized === code || normalized === name || normalized === label;
+      return normalized === code || normalized === name;
     });
 
     if (!product) return;
@@ -297,6 +348,27 @@ export class DocumentFormComponent implements OnInit {
     const group = this.lines.at(index);
     group.patchValue({
       productId: Number(product.id ?? 0),
+      productLookup: this.productLookupLabel(product)
+    }, { emitEvent: false });
+
+    this.onProductSelected(index);
+  }
+
+  onItemCodeInput(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = String(input.value ?? '').trim();
+    if (!value) return;
+
+    const normalized = value.toLowerCase();
+    const product = this.products().find((p) =>
+      String(p.itemCode ?? '').trim().toLowerCase() === normalized
+    );
+    if (!product) return;
+
+    const group = this.lines.at(index);
+    group.patchValue({
+      productId: Number(product.id ?? 0),
+      itemCode: String(product.itemCode ?? '').trim(),
       productLookup: this.productLookupLabel(product)
     }, { emitEvent: false });
 
@@ -489,7 +561,7 @@ export class DocumentFormComponent implements OnInit {
       }
     };
 
-    this.partnerApi.getAll(1, 1000)
+    this.partnerApi.getAll(1, INITIAL_CUSTOMERS_PAGE_SIZE)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (partnersRes) => {
@@ -513,12 +585,20 @@ export class DocumentFormComponent implements OnInit {
           if (mapped.length > 0) {
             this.customers.set(mapped);
             this.patchCardCodeForEdit(mapped);
+            this.preloadCustomersInBackground();
             finalizeOne();
             return;
           }
 
           // Secondary fallback for SAP adapters exposing only /sap/clients
-          this.customerApi.getAll(1, 1000)
+          if (!['Admin', 'Manager'].includes(this.auth.role())) {
+            this.customers.set([]);
+            this.error.set('Aucun client associe a ce commercial n est disponible.');
+            finalizeOne();
+            return;
+          }
+
+          this.customerApi.getAll(1, INITIAL_CUSTOMERS_PAGE_SIZE)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (res) => {
@@ -532,6 +612,7 @@ export class DocumentFormComponent implements OnInit {
                   this.error.set('Aucun client disponible depuis SAP. Verifiez les routes /sap/partners ou /sap/clients.');
                 }
                 this.patchCardCodeForEdit(items);
+                this.preloadCustomersInBackground();
                 finalizeOne();
               },
               error: () => {
@@ -541,7 +622,14 @@ export class DocumentFormComponent implements OnInit {
             });
         },
         error: () => {
-          this.customerApi.getAll(1, 1000)
+          if (!['Admin', 'Manager'].includes(this.auth.role())) {
+            this.customers.set([]);
+            this.error.set('Impossible de charger vos partenaires commerciaux.');
+            finalizeOne();
+            return;
+          }
+
+          this.customerApi.getAll(1, INITIAL_CUSTOMERS_PAGE_SIZE)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (res) => {
@@ -555,6 +643,7 @@ export class DocumentFormComponent implements OnInit {
                   this.error.set('Aucun client disponible depuis SAP. Verifiez les routes /sap/partners ou /sap/clients.');
                 }
                 this.patchCardCodeForEdit(items);
+                this.preloadCustomersInBackground();
                 finalizeOne();
               },
               error: () => {
@@ -565,7 +654,7 @@ export class DocumentFormComponent implements OnInit {
         }
       });
 
-    this.productApi.getAll(1, 2000)
+    this.productApi.getAll(1, INITIAL_PRODUCTS_PAGE_SIZE)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: any) => {
@@ -573,6 +662,7 @@ export class DocumentFormComponent implements OnInit {
           const items = Array.isArray(payload?.items) ? payload.items : [];
           this.products.set(items);
           this.syncLineProductsByItemCode();
+          this.preloadProductsInBackground();
           finalizeOne();
         },
         error: () => {
@@ -580,6 +670,79 @@ export class DocumentFormComponent implements OnInit {
           finalizeOne();
         }
       });
+  }
+
+  private preloadCustomersInBackground(): void {
+    this.partnerApi.getAll(1, BACKGROUND_CUSTOMERS_PAGE_SIZE)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (partnersRes) => {
+          const pickText = (...values: Array<unknown>): string => {
+            for (const value of values) {
+              const text = String(value ?? '').trim();
+              if (text) return text;
+            }
+            return '-';
+          };
+
+          const mapped = (partnersRes.items ?? [])
+            .map((row: any, index: number) => ({
+              id: Number(row?.id ?? row?.DocEntry ?? index + 1),
+              cardCode: pickText(row?.CardCode, row?.cardCode, row?.CustomerCode, row?.code),
+              cardName: pickText(row?.CardName, row?.cardName, row?.CustomerName, row?.name),
+              isActive: true
+            } as Customer))
+            .filter((c) => c.cardCode !== '-');
+
+          if (mapped.length === 0) return;
+          this.customers.update((current) => this.mergeCustomers(current, mapped));
+          this.patchCardCodeForEdit(this.customers());
+        },
+        error: () => {}
+      });
+  }
+
+  private preloadProductsInBackground(): void {
+    this.productApi.getAll(1, BACKGROUND_PRODUCTS_PAGE_SIZE)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: any) => {
+          const payload = res?.data ?? res;
+          const items = Array.isArray(payload?.items) ? payload.items : [];
+          if (items.length === 0) return;
+          this.products.update((current) => this.mergeProducts(current, items));
+          this.syncLineProductsByItemCode();
+        },
+        error: () => {}
+      });
+  }
+
+  private mergeCustomers(existing: Customer[], incoming: Customer[]): Customer[] {
+    const byCode = new Map<string, Customer>();
+    for (const item of existing) {
+      const key = String(item.cardCode ?? '').trim().toLowerCase();
+      if (key) byCode.set(key, item);
+    }
+    for (const item of incoming) {
+      const key = String(item.cardCode ?? '').trim().toLowerCase();
+      if (!key) continue;
+      if (!byCode.has(key)) byCode.set(key, item);
+    }
+    return Array.from(byCode.values());
+  }
+
+  private mergeProducts(existing: Product[], incoming: Product[]): Product[] {
+    const byCode = new Map<string, Product>();
+    for (const item of existing) {
+      const key = String(item.itemCode ?? '').trim().toLowerCase();
+      if (key) byCode.set(key, item);
+    }
+    for (const item of incoming) {
+      const key = String(item.itemCode ?? '').trim().toLowerCase();
+      if (!key) continue;
+      if (!byCode.has(key)) byCode.set(key, item);
+    }
+    return Array.from(byCode.values());
   }
 
   private patchCardCodeForEdit(items: Customer[]): void {
@@ -812,6 +975,12 @@ export class DocumentFormComponent implements OnInit {
   }
 
   private refreshListAfterMutation(saved: CommercialDocument, isEditMode: boolean): void {
+    if (isEditMode) {
+      this.router.navigateByUrl(this.backRoute());
+    } else {
+      this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
+    }
+
     const filters: CommercialListFilters = { page: 1, pageSize: 100 };
     this.api.getList(this.resource(), filters)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -830,18 +999,10 @@ export class DocumentFormComponent implements OnInit {
               }
             }));
           }
-          if (isEditMode) {
-            this.router.navigateByUrl(this.backRoute());
-            return;
-          }
-
-          this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
         },
-        error: () => {
-          this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
-        }
-        });
-        }
+        error: () => {}
+      });
+  }
 
   private routeSegmentForResource(): string {
     return this.resource() === 'invoices' ? 'factures' : this.resource();

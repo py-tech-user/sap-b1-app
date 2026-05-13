@@ -169,7 +169,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
         </form>
 
         <div class="table-wrapper">
-          <table>
+          <table class="desktop-table">
           <thead>
             <tr>
               <th>Details</th>
@@ -205,6 +205,35 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
             }
           </tbody>
           </table>
+        </div>
+
+        <div class="mobile-list">
+          @if (filteredCustomers().length === 0) {
+            <div class="empty">Aucun partenaire disponible.</div>
+          } @else {
+            @for (customer of pagedCustomers(); track customer.code + '-m-' + $index) {
+              <article class="customer-card">
+                <div class="customer-card-header">
+                  <div class="customer-card-head-item">
+                    <span>Raison social</span>
+                    <strong class="customer-name">{{ customer.name }}</strong>
+                  </div>
+                  <div class="customer-card-head-item">
+                    <span>Code</span>
+                    <strong class="customer-code">{{ customer.code }}</strong>
+                  </div>
+                </div>
+                <div class="customer-card-grid">
+                  <div><span>Telephone</span><strong>{{ customer.phone1 }}</strong></div>
+                  <div><span>Email</span><strong>{{ customer.email }}</strong></div>
+                  <div><span>Devise</span><strong>{{ customer.currency }}</strong></div>
+                  <div><span>Type</span><strong>{{ customer.cardType }}</strong></div>
+                  <div><span>Pays</span><strong>{{ customer.country }}</strong></div>
+                </div>
+                <button type="button" class="btn-detail mobile-detail" (click)="openDetails(customer)">Details</button>
+              </article>
+            }
+          }
         </div>
 
         <div class="pager">
@@ -252,7 +281,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
     .filters input, .filters select { width: 100%; border: 1px solid #d0d7de; border-radius: 6px; padding: 0.45rem 0.6rem; }
     .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; }
     .table-wrapper { width: 100%; overflow-x: hidden; }
-    table { width: 100%; background: white; border-radius: 10px; border-collapse: collapse; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); overflow: hidden; }
+    .desktop-table { width: 100%; background: white; border-radius: 10px; border-collapse: collapse; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); overflow: hidden; }
     th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eef2ff; vertical-align: top; white-space: normal; word-break: break-word; }
     th { background: #eef2ff; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.02em; }
     .type-chip { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 999px; padding: 0.2rem 0.6rem; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
@@ -261,6 +290,18 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
     .alert-success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
     .alert-error { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
     .empty { text-align: center; color: #6b7280; font-style: italic; }
+    .mobile-list { display: none; }
+    .customer-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.7rem; }
+    .customer-card-header { display: flex; flex-direction: column; gap: 0.2rem; }
+    .customer-card-head-item { display: flex; flex-direction: column; gap: 0.1rem; }
+    .customer-card-head-item span { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.02em; }
+    .customer-name { font-weight: 700; color: #111827; line-height: 1.2; }
+    .customer-code { font-size: 0.9rem; color: #111827; }
+    .customer-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .customer-card-grid div { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+    .customer-card-grid span { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.02em; }
+    .customer-card-grid strong { font-size: 0.88rem; color: #111827; overflow-wrap: anywhere; }
+    .mobile-detail { width: 100%; }
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 30; }
     .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(460px, 100vw); background: #fff; box-shadow: -8px 0 24px rgba(15, 23, 42, 0.18); z-index: 31; display: flex; flex-direction: column; }
     .drawer-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid #e5e7eb; }
@@ -270,7 +311,25 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
     .details-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px dashed #e5e7eb; }
     .details-row dt { color: #374151; font-weight: 600; }
     .details-row dd { margin: 0; color: #111827; word-break: break-word; }
-    @media (max-width: 900px) { .filters { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) {
+      .header { flex-direction: column; align-items: stretch; }
+      .header-actions { width: 100%; justify-content: stretch; }
+      .header-actions .btn-primary { width: 100%; text-align: center; }
+      .filters { grid-template-columns: 1fr; }
+      .filters .btn-filter { width: 100%; }
+      .table-wrapper { display: none; }
+      .mobile-list { display: grid; gap: 0.65rem; }
+      .pager { gap: 0.75rem; }
+      .drawer { width: 100vw; }
+      .drawer-header { flex-direction: column; align-items: stretch; }
+      .btn-close { width: 100%; }
+    }
+    @media (max-width: 520px) {
+      .customer-card-grid { grid-template-columns: 1fr; }
+      .pager { flex-direction: column; align-items: stretch; }
+      .pager .btn-secondary { width: 100%; }
+      .details-row { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class CustomerListComponent implements OnInit, OnDestroy {

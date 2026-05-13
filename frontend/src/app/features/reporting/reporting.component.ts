@@ -1,89 +1,159 @@
-﻿import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { ReportingApiService, CommercialReportingPayload } from '../../core/services/reporting-api.service';
+import { AdvancedReportingPayload, ReportingApiService } from '../../core/services/reporting-api.service';
+
+type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
+type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | 'impayes';
 
 @Component({
   selector: 'app-reporting',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe, RouterLink],
+  imports: [CommonModule, FormsModule, DatePipe],
   template: `
     <div class="reporting-page">
-      <div class="header">
+      <header class="header">
         <div>
-          <h2>Reporting</h2>
-          <h1>{{ title() }}</h1>
+          <h1>Rapport commercial detaille</h1>
+          <p>{{ data()?.periodLabel || etiquettePeriode() }}</p>
         </div>
-      </div>
+        </header>
 
-      <div class="filters">
-        <label>
-          Mois
-          <input type="month" [(ngModel)]="month" (change)="load()"/>
+      <section class="panel filters">
+        <label>Periode
+          <select [(ngModel)]="modePeriode" (change)="charger()">
+            <option value="month">Mois</option>
+            <option value="quarter">Trimestre</option>
+            <option value="year">Annee</option>
+            <option value="custom">Personnalisee</option>
+          </select>
         </label>
-        @if (isAdminMode() && salesPeople().length > 0) {
-          <label>
-            Commercial
-            <select [(ngModel)]="selectedSalesPersonCode" (change)="load()">
-              <option [ngValue]="0">Toute l'equipe</option>
-              @for (sp of salesPeople(); track sp.salesPersonCode) {
-                <option [ngValue]="sp.salesPersonCode">{{ sp.salesPersonName }}</option>
-              }
+
+        @if (modePeriode === 'month') {
+          <label>Mois <input type="month" [(ngModel)]="mois" (change)="charger()" /></label>
+        }
+        @if (modePeriode === 'quarter') {
+          <label>Trimestre
+            <select [(ngModel)]="trimestre" (change)="charger()">
+              <option [ngValue]="1">Premier trimestre</option>
+              <option [ngValue]="2">Deuxieme trimestre</option>
+              <option [ngValue]="3">Troisieme trimestre</option>
+              <option [ngValue]="4">Quatrieme trimestre</option>
             </select>
           </label>
+          <label>Annee <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
         }
-      </div>
+        @if (modePeriode === 'year') {
+          <label>Annee <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
+        }
+        @if (modePeriode === 'custom') {
+          <label>Date de debut <input type="date" [(ngModel)]="dateDebut" (change)="charger()" /></label>
+          <label>Date de fin <input type="date" [(ngModel)]="dateFin" (change)="charger()" /></label>
+        }
 
-      @if (loading()) { <p>Chargement du reporting...</p> }
+        @if (estModeAdministrateur()) {
+          <label>Commercial
+            <input list="liste-commerciaux" [(ngModel)]="rechercheCommercial" (input)="surSaisieCommercial()" placeholder="Nom du commercial" />
+            <datalist id="liste-commerciaux">
+              @for (s of suggestionsCommerciaux(); track s) { <option [value]="s"></option> }
+            </datalist>
+          </label>
+        }
 
-      @if (!loading() && data(); as report) {
-        <div class="kpi-grid">
-          <article class="kpi"><h3>Devis</h3><p>{{ report.kpis.quotesCount }}</p><span>{{ formatMoney(report.kpis.quotesAmount) }}</span></article>
-          <article class="kpi"><h3>Commandes</h3><p>{{ report.kpis.ordersCount }}</p><span>{{ formatMoney(report.kpis.ordersAmount) }}</span></article>
-          <article class="kpi"><h3>Factures</h3><p>{{ report.kpis.invoicesCount }}</p><span>{{ formatMoney(report.kpis.invoicesAmount) }}</span></article>
-          <article class="kpi alert"><h3>Impayes</h3><p>{{ report.kpis.unpaidInvoicesCount }}</p><span>{{ formatMoney(report.kpis.unpaidInvoicesAmount) }}</span></article>
-        </div>
+        <label>Client
+          <input list="liste-clients" [(ngModel)]="codeClientSelectionne" (input)="chargerAvecDelai()" placeholder="Code ou nom client" />
+          <datalist id="liste-clients">
+            @for (c of suggestionsClients(); track c) { <option [value]="c"></option> }
+          </datalist>
+        </label>
 
-        @if (isAdminMode()) {
+        <label>Article
+          <input list="liste-articles" [(ngModel)]="codeArticleSelectionne" (input)="chargerAvecDelai()" placeholder="Code ou nom article" />
+          <datalist id="liste-articles">
+            @for (a of suggestionsArticles(); track a) { <option [value]="a"></option> }
+          </datalist>
+        </label>
+      </section>
+
+      @if (chargement()) { <p>Chargement...</p> }
+
+      @if (!chargement() && data(); as rapport) {
+        <section class="panel">
+          <h2>Indicateurs cles de performance</h2>
+          <div class="kpi-grid">
+            <article class="kpi" [class.active]="metriqueActive === 'chiffreAffaires'" (click)="activerMetrique('chiffreAffaires')">
+              <h3>Chiffre d'affaires net</h3><p>{{ monnaie(rapport.kpis.netRevenue) }}</p>
+            </article>
+            <article class="kpi" [class.active]="metriqueActive === 'devis'" (click)="activerMetrique('devis')">
+              <h3>Devis</h3><p>{{ rapport.kpis.quotesCount }}</p><span>{{ monnaie(rapport.kpis.quotesAmount) }}</span>
+            </article>
+            <article class="kpi" [class.active]="metriqueActive === 'commandes'" (click)="activerMetrique('commandes')">
+              <h3>Commandes</h3><p>{{ rapport.kpis.ordersCount }}</p><span>{{ monnaie(rapport.kpis.ordersAmount) }}</span>
+            </article>
+            <article class="kpi" [class.active]="metriqueActive === 'factures'" (click)="activerMetrique('factures')">
+              <h3>Factures</h3><p>{{ rapport.kpis.invoicesCount }}</p><span>{{ monnaie(rapport.kpis.invoicesAmount) }}</span>
+            </article>
+            <article class="kpi" [class.active]="metriqueActive === 'impayes'" (click)="activerMetrique('impayes')">
+              <h3>Impayes</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
+            </article>
+            <article class="kpi">
+              <h3>Progression du chiffre d'affaires</h3><p>{{ variation(rapport.kpis.netRevenue, rapport.previousKpis.netRevenue) }}</p>
+            </article>
+          </div>
+          <p class="muted">Clique sur une carte pour mettre en avant cette information dans les tableaux.</p>
+        </section>
+
+        @if (estModeAdministrateur()) {
           <section class="panel">
-            <h2>Comparatif commerciaux</h2>
-            @for (row of sortedTeamPerformances(); track row.salesPersonCode) {
-              <div class="row">
-                <div class="name">{{ row.salesPersonName || ('Commercial #' + row.salesPersonCode) }}</div>
-                <div class="amount">{{ formatMoney(row.ordersAmount) }}</div>
+            <h2>Repartition du chiffre d'affaires par commercial</h2>
+            <div class="camembert-zone">
+              <div class="pie" [style.background]="fondCamembertCommerciaux()"></div>
+              <div class="legend">
+                @for (l of legendeCommerciaux(); track l.code) {
+                  <button type="button" class="legend-item" (click)="selectionnerCommercialDepuisLegende(l.code)">
+                    <span class="dot" [style.background]="l.couleur"></span>
+                    <span>{{ l.nom }} - {{ l.pourcentage }}</span>
+                  </button>
+                }
               </div>
-            }
-            @if (showTopSalesPerson() && report.topSalesPerson && isTopVisibleInComparatif()) {
-              <p class="tag">Meilleur commercial: <strong>{{ report.topSalesPerson.salesPersonName || ('#' + report.topSalesPerson.salesPersonCode) }}</strong></p>
-            }
+            </div>
           </section>
         }
 
         <section class="panel">
-          <h2>Derniers documents</h2>
+          <h2>Classements globaux</h2>
           <table>
-            <thead><tr><th>Type</th><th>N°</th><th>Client</th><th>Commercial</th><th>Date</th><th>Montant</th><th>Action</th></tr></thead>
-            <tbody>
-              @for (doc of report.recentDocuments; track doc.type + '-' + doc.docEntry) {
-                <tr>
-                  <td>{{ doc.type }}</td>
-                  <td>{{ doc.docNum }}</td>
-                  <td>{{ doc.cardName }}</td>
-                  <td>{{ salesPersonNameByCode(doc.salesPersonCode) }}</td>
-                  <td>{{ doc.date | date:'dd/MM/yyyy' }}</td>
-                  <td>{{ formatMoney(doc.total) }}</td>
-                  <td>
-                    @if (documentDetailLink(doc.type, doc.docEntry); as link) {
-                      <a class="btn-view" [routerLink]="link">Voir</a>
-                    } @else {
-                      <span>-</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
+            <thead><tr><th>Article</th><th>Nombre de ventes</th><th>Chiffre d'affaires</th><th>Nombre de commerciaux</th><th>Client principal</th></tr></thead>
+            <tbody>@for (p of rapport.topProducts; track p.itemCode) {<tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ p.salesCount }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.salesPeopleCount }}</td><td>{{ p.mainClientName || '-' }}</td></tr>}</tbody>
+          </table>
+          <table>
+            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant paye</th><th>Montant en attente</th><th>Nombre de contrats</th><th>Commercial principal</th></tr></thead>
+            <tbody>@for (c of rapport.topClients; track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.mainSalesPersonName || '-' }}</td></tr>}</tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h2>Analyses detaillees</h2>
+          <table>
+            <thead><tr><th>Article</th><th>Quantite vendue</th><th>Chiffre d'affaires</th><th>Nombre de clients</th><th>Client principal</th><th>Evolution</th></tr></thead>
+            <tbody>@for (r of rapport.productDetails; track r.itemCode) {<tr><td>{{ r.itemName || r.itemCode }}</td><td>{{ r.quantitySold }}</td><td>{{ monnaie(r.revenue) }}</td><td>{{ r.clientsCount }}</td><td>{{ r.mainClientName || '-' }}</td><td>{{ pourcentage(r.trendPercent) }}</td></tr>}</tbody>
+          </table>
+          <table>
+            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant paye</th><th>Montant en attente</th><th>Pourcentage de paiement</th><th>Nombre de contrats</th><th>Article favori</th></tr></thead>
+            <tbody>@for (c of rapport.clientDetails; track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ pourcentage(c.paymentRate) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.favoriteItemName || '-' }}</td></tr>}</tbody>
+          </table>
+          <table>
+            <thead><tr><th>Partenaire</th><th>Chiffre d'affaires</th><th>Nombre de devis</th><th>Articles vendus</th><th>Commerciaux utilisateurs</th></tr></thead>
+            <tbody>@for (p of rapport.partnerDetails; track p.partnerCode) {<tr><td>{{ p.partnerName }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.quotesCount }}</td><td>{{ p.productsCount }}</td><td>{{ p.salesPeopleCount }}</td></tr>}</tbody>
+          </table>
+        </section>
+
+        <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
+          <h2>Impayes et creances</h2>
+          <table>
+            <thead><tr><th>Client</th><th>Montant du</th><th>Article</th><th>Commercial</th><th>Date limite</th><th>Jours de retard</th></tr></thead>
+            <tbody>@for (u of rapport.unpaidItems; track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>
           </table>
         </section>
       }
@@ -91,116 +161,186 @@ import { ReportingApiService, CommercialReportingPayload } from '../../core/serv
   `,
   styles: [`
     .reporting-page { display: grid; gap: 1rem; }
-    .header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .subtitle { color: #526074; margin-top: 0.35rem; }
-    .filters { display: flex; gap: 1rem; background: #fff; border: 1px solid #dde3ea; border-radius: 12px; padding: .75rem; flex-wrap: wrap; }
-    label { display: grid; gap: .3rem; font-weight: 600; color: #2f3a49; }
-    input, select, button { border: 1px solid #cfd8e3; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: .8rem; }
-    .kpi { background: linear-gradient(145deg, #fff, #f8fbff); border: 1px solid #dce6f2; border-radius: 12px; padding: 1rem; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between; }
-    .kpi.alert { border-color: #f1b2b2; background: linear-gradient(145deg, #fff, #fff6f6); }
-    .kpi h3 { margin: 0; font-size: .9rem; color: #48607a; }
-    .kpi p { margin: .4rem 0; font-size: 1.3rem; font-weight: 700; color: #152033; }
-    .kpi span { color: #5f7186; font-size: .86rem; }
-    .panel { background: #fff; border: 1px solid #dde3ea; border-radius: 12px; padding: .9rem; }
-    .row {  display: flex; align-items: center; gap: 10px ; margin:.45rem 0;}
-    .name { font-weight: 600; color: #2b3a4b; }
-    .amount { color: #304257; font-weight: 600; }
-    .tag { margin-top: .6rem; font-size: .92rem; color: #2b3a4b; }
-    table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; }
-    th, td { padding: .55rem; border-bottom: 1px solid #ecf0f5; text-align: left; font-size: .92rem; }
-    th { color: #56687e; font-weight: 600; background: #f8fbff; }
-    .btn-view { display: inline-block; padding: .35rem .6rem; border: 1px solid #cfd8e3; border-radius: 8px; text-decoration: none; color: #2f3a49; background: #fff; }
-    .btn-view:hover { background: #f8fbff; }
-    @media (max-width: 1100px) {
-      .kpi-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
-    }
-    @media (max-width: 640px) {
-      .kpi-grid { grid-template-columns: 1fr; }
-      th, td { font-size: .86rem; padding: .45rem; }
-    }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; }
+    .actions { display: flex; gap: .5rem; }
+    .panel { background: #fff; border: 1px solid #dbe4ee; border-radius: 12px; padding: .9rem; }
+    .filters { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: .7rem; }
+    label { display: grid; gap: .3rem; font-weight: 600; color: #2b3a4a; }
+    input, select, button { border: 1px solid #cad7e5; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: .7rem; }
+    .kpi { border: 1px solid #e4ebf3; border-radius: 10px; padding: .7rem; background: linear-gradient(145deg, #fff, #f7fbff); cursor: pointer; }
+    .kpi.active { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
+    .kpi h3 { margin: 0; font-size: .88rem; color: #52657d; }
+    .kpi p { margin: .3rem 0; font-size: 1.2rem; font-weight: 700; }
+    .camembert-zone { display: grid; grid-template-columns: 180px 1fr; gap: .8rem; align-items: center; }
+    .pie { width: 160px; height: 160px; border-radius: 50%; border: 1px solid #e5e7eb; }
+    .legend { display: grid; gap: .35rem; }
+    .legend-item { display: flex; align-items: center; gap: .45rem; border: 1px solid #e5e7eb; background: #fff; text-align: left; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; margin-top: .7rem; }
+    th, td { border-bottom: 1px solid #ecf1f6; padding: .45rem; text-align: left; font-size: .9rem; }
+    th { background: #f8fbff; color: #51657e; }
+    .muted { color: #6b7280; font-size: .9rem; }
+    .highlight { border-color: #f59e0b; }
+    @media (max-width: 1100px) { .filters, .kpi-grid { grid-template-columns: 1fr 1fr; } .camembert-zone { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .filters, .kpi-grid { grid-template-columns: 1fr; } }
   `]
 })
 export class ReportingComponent {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ReportingApiService);
 
-  loading = signal(false);
-  data = signal<CommercialReportingPayload | null>(null);
-  month = this.defaultMonth();
-  selectedSalesPersonCode = 0;
+  readonly chargement = signal(false);
+  readonly data = signal<AdvancedReportingPayload | null>(null);
 
-  isAdminMode = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
-  salesPeople = computed(() =>
-    (this.data()?.teamMembers ?? []).filter(sp => {
-      const name = String(sp.salesPersonName ?? '').trim().toLowerCase();
-      return name !== 'administrateur';
-    })
-  );
-  showTopSalesPerson = computed(() => this.isAdminMode() && this.selectedSalesPersonCode === 0);
-  sortedTeamPerformances = computed(() =>
-    [...(this.data()?.teamPerformances ?? [])].sort((a, b) => (b.ordersAmount - a.ordersAmount) || (b.invoicesAmount - a.invoicesAmount))
-  );
-  title = computed(() => this.data()?.periodLabel ? `Periode: ${this.data()!.periodLabel}` : 'Analyse mensuelle');
+  modePeriode: ModePeriode = 'month';
+  mois = this.moisParDefaut();
+  trimestre = 1;
+  annee = new Date().getFullYear();
+  dateDebut = this.premierJourMois();
+  dateFin = this.dateDuJour();
 
-  constructor() {
-    this.load();
-  }
+  codeClientSelectionne = '';
+  codeArticleSelectionne = '';
+  rechercheCommercial = '';
+  metriqueActive: MetriqueActive = 'chiffreAffaires';
 
-  load(): void {
-    this.loading.set(true);
-    const salesperson = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined;
-    this.api.getCommercialReporting(this.month, salesperson).subscribe({
-      next: (res) => {
-        this.data.set(res.data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false)
+  private delaiRecherche: ReturnType<typeof setTimeout> | null = null;
+
+  readonly estModeAdministrateur = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
+  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(sp => String(sp.salesPersonName).trim().toLowerCase() !== 'administrateur'));
+  readonly suggestionsCommerciaux = computed(() => this.commerciaux().map(s => s.salesPersonName));
+  readonly suggestionsClients = computed(() => {
+    const rapport = this.data();
+    if (!rapport) return [];
+    const liste = [...rapport.topClients.map(c => `${c.cardCode} - ${c.cardName}`), ...rapport.clientDetails.map(c => `${c.cardCode} - ${c.cardName}`)];
+    return Array.from(new Set(liste)).slice(0, 120);
+  });
+  readonly suggestionsArticles = computed(() => {
+    const rapport = this.data();
+    if (!rapport) return [];
+    const liste = [...rapport.topProducts.map(a => `${a.itemCode} - ${a.itemName}`), ...rapport.productDetails.map(a => `${a.itemCode} - ${a.itemName}`)];
+    return Array.from(new Set(liste)).slice(0, 120);
+  });
+
+  constructor() { this.charger(); }
+
+  charger(): void {
+    this.chargement.set(true);
+    this.api.getAdvancedReporting({
+      periodType: this.modePeriode,
+      month: this.modePeriode === 'month' ? this.mois : undefined,
+      quarter: this.modePeriode === 'quarter' ? this.trimestre : undefined,
+      year: this.modePeriode === 'quarter' || this.modePeriode === 'year' ? this.annee : undefined,
+      startDate: this.modePeriode === 'custom' ? this.dateDebut : undefined,
+      endDate: this.modePeriode === 'custom' ? this.dateFin : undefined,
+      salesPersonCode: this.codeCommercialSelectionne(),
+      cardCode: this.extraireCode(this.codeClientSelectionne),
+      itemCode: this.extraireCode(this.codeArticleSelectionne)
+    }).subscribe({
+      next: (res) => { this.data.set(res.data); this.chargement.set(false); },
+      error: () => this.chargement.set(false)
     });
   }
 
-  formatMoney(value: number): string {
-    const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-      .format(Number(value ?? 0))
-      .replace(/\u202f/g, ' ');
-    return `${formatted} MAD`;
+  chargerAvecDelai(): void {
+    if (this.delaiRecherche) clearTimeout(this.delaiRecherche);
+    this.delaiRecherche = setTimeout(() => this.charger(), 300);
   }
 
-  isTopVisibleInComparatif(): boolean {
-    const top = this.data()?.topSalesPerson;
-    const first = this.sortedTeamPerformances()[0];
-    if (!top || !first) return false;
-    return top.salesPersonCode === first.salesPersonCode;
+  surSaisieCommercial(): void {
+    this.chargerAvecDelai();
   }
 
-  documentDetailLink(type: string, docEntry: number): string[] | null {
-    const normalized = String(type ?? '').trim().toLowerCase();
-    if (!Number.isFinite(docEntry)) return null;
-
-    if (normalized.includes('devis') || normalized.includes('quote')) {
-      return ['/quotes', String(docEntry)];
-    }
-    if (normalized.includes('commande') || normalized.includes('order')) {
-      return ['/orders', String(docEntry)];
-    }
-    if (normalized.includes('facture') || normalized.includes('invoice')) {
-      return ['/factures', String(docEntry)];
-    }
-
-    return null;
+  activerMetrique(metrique: MetriqueActive): void {
+    this.metriqueActive = metrique;
   }
 
-  salesPersonNameByCode(code: number): string {
-    const numericCode = Number(code);
-    if (!Number.isFinite(numericCode)) return '-';
-    const match = (this.data()?.teamMembers ?? []).find(sp => sp.salesPersonCode === numericCode);
-    return match?.salesPersonName || `#${numericCode}`;
+  legendeCommerciaux(): Array<{ code: number; nom: string; pourcentage: string; couleur: string }> {
+    const palette = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    const liste = (this.data()?.topCommercials ?? []).slice(0, 8);
+    const total = Math.max(1, liste.reduce((sum, row) => sum + Number(row.netRevenue || 0), 0));
+    return liste.map((row, index) => ({
+      code: row.salesPersonCode,
+      nom: row.salesPersonName || `Commercial ${row.salesPersonCode}`,
+      pourcentage: this.pourcentage((Number(row.netRevenue || 0) * 100) / total),
+      couleur: palette[index % palette.length]
+    }));
   }
 
-  private defaultMonth(): string {
+  fondCamembertCommerciaux(): string {
+    const palette = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    const liste = (this.data()?.topCommercials ?? []).slice(0, 8);
+    if (liste.length === 0) return 'conic-gradient(#e5e7eb 0 100%)';
+    const total = Math.max(1, liste.reduce((sum, row) => sum + Number(row.netRevenue || 0), 0));
+    let depart = 0;
+    const segments = liste.map((row, index) => {
+      const valeur = (Number(row.netRevenue || 0) * 100) / total;
+      const fin = depart + valeur;
+      const segment = `${palette[index % palette.length]} ${depart.toFixed(2)}% ${fin.toFixed(2)}%`;
+      depart = fin;
+      return segment;
+    });
+    return `conic-gradient(${segments.join(', ')})`;
+  }
+
+  selectionnerCommercialDepuisLegende(code: number): void {
+    if (!this.estModeAdministrateur()) return;
+    const commercial = this.commerciaux().find((x) => x.salesPersonCode === code);
+    if (!commercial) return;
+    this.rechercheCommercial = commercial.salesPersonName;
+    this.charger();
+  }
+
+  etiquettePeriode(): string {
+    if (this.modePeriode === 'month') return `Periode: ${this.mois}`;
+    if (this.modePeriode === 'quarter') return `Periode: trimestre ${this.trimestre} ${this.annee}`;
+    if (this.modePeriode === 'year') return `Periode: ${this.annee}`;
+    return `Periode: ${this.dateDebut} au ${this.dateFin}`;
+  }
+
+  variation(courant: number, precedent: number): string {
+    const base = Number(precedent || 0);
+    if (base <= 0) return '+100.00%';
+    return this.pourcentage(((Number(courant || 0) - base) * 100) / base);
+  }
+
+  monnaie(valeur: number): string {
+    return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(valeur || 0))} MAD`;
+  }
+
+  pourcentage(valeur: number): string {
+    return `${Number(valeur || 0).toFixed(2)}%`;
+  }
+
+  private codeCommercialSelectionne(): number | undefined {
+    if (!this.estModeAdministrateur()) return undefined;
+    const saisie = this.rechercheCommercial.trim().toLowerCase();
+    if (!saisie) return undefined;
+    const commercial = this.commerciaux().find((x) => x.salesPersonName.trim().toLowerCase().includes(saisie));
+    return commercial?.salesPersonCode;
+  }
+
+  private extraireCode(valeur: string): string | undefined {
+    const propre = String(valeur || '').trim();
+    if (!propre) return undefined;
+    const index = propre.indexOf(' - ');
+    return (index > 0 ? propre.slice(0, index) : propre).trim();
+  }
+
+  private moisParDefaut(): string {
     const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    return `${y}-${m}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private premierJourMois(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  private dateDuJour(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
+
