@@ -12,19 +12,19 @@ import { switchMap } from 'rxjs';
   template: `
     @if (!showNotes()) {
       <button class="btn-checkout" [disabled]="loading()" (click)="showNotes.set(true)">
-        ðY Check-out
+        Check-out
       </button>
     } @else {
       <div class="checkout-form">
         <input type="text" [(ngModel)]="notes" placeholder="Notes de fin de visite..." class="notes-input" />
         <button class="btn-checkout-confirm" [disabled]="loading()" (click)="doCheckOut()">
           @if (loading()) {
-            a³ Envoi...
+            Envoi...
           } @else {
-            aœ… Confirmer
+            Confirmer
           }
         </button>
-        <button class="btn-cancel" (click)="showNotes.set(false)">aœ•</button>
+        <button class="btn-cancel" (click)="showNotes.set(false)">Annuler</button>
       </div>
     }
     @if (error()) {
@@ -65,7 +65,7 @@ export class VisitCheckoutButtonComponent {
   /** ID de la visite (input signal) */
   visitId = input.required<number>();
 
-  /** A‰venement emis apres un check-out reussi */
+  /** Événement émis après un check-out réussi */
   checkedOut = output<void>();
 
   loading = signal(false);

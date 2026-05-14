@@ -129,10 +129,10 @@ ORDER BY I.ItemCode;";
                 await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
+                    var itemName = reader["ItemName"]?.ToString() ?? string.Empty;
                     var picture = reader["PicturName"]?.ToString() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(picture))
                     {
-                        var itemName = reader["ItemName"]?.ToString() ?? string.Empty;
                         picture = GuessPictureFileNameFromItemName(itemName);
                     }
                     items.Add(new SapItemDto

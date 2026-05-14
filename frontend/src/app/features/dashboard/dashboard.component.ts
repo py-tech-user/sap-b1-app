@@ -225,8 +225,7 @@ export class DashboardComponent implements OnInit {
     this.partnerDebts()
       .flatMap((row) => [
         String(row.cardCode ?? ''),
-        String(row.cardName ?? ''),
-        `${row.cardCode} - ${row.cardName}`
+        String(row.cardName ?? '')
       ])
       .filter(Boolean)
       .slice(0, 150)

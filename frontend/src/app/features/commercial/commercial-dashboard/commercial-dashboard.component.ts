@@ -10,7 +10,7 @@ import { CommercialDashboard } from '../../../core/models/models';
   imports: [CommonModule, RouterLink, DecimalPipe],
   template: `
     <div class="page">
-      <h1>ðY“Œ Dashboard commercial</h1>
+      <h1>Dashboard commercial</h1>
 
       @if (loading()) {
         <div class="loading">Chargement...</div>
@@ -24,7 +24,7 @@ import { CommercialDashboard } from '../../../core/models/models';
           </a>
           <a class="card" routerLink="/orders">
             <div class="value">{{ data()!.ordersInPreparation }}</div>
-            <div class="label">BC en preparation</div>
+            <div class="label">BC en préparation</div>
           </a>
           <a class="card" routerLink="/deliverynotes">
             <div class="value">{{ data()!.deliveryInProgress }}</div>
@@ -32,11 +32,11 @@ import { CommercialDashboard } from '../../../core/models/models';
           </a>
             <a class="card" routerLink="/factures">
             <div class="value">{{ data()!.unpaidInvoices }}</div>
-            <div class="label">Factures impayees</div>
+            <div class="label">Factures impayées</div>
           </a>
           <a class="card" routerLink="/returns">
             <div class="value">{{ data()!.pendingReturns }}</div>
-            <div class="label">Retours a traiter</div>
+            <div class="label">Retours à traiter</div>
           </a>
           <a class="card" routerLink="/creditnotes">
             <div class="value">{{ data()!.totalCreditNotes }}</div>
@@ -45,7 +45,7 @@ import { CommercialDashboard } from '../../../core/models/models';
         </div>
 
         <div class="amounts card">
-          <h3>Montants agreges</h3>
+          <h3>Montants agrégés</h3>
           <div class="amount-grid">
             <div>Devis: <strong>{{ data()!.amounts?.quotes ?? 0 | number:'1.2-2' }}</strong></div>
             <div>BC: <strong>{{ data()!.amounts?.orders ?? 0 | number:'1.2-2' }}</strong></div>
@@ -53,7 +53,7 @@ import { CommercialDashboard } from '../../../core/models/models';
             <div>Factures: <strong>{{ data()!.amounts?.invoices ?? 0 | number:'1.2-2' }}</strong></div>
             <div>Avoirs: <strong>{{ data()!.amounts?.creditNotes ?? 0 | number:'1.2-2' }}</strong></div>
             <div>Retours: <strong>{{ data()!.amounts?.returns ?? 0 | number:'1.2-2' }}</strong></div>
-            <div>Impaye: <strong>{{ data()!.amounts?.unpaidInvoices ?? 0 | number:'1.2-2' }}</strong></div>
+            <div>Impayé: <strong>{{ data()!.amounts?.unpaidInvoices ?? 0 | number:'1.2-2' }}</strong></div>
           </div>
         </div>
       }

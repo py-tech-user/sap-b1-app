@@ -15,18 +15,18 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
     <div class="reporting-page">
       <header class="header">
         <div>
-          <h1>Rapport commercial detaille</h1>
+          <h1>Rapport commercial détaillé</h1>
           <p>{{ data()?.periodLabel || etiquettePeriode() }}</p>
         </div>
         </header>
 
       <section class="panel filters">
-        <label>Periode
+        <label>Période
           <select [(ngModel)]="modePeriode" (change)="charger()">
             <option value="month">Mois</option>
             <option value="quarter">Trimestre</option>
-            <option value="year">Annee</option>
-            <option value="custom">Personnalisee</option>
+            <option value="year">Année</option>
+            <option value="custom">Personnalisée</option>
           </select>
         </label>
 
@@ -37,18 +37,18 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
           <label>Trimestre
             <select [(ngModel)]="trimestre" (change)="charger()">
               <option [ngValue]="1">Premier trimestre</option>
-              <option [ngValue]="2">Deuxieme trimestre</option>
-              <option [ngValue]="3">Troisieme trimestre</option>
-              <option [ngValue]="4">Quatrieme trimestre</option>
+              <option [ngValue]="2">Deuxième trimestre</option>
+              <option [ngValue]="3">Troisième trimestre</option>
+              <option [ngValue]="4">Quatrième trimestre</option>
             </select>
           </label>
-          <label>Annee <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
+          <label>Année <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
         }
         @if (modePeriode === 'year') {
-          <label>Annee <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
+          <label>Année <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
         }
         @if (modePeriode === 'custom') {
-          <label>Date de debut <input type="date" [(ngModel)]="dateDebut" (change)="charger()" /></label>
+          <label>Date de début <input type="date" [(ngModel)]="dateDebut" (change)="charger()" /></label>
           <label>Date de fin <input type="date" [(ngModel)]="dateFin" (change)="charger()" /></label>
         }
 
@@ -61,26 +61,13 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
           </label>
         }
 
-        <label>Client
-          <input list="liste-clients" [(ngModel)]="codeClientSelectionne" (input)="chargerAvecDelai()" placeholder="Code ou nom client" />
-          <datalist id="liste-clients">
-            @for (c of suggestionsClients(); track c) { <option [value]="c"></option> }
-          </datalist>
-        </label>
-
-        <label>Article
-          <input list="liste-articles" [(ngModel)]="codeArticleSelectionne" (input)="chargerAvecDelai()" placeholder="Code ou nom article" />
-          <datalist id="liste-articles">
-            @for (a of suggestionsArticles(); track a) { <option [value]="a"></option> }
-          </datalist>
-        </label>
       </section>
 
       @if (chargement()) { <p>Chargement...</p> }
 
       @if (!chargement() && data(); as rapport) {
         <section class="panel">
-          <h2>Indicateurs cles de performance</h2>
+          <h2>Indicateurs clés de performance</h2>
           <div class="kpi-grid">
             <article class="kpi" [class.active]="metriqueActive === 'chiffreAffaires'" (click)="activerMetrique('chiffreAffaires')">
               <h3>Chiffre d'affaires net</h3><p>{{ monnaie(rapport.kpis.netRevenue) }}</p>
@@ -95,7 +82,7 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
               <h3>Factures</h3><p>{{ rapport.kpis.invoicesCount }}</p><span>{{ monnaie(rapport.kpis.invoicesAmount) }}</span>
             </article>
             <article class="kpi" [class.active]="metriqueActive === 'impayes'" (click)="activerMetrique('impayes')">
-              <h3>Impayes</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
+              <h3>Impayés</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
             </article>
             <article class="kpi">
               <h3>Progression du chiffre d'affaires</h3><p>{{ variation(rapport.kpis.netRevenue, rapport.previousKpis.netRevenue) }}</p>
@@ -106,7 +93,7 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
 
         @if (estModeAdministrateur()) {
           <section class="panel">
-            <h2>Repartition du chiffre d'affaires par commercial</h2>
+            <h2>Répartition du chiffre d'affaires par commercial</h2>
             <div class="camembert-zone">
               <div class="pie" [style.background]="fondCamembertCommerciaux()"></div>
               <div class="legend">
@@ -134,13 +121,13 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
         </section>
 
         <section class="panel">
-          <h2>Analyses detaillees</h2>
+          <h2>Analyses détaillées</h2>
           <table>
-            <thead><tr><th>Article</th><th>Quantite vendue</th><th>Chiffre d'affaires</th><th>Nombre de clients</th><th>Client principal</th><th>Evolution</th></tr></thead>
+            <thead><tr><th>Article</th><th>Quantité vendue</th><th>Chiffre d'affaires</th><th>Nombre de clients</th><th>Client principal</th><th>Évolution</th></tr></thead>
             <tbody>@for (r of rapport.productDetails; track r.itemCode) {<tr><td>{{ r.itemName || r.itemCode }}</td><td>{{ r.quantitySold }}</td><td>{{ monnaie(r.revenue) }}</td><td>{{ r.clientsCount }}</td><td>{{ r.mainClientName || '-' }}</td><td>{{ pourcentage(r.trendPercent) }}</td></tr>}</tbody>
           </table>
           <table>
-            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant paye</th><th>Montant en attente</th><th>Pourcentage de paiement</th><th>Nombre de contrats</th><th>Article favori</th></tr></thead>
+            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant payé</th><th>Montant en attente</th><th>Pourcentage de paiement</th><th>Nombre de contrats</th><th>Article favori</th></tr></thead>
             <tbody>@for (c of rapport.clientDetails; track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ pourcentage(c.paymentRate) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.favoriteItemName || '-' }}</td></tr>}</tbody>
           </table>
           <table>
@@ -150,7 +137,7 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
         </section>
 
         <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
-          <h2>Impayes et creances</h2>
+          <h2>Impayés et créances</h2>
           <table>
             <thead><tr><th>Client</th><th>Montant du</th><th>Article</th><th>Commercial</th><th>Date limite</th><th>Jours de retard</th></tr></thead>
             <tbody>@for (u of rapport.unpaidItems; track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>
@@ -200,8 +187,6 @@ export class ReportingComponent {
   dateDebut = this.premierJourMois();
   dateFin = this.dateDuJour();
 
-  codeClientSelectionne = '';
-  codeArticleSelectionne = '';
   rechercheCommercial = '';
   metriqueActive: MetriqueActive = 'chiffreAffaires';
 
@@ -210,19 +195,6 @@ export class ReportingComponent {
   readonly estModeAdministrateur = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
   readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(sp => String(sp.salesPersonName).trim().toLowerCase() !== 'administrateur'));
   readonly suggestionsCommerciaux = computed(() => this.commerciaux().map(s => s.salesPersonName));
-  readonly suggestionsClients = computed(() => {
-    const rapport = this.data();
-    if (!rapport) return [];
-    const liste = [...rapport.topClients.map(c => `${c.cardCode} - ${c.cardName}`), ...rapport.clientDetails.map(c => `${c.cardCode} - ${c.cardName}`)];
-    return Array.from(new Set(liste)).slice(0, 120);
-  });
-  readonly suggestionsArticles = computed(() => {
-    const rapport = this.data();
-    if (!rapport) return [];
-    const liste = [...rapport.topProducts.map(a => `${a.itemCode} - ${a.itemName}`), ...rapport.productDetails.map(a => `${a.itemCode} - ${a.itemName}`)];
-    return Array.from(new Set(liste)).slice(0, 120);
-  });
-
   constructor() { this.charger(); }
 
   charger(): void {
@@ -234,9 +206,7 @@ export class ReportingComponent {
       year: this.modePeriode === 'quarter' || this.modePeriode === 'year' ? this.annee : undefined,
       startDate: this.modePeriode === 'custom' ? this.dateDebut : undefined,
       endDate: this.modePeriode === 'custom' ? this.dateFin : undefined,
-      salesPersonCode: this.codeCommercialSelectionne(),
-      cardCode: this.extraireCode(this.codeClientSelectionne),
-      itemCode: this.extraireCode(this.codeArticleSelectionne)
+      salesPersonCode: this.codeCommercialSelectionne()
     }).subscribe({
       next: (res) => { this.data.set(res.data); this.chargement.set(false); },
       error: () => this.chargement.set(false)
@@ -293,10 +263,10 @@ export class ReportingComponent {
   }
 
   etiquettePeriode(): string {
-    if (this.modePeriode === 'month') return `Periode: ${this.mois}`;
-    if (this.modePeriode === 'quarter') return `Periode: trimestre ${this.trimestre} ${this.annee}`;
-    if (this.modePeriode === 'year') return `Periode: ${this.annee}`;
-    return `Periode: ${this.dateDebut} au ${this.dateFin}`;
+    if (this.modePeriode === 'month') return `Période: ${this.mois}`;
+    if (this.modePeriode === 'quarter') return `Période: trimestre ${this.trimestre} ${this.annee}`;
+    if (this.modePeriode === 'year') return `Période: ${this.annee}`;
+    return `Période: ${this.dateDebut} au ${this.dateFin}`;
   }
 
   variation(courant: number, precedent: number): string {
@@ -319,13 +289,6 @@ export class ReportingComponent {
     if (!saisie) return undefined;
     const commercial = this.commerciaux().find((x) => x.salesPersonName.trim().toLowerCase().includes(saisie));
     return commercial?.salesPersonCode;
-  }
-
-  private extraireCode(valeur: string): string | undefined {
-    const propre = String(valeur || '').trim();
-    if (!propre) return undefined;
-    const index = propre.indexOf(' - ');
-    return (index > 0 ? propre.slice(0, index) : propre).trim();
   }
 
   private moisParDefaut(): string {

@@ -11,9 +11,9 @@ import { switchMap } from 'rxjs';
   template: `
     <button class="btn-checkin" [disabled]="loading()" (click)="doCheckIn()">
       @if (loading()) {
-        a³ Localisation...
+        Localisation...
       } @else {
-        ðY“ Check-in
+        Check-in
       }
     </button>
     @if (error()) {
@@ -38,7 +38,7 @@ export class VisitCheckinButtonComponent {
   /** ID de la visite (input signal) */
   visitId = input.required<number>();
 
-  /** A‰venement emis apres un check-in reussi */
+  /** Événement émis après un check-in réussi */
   checkedIn = output<void>();
 
   loading = signal(false);

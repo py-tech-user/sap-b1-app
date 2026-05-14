@@ -136,7 +136,7 @@ export class DashboardPartnersActivityComponent implements OnInit {
   docFilter: PartnerDocFilter = 'all';
 
   readonly suggestions = computed(() =>
-    this.rows().flatMap(r => [`${r.cardCode}`, `${r.cardName}`, `${r.cardCode} - ${r.cardName}`]).slice(0, 120)
+    this.rows().flatMap(r => [`${r.cardCode}`, `${r.cardName}`]).slice(0, 120)
   );
   readonly isAdminMode = signal(false);
 

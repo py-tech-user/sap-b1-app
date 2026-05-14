@@ -17,31 +17,31 @@ import * as L from 'leaflet';
     <div class="track-history-page">
       <div class="header">
         <div>
-          <a routerLink="/tracking" class="back-link">a† Retour au suivi</a>
-          <h1>ðY“ Historique de {{ userName() }}</h1>
+          <a routerLink="/tracking" class="back-link">Retour au suivi</a>
+          <h1>Historique de {{ userName() }}</h1>
         </div>
       </div>
 
       <!-- Filtres dates -->
       <div class="filters">
         <div class="filter-group">
-          <label>Date debut</label>
+          <label>Date début</label>
           <input type="date" [(ngModel)]="dateFrom" />
         </div>
         <div class="filter-group">
           <label>Date fin</label>
           <input type="date" [(ngModel)]="dateTo" />
         </div>
-        <button class="btn-filter" (click)="loadHistory()">ðY” Filtrer</button>
+        <button class="btn-filter" (click)="loadHistory()">Filtrer</button>
       </div>
 
       <!-- Stats utilisateur -->
       @if (userStats(); as s) {
         <div class="stats-row">
-          <div class="mini-stat">ðY“‹ {{ s.totalVisits }} visites</div>
-          <div class="mini-stat">aœ… {{ s.completedVisits }} terminees</div>
-          <div class="mini-stat">ðY“ {{ s.totalDistanceKm.toFixed(1) }} km</div>
-          <div class="mini-stat">a± {{ s.avgVisitDurationMin.toFixed(0) }} min/visite</div>
+          <div class="mini-stat">{{ s.totalVisits }} visites</div>
+          <div class="mini-stat">{{ s.completedVisits }} terminées</div>
+          <div class="mini-stat">{{ s.totalDistanceKm.toFixed(1) }} km</div>
+          <div class="mini-stat">{{ s.avgVisitDurationMin.toFixed(0) }} min/visite</div>
         </div>
       }
 
@@ -55,7 +55,7 @@ import * as L from 'leaflet';
 
         <!-- Tableau des points -->
         <div class="table-container">
-          <h3>ðY“‹ Points de passage ({{ points().length }})</h3>
+          <h3>Points de passage ({{ points().length }})</h3>
           <table>
             <thead>
               <tr>
@@ -74,9 +74,9 @@ import * as L from 'leaflet';
                   <td>
                     <span [class]="'badge badge-' + pt.eventType">
                       @switch (pt.eventType) {
-                        @case ('check-in')  { ðY“ Check-in }
-                        @case ('check-out') { ðY Check-out }
-                        @default            { ðY”µ Auto }
+                        @case ('check-in')  { Check-in }
+                        @case ('check-out') { Check-out }
+                        @default            { Auto }
                       }
                     </span>
                   </td>
@@ -84,7 +84,7 @@ import * as L from 'leaflet';
                   <td>{{ pt.longitude.toFixed(5) }}</td>
                 </tr>
               } @empty {
-                <tr><td colspan="5" class="empty-row">Aucun point pour cette periode.</td></tr>
+                <tr><td colspan="5" class="empty-row">Aucun point pour cette période.</td></tr>
               }
             </tbody>
           </table>
@@ -177,7 +177,7 @@ export class TrackHistoryComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.userId = Number(this.route.snapshot.paramMap.get('userId') ?? 0);
 
-    // Pre-remplir les dates (7 derniers jours)
+    // Pré-remplir les dates (7 derniers jours)
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(today.getDate() - 7);
@@ -233,7 +233,7 @@ export class TrackHistoryComponent implements OnInit, OnDestroy {
 
     this.map = L.map(el).setView([33.5933, -7.6035], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'A© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
 
     this.markersLayer = L.layerGroup().addTo(this.map);
@@ -258,17 +258,17 @@ export class TrackHistoryComponent implements OnInit, OnDestroy {
       color: '#667eea', weight: 3, opacity: 0.8
     }).addTo(this.map);
 
-    // Marqueurs speciaux pour check-in / check-out
+    // Marqueurs spéciaux pour check-in / check-out
     const checkinIcon = L.divIcon({
       className: 'custom-icon',
-      html: '<div style="background:#27ae60;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">ðY“</div>',
+      html: '<div style="background:#27ae60;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">IN</div>',
       iconSize: [28, 28],
       iconAnchor: [14, 14]
     });
 
     const checkoutIcon = L.divIcon({
       className: 'custom-icon',
-      html: '<div style="background:#e67e22;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">ðY</div>',
+      html: '<div style="background:#e67e22;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">OUT</div>',
       iconSize: [28, 28],
       iconAnchor: [14, 14]
     });

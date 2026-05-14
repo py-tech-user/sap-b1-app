@@ -12,17 +12,17 @@ import { UserTrackingStats } from '../../../core/models/models';
   template: `
     <div class="tracking-dashboard">
       <div class="header">
-        <h1>ðY“¡ Suivi terrain</h1>
+        <h1>Suivi terrain</h1>
         <div class="header-actions">
-          <a routerLink="/tracking/map" class="btn-primary">ðY—ºi¸ Carte en direct</a>
+          <a routerLink="/tracking/map" class="btn-primary">Carte en direct</a>
           <button class="btn-track" [class.active]="geo.isTracking()" (click)="toggleTracking()">
-            {{ geo.isTracking() ? 'a¹ Arreter mon suivi' : 'a–¶ Demarrer mon suivi' }}
+            {{ geo.isTracking() ? 'Arrêter mon suivi' : 'Démarrer mon suivi' }}
           </button>
         </div>
       </div>
 
       @if (geo.error()) {
-        <div class="alert alert-error">as i¸ {{ geo.error() }}</div>
+        <div class="alert alert-error">{{ geo.error() }}</div>
       }
 
       @if (loading()) {
@@ -30,11 +30,11 @@ import { UserTrackingStats } from '../../../core/models/models';
       } @else {
         <!-- GPS Status Card -->
         <div class="gps-status-card">
-          <div class="gps-icon">{{ geo.isTracking() ? 'ðYY¢' : 'ðY”´' }}</div>
+          <div class="gps-icon">{{ geo.isTracking() ? 'GPS ON' : 'GPS OFF' }}</div>
           <div class="gps-info">
             <strong>GPS {{ geo.isTracking() ? 'Actif' : 'Inactif' }}</strong>
             @if (geo.currentPosition(); as pos) {
-              <small>ðY“ {{ pos.latitude.toFixed(5) }}, {{ pos.longitude.toFixed(5) }} (A±{{ pos.accuracy.toFixed(0) }}m)</small>
+              <small>{{ pos.latitude.toFixed(5) }}, {{ pos.longitude.toFixed(5) }} (±{{ pos.accuracy.toFixed(0) }}m)</small>
             } @else {
               <small>Position non disponible</small>
             }
@@ -44,22 +44,22 @@ import { UserTrackingStats } from '../../../core/models/models';
         <!-- Stats Cards -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon">ðY‘¥</div>
+            <div class="stat-icon">Equipe</div>
             <div class="stat-value">{{ stats().length }}</div>
             <div class="stat-label">Commerciaux suivis</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">ðY“‹</div>
+            <div class="stat-icon">Visites</div>
             <div class="stat-value">{{ totalVisits() }}</div>
             <div class="stat-label">Visites totales</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">aœ…</div>
+            <div class="stat-icon">OK</div>
             <div class="stat-value">{{ completedVisits() }}</div>
             <div class="stat-label">Visites terminees</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">ðY“</div>
+            <div class="stat-icon">Km</div>
             <div class="stat-value">{{ totalDistance().toFixed(1) }} km</div>
             <div class="stat-label">Distance totale</div>
           </div>
@@ -67,16 +67,16 @@ import { UserTrackingStats } from '../../../core/models/models';
 
         <!-- Users Stats Table -->
         <div class="table-container">
-          <h3>ðY“S Statistiques par commercial</h3>
+          <h3>Statistiques par commercial</h3>
           <table>
             <thead>
               <tr>
                 <th>Commercial</th>
                 <th>Visites</th>
-                <th>Terminees</th>
+                <th>Terminées</th>
                 <th>Distance (km)</th>
-                <th>Duree moy. (min)</th>
-                <th>Derniere activite</th>
+                <th>Durée moy. (min)</th>
+                <th>Dernière activité</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -91,12 +91,12 @@ import { UserTrackingStats } from '../../../core/models/models';
                   <td>{{ stat.lastActivity ? (stat.lastActivity | date:'dd/MM HH:mm') : '-' }}</td>
                   <td>
                     <a [routerLink]="'/tracking/history/' + stat.userId" class="btn-sm btn-view">
-                      ðY“ Historique
+                      Historique
                     </a>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="empty-row">Aucune donnee de tracking disponible.</td></tr>
+                <tr><td colspan="7" class="empty-row">Aucune donnée de tracking disponible.</td></tr>
               }
             </tbody>
           </table>
