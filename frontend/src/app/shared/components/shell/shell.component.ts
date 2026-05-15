@@ -10,10 +10,15 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
   imports: [RouterOutlet, RouterLinkActive],
   template: `
     <div class="shell-container">
+      @if (sidenavOpen()) {
+        <div class="sidenav-overlay" (click)="closeSidenav()"></div>
+      }
+
       <!-- a”€a”€ Sidenav a”€a”€ -->
       @if (sidenavOpen()) {
         <aside class="sidenav">
           <div class="brand">
+            <button type="button" class="sidenav-close" (click)="closeSidenav()">Fermer</button>
           </div>
 
           <nav class="nav-list">
@@ -77,7 +82,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
   styles: [`
     .shell-container {
       display: flex;
-      height: 100vh;
+      height: 100dvh;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
@@ -95,10 +100,21 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
     .brand {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 10px;
       padding: 18px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
+    .sidenav-close {
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      background: transparent;
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+    .sidenav-overlay { display: none; }
     .nav-list {
       padding: 6px 8px;
       flex: 1;
@@ -251,6 +267,42 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
       overflow-y: auto;
       background: #f5f7fa;
     }
+
+    @media (max-width: 900px) {
+      .toolbar {
+        padding: 0 10px;
+        height: 52px;
+      }
+
+      .menu-btn {
+        font-size: 18px;
+        padding: 6px;
+      }
+
+      .user-btn {
+        font-size: 12px;
+        padding: 4px 6px;
+      }
+
+      .page-wrapper {
+        padding: 12px;
+      }
+
+      .sidenav {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(84vw, 280px);
+        z-index: 1200;
+        box-shadow: 10px 0 28px rgba(15, 23, 42, 0.28);
+      }
+      .sidenav-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.3);
+        z-index: 1199;
+      }
+    }
   `]
 })
 export class ShellComponent {
@@ -268,7 +320,14 @@ export class ShellComponent {
 
   onNavItemClick(route: string): void {
     this.showUserMenu = false;
+    if (typeof window !== 'undefined' && window.innerWidth <= 900) {
+      this.sidenavOpen.set(false);
+    }
     this.router.navigateByUrl(route);
+  }
+
+  closeSidenav(): void {
+    this.sidenavOpen.set(false);
   }
 }
 

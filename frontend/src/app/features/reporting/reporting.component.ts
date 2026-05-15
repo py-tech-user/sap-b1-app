@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+﻿import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -88,7 +88,6 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
               <h3>Progression du chiffre d'affaires</h3><p>{{ variation(rapport.kpis.netRevenue, rapport.previousKpis.netRevenue) }}</p>
             </article>
           </div>
-          <p class="muted">Clique sur une carte pour mettre en avant cette information dans les tableaux.</p>
         </section>
 
         @if (estModeAdministrateur()) {
@@ -137,7 +136,7 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
         </section>
 
         <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
-          <h2>Impayés et créances</h2>
+          <h2>Impayés</h2>
           <table>
             <thead><tr><th>Client</th><th>Montant du</th><th>Article</th><th>Commercial</th><th>Date limite</th><th>Jours de retard</th></tr></thead>
             <tbody>@for (u of rapport.unpaidItems; track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>

@@ -56,7 +56,8 @@ interface InvoiceSelection {
             placeholder="Rechercher et sélectionner client" />
           <datalist id="encaissement-client-options">
             @for (client of clients(); track client.cardCode) {
-              <option [value]="clientPickerValue(client)" [label]="client.cardName + ' (' + client.cardCode + ') - ' + client.currency">{{ client.cardName }} ({{ client.cardCode }})</option>
+              <option [value]="client.cardCode"></option>
+              <option [value]="client.cardName"></option>
             }
           </datalist>
         </label>
@@ -567,11 +568,8 @@ export class EncaissementComponent {
   }
 
   clientPickerValue(client: EncaissementClient): string {
-    const name = String(client.cardName ?? '').trim();
     const code = String(client.cardCode ?? '').trim();
-    if (!name) return code;
-    if (!code) return name;
-    return `${name} (${code})`;
+    return code;
   }
 
   private resolveCommittedClientFromInput(input: string): EncaissementClient | null {
@@ -580,8 +578,8 @@ export class EncaissementComponent {
 
     return this.clients().find((client) => {
       const code = client.cardCode.toLowerCase();
-      const label = this.clientPickerValue(client).toLowerCase();
-      return typed === code || typed === label;
+      const name = client.cardName.toLowerCase();
+      return typed === code || typed === name;
     }) ?? null;
   }
 
@@ -592,16 +590,8 @@ export class EncaissementComponent {
     const exact = this.clients().find(c =>
       c.cardCode.toLowerCase() === typed
       || c.cardName.toLowerCase() === typed
-      || this.clientPickerValue(c).toLowerCase() === typed
     );
     if (exact) return exact;
-
-    const fromLabel = typed.match(/\(([^)]+)\)\s*$/);
-    if (fromLabel?.[1]) {
-      const extractedCode = fromLabel[1].trim().toLowerCase();
-      const byExtractedCode = this.clients().find(c => c.cardCode.toLowerCase() === extractedCode);
-      if (byExtractedCode) return byExtractedCode;
-    }
 
     const byCode = this.clients().find(c => c.cardCode.toLowerCase() === typed);
     if (byCode) return byCode;

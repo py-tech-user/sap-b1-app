@@ -39,6 +39,9 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
             </strong>
           </div>
           <div class="card"><label>Total</label><strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong></div>
+          @if (doc()!.comments && doc()!.comments!.trim() !== '') {
+            <div class="card comments-card"><label>Commentaires</label><strong>{{ doc()!.comments }}</strong></div>
+          }
         </div>
 
         <div class="card">
@@ -146,6 +149,7 @@ import { CommercialDocument, CommercialResource } from '../../../core/models/mod
     .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .action-hint { margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; }
     .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+    .comments-card { grid-column: 1 / -1; }
     .card label { display: block; color: #666; font-size: 0.78rem; margin-bottom: 0.25rem; }
     .status-badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.82rem; }
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }

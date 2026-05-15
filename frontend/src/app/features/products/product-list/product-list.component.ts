@@ -12,9 +12,14 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
     <div class="product-list">
       <div class="header">
         <h1>Catalogue</h1>
-        <button type="button" class="btn-primary" (click)="goToOrderFromCart()" [disabled]="cartLines().length === 0">
-          Commander ({{ cartLines().length }})
-        </button>
+        <div class="header-actions">
+          <button type="button" class="btn-secondary" (click)="toggleCart()" [disabled]="cartLines().length === 0">
+            Voir panier ({{ cartLines().length }})
+          </button>
+          <button type="button" class="btn-primary" (click)="goToOrderFromCart()" [disabled]="cartLines().length === 0">
+            Commander
+          </button>
+        </div>
       </div>
 
       @if (loading()) {
@@ -58,11 +63,10 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
 
                 <div class="product-content">
                   <div class="mini-table">
-                    <div class="k">Nom</div><div class="v">{{ product.itemName || '-' }}</div>
-                    <div class="k">Code</div><div class="v">{{ product.itemCode || '-' }}</div>
-                    <div class="k">Prix</div><div class="v">{{ product.price | number:'1.2-2' }} {{ currencyOf(product) }}</div>
-                    <div class="k">Stock</div><div class="v" [class.low-stock]="product.stock < 10">{{ product.stock }}</div>
-                    <div class="k">Groupe</div><div class="v">{{ product.groupName || '-' }}</div>
+                    <div class="title" [title]="product.itemName || '-'">{{ product.itemName || '-' }}</div>
+                    <div class="meta">{{ product.itemCode || '-' }} • {{ product.groupName || '-' }}</div>
+                    <div class="price">{{ product.price | number:'1.2-2' }} {{ currencyOf(product) }}</div>
+                    <div class="stock" [class.low-stock]="product.stock < 10">Stock: {{ product.stock }}</div>
                   </div>
                   <div class="actions">
                     <button type="button" class="btn-primary btn-sm" (click)="addToCart(product)">Ajouter au panier</button>
@@ -75,28 +79,41 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
       }
 
       @if (cartLines().length > 0) {
-        <div class="cart-panel">
-          <h3>Panier</h3>
-          @for (line of cartLines(); track line.itemCode) {
-            <div class="cart-row">
-              <div class="cart-main">
-                <strong>{{ line.itemName }}</strong>
-                <small>{{ line.itemCode }}</small>
+        <button type="button" class="cart-fab" (click)="toggleCart()">
+          Voir panier ({{ cartLines().length }})
+        </button>
+      }
+
+      @if (showCart() && cartLines().length > 0) {
+        <div class="cart-overlay" (click)="closeCart()"></div>
+        <aside class="cart-drawer" role="dialog" aria-modal="true" aria-label="Panier">
+          <div class="cart-head">
+            <h3>Panier ({{ cartLines().length }})</h3>
+            <button type="button" class="btn-secondary" (click)="closeCart()">Fermer</button>
+          </div>
+          <div class="cart-body">
+            @for (line of cartLines(); track line.itemCode) {
+              <div class="cart-row">
+                <div class="cart-main">
+                  <strong>{{ line.itemName }}</strong>
+                  <small>{{ line.itemCode }}</small>
+                </div>
+                <input type="number" min="1" [value]="line.quantity" (change)="onCartQtyChange(line.itemCode, $event)" />
+                <button type="button" class="btn-danger" (click)="removeFromCart(line.itemCode)">Suppr.</button>
               </div>
-              <input type="number" min="1" [value]="line.quantity" (change)="onCartQtyChange(line.itemCode, $event)" />
-              <button type="button" class="btn-danger" (click)="removeFromCart(line.itemCode)">Suppr.</button>
-            </div>
-          }
+            }
+          </div>
           <div class="cart-footer">
             <button type="button" class="btn-secondary" (click)="clearCart()">Vider panier</button>
             <button type="button" class="btn-primary" (click)="goToOrderFromCart()">Commander</button>
           </div>
-        </div>
+        </aside>
       }
     </div>
   `,
   styles: [`
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .header-actions { display: flex; gap: .45rem; }
     .subheader { display: flex; align-items: center; gap: .8rem; margin-bottom: .8rem; }
     .subheader h2 { margin: 0; font-size: 1.05rem; color: #1f2937; }
     .status { padding: 1rem; color: #374151; }
@@ -106,32 +123,46 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
     .group-card { text-align: left; border: 1px solid #e5e7eb; background: #fff; border-radius: 10px; padding: .85rem; cursor: pointer; display: grid; gap: .25rem; }
     .group-card strong { color: #111827; font-size: .98rem; }
     .group-card span { color: #6b7280; font-size: .85rem; }
-    .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: .75rem; }
-    .product-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); overflow: hidden; border: 1px solid #eef2f7; display: grid; grid-template-columns: 92px 1fr; }
-    .product-image-wrap { width: 92px; height: 92px; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
+    .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .6rem; }
+    .product-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #eef2f7; display: grid; grid-template-columns: 74px 1fr; }
+    .product-image-wrap { width: 74px; height: 74px; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
     .product-image { width: 100%; height: 100%; object-fit: cover; }
     .product-image.placeholder { font-size: 0.8rem; color: #94a3b8; font-weight: 600; }
-    .product-content { padding: 0.55rem .65rem; }
-    .actions { display: flex; justify-content: flex-end; margin-top: .4rem; }
+    .product-content { padding: 0.45rem .55rem; }
+    .actions { display: flex; justify-content: flex-end; margin-top: .35rem; }
     .btn-primary { padding: 0.55rem 0.95rem; border-radius: 6px; border: 1px solid #1976d2; background: #1976d2; color: #fff; cursor: pointer; font-weight: 600; }
     .btn-primary:disabled { background: #93c5fd; border-color: #93c5fd; cursor: not-allowed; }
-    .btn-sm { padding: 0.35rem 0.6rem; font-size: 0.8rem; }
-    .cart-panel { margin-top: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; padding: .75rem; background: #fff; }
-    .cart-panel h3 { margin: 0 0 .55rem; font-size: 1rem; }
+    .btn-sm { padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+
+    .mini-table { display: grid; gap: .15rem; }
+    .mini-table .title { color: #111827; font-size: .84rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-table .meta { color: #6b7280; font-size: .74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-table .price { color: #0f172a; font-size: .82rem; font-weight: 700; }
+    .mini-table .stock { color: #334155; font-size: .74rem; }
+    .low-stock { color: #dc2626; font-weight: 700; }
+
+    .cart-fab { position: fixed; right: 14px; bottom: 14px; z-index: 1000; padding: .65rem .9rem; border: 1px solid #1976d2; background: #1976d2; color: #fff; border-radius: 999px; font-weight: 700; box-shadow: 0 8px 18px rgba(25, 118, 210, 0.35); cursor: pointer; }
+    .cart-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 1200; }
+    .cart-drawer { position: fixed; right: 0; top: 0; height: 100dvh; width: min(420px, 100vw); background: #fff; z-index: 1201; display: flex; flex-direction: column; border-left: 1px solid #e5e7eb; box-shadow: -8px 0 24px rgba(15, 23, 42, 0.2); }
+    .cart-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .8rem; border-bottom: 1px solid #e5e7eb; }
+    .cart-head h3 { margin: 0; font-size: 1rem; }
+    .cart-body { flex: 1; overflow: auto; padding: .75rem; }
     .cart-row { display: grid; grid-template-columns: 1fr 80px auto; gap: .5rem; align-items: center; margin-bottom: .5rem; }
     .cart-main { display: grid; }
     .cart-main small { color: #6b7280; }
     .cart-row input { border: 1px solid #d1d5db; border-radius: 6px; padding: .35rem .45rem; }
     .btn-danger { padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #dc2626; background: #fff; color: #dc2626; cursor: pointer; font-weight: 600; }
-    .cart-footer { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .3rem; }
-    .mini-table { display: grid; grid-template-columns: 58px 1fr; gap: .22rem .45rem; align-items: baseline; }
-    .mini-table .k { color: #6b7280; font-size: .78rem; font-weight: 600; }
-    .mini-table .v { color: #111827; font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .low-stock { color: #dc2626; font-weight: 700; }
+    .cart-footer { display: flex; justify-content: flex-end; gap: .5rem; padding: .75rem; border-top: 1px solid #e5e7eb; background: #fff; }
+
     @media (max-width: 720px) {
       .group-grid, .catalog-grid { grid-template-columns: 1fr; }
-      .product-card { grid-template-columns: 80px 1fr; }
-      .product-image-wrap { width: 80px; height: 80px; }
+      .product-card { grid-template-columns: 66px 1fr; }
+      .product-image-wrap { width: 66px; height: 66px; }
+      .header { align-items: flex-start; gap: .5rem; }
+      .header-actions { width: 100%; justify-content: flex-end; }
+      .btn-primary, .btn-secondary { padding: .45rem .7rem; font-size: .82rem; }
+      .cart-row { grid-template-columns: 1fr 74px auto; }
+      .cart-fab { right: 10px; bottom: 10px; padding: .6rem .8rem; }
     }
   `]
 })
@@ -142,6 +173,7 @@ export class ProductListComponent implements OnInit {
   products = signal<Product[]>([]);
   visibleProducts = signal<Product[]>([]);
   cartLines = signal<CatalogCartLine[]>([]);
+  showCart = signal(false);
   selectedGroupCode = signal<number | null>(null);
   loadingGroups = signal(true);
   loadingProducts = signal(false);
@@ -208,17 +240,30 @@ export class ProductListComponent implements OnInit {
 
   removeFromCart(itemCode: string): void {
     this.cart.removeLine(itemCode);
-    this.cartLines.set(this.cart.getLines());
+    const lines = this.cart.getLines();
+    this.cartLines.set(lines);
+    if (lines.length === 0) this.showCart.set(false);
   }
 
   clearCart(): void {
     this.cart.clear();
     this.cartLines.set([]);
+    this.showCart.set(false);
   }
 
   goToOrderFromCart(): void {
     if (this.cartLines().length === 0) return;
+    this.showCart.set(false);
     this.router.navigate(['/orders/new'], { queryParams: { fromCatalog: '1' } });
+  }
+
+  toggleCart(): void {
+    if (this.cartLines().length === 0) return;
+    this.showCart.set(!this.showCart());
+  }
+
+  closeCart(): void {
+    this.showCart.set(false);
   }
 
   private loadGroups(): void {
@@ -230,7 +275,6 @@ export class ProductListComponent implements OnInit {
       next: (groups) => {
         this.groups.set(groups);
         this.loadingGroups.set(false);
-        // Show groups immediately; products continue in background.
         this.loading.set(false);
       },
       error: (err) => {

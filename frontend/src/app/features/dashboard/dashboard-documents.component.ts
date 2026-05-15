@@ -43,9 +43,9 @@ type DocTypeFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoices';
           Statut
           <select [(ngModel)]="statusFilter" (change)="noop()">
             <option value="all">Tous</option>
-            <option value="En attente">En attente</option>
-            <option value="Cloture">Cloture</option>
-            <option value="Annule">Annule</option>
+            <option value="open">En attente</option>
+            <option value="closed">Clôturé</option>
+            <option value="cancelled">Annulé</option>
           </select>
         </label>
         @if (isAdminMode()) {
@@ -129,10 +129,10 @@ export class DashboardDocumentsComponent implements OnInit {
   type: DocTypeFilter = 'all';
   docSearch = '';
   customerSearch = '';
-  statusFilter = 'all';
+  statusFilter: 'all' | 'open' | 'closed' | 'cancelled' = 'all';
   salesPersonCode = 0;
 
-  readonly filtered = computed(() => {
+  filtered(): ReportingRecentDocument[] {
     const type = this.type;
     const docQ = this.docSearch.trim().toLowerCase();
     const custQ = this.customerSearch.trim().toLowerCase();
@@ -141,10 +141,10 @@ export class DashboardDocumentsComponent implements OnInit {
       if (type !== 'all' && this.typeOf(d) !== type) return false;
       if (docQ && !String(d.docNum ?? '').toLowerCase().includes(docQ)) return false;
       if (custQ && !String(d.cardName ?? '').toLowerCase().includes(custQ)) return false;
-      if (statusQ !== 'all' && String(d.status ?? '').trim() !== statusQ) return false;
+      if (statusQ !== 'all' && this.normalizeStatus(d.status) !== statusQ) return false;
       return true;
     });
-  });
+  }
 
   readonly docSuggestions = computed(() => this.documents().map((d) => String(d.docNum ?? '')).filter(Boolean).slice(0, 80));
   readonly customerSuggestions = computed(() => this.documents().map((d) => String(d.cardName ?? '')).filter(Boolean).slice(0, 80));
@@ -195,6 +195,34 @@ export class DashboardDocumentsComponent implements OnInit {
     if (normalized.includes('livraison') || normalized.includes('delivery')) return 'deliverynotes';
     if (normalized.includes('facture') || normalized.includes('invoice')) return 'invoices';
     return 'all';
+  }
+
+  private normalizeStatus(rawStatus: string | null | undefined): 'open' | 'closed' | 'cancelled' {
+    const status = String(rawStatus ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (
+      status.includes('annul') ||
+      status.includes('cancel') ||
+      status === 'canceled' ||
+      status === 'cancelled'
+    ) {
+      return 'cancelled';
+    }
+
+    if (
+      status.includes('clotur') ||
+      status.includes('ferme') ||
+      status.includes('closed') ||
+      status === 'close'
+    ) {
+      return 'closed';
+    }
+
+    return 'open';
   }
 
   private defaultMonth(): string {

@@ -35,7 +35,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
             <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sélectionner client" />
             <datalist id="customer-options">
               @for (c of customers(); track c.id) {
-                <option [value]="customerPickerValue(c)" [label]="(c.cardName || '-') + ' (' + (c.cardCode || '-') + ')'"></option>
+                <option [value]="c.cardCode"></option>
+                <option [value]="c.cardName"></option>
               }
             </datalist>
           </div>
@@ -867,11 +868,8 @@ export class DocumentFormComponent implements OnInit {
   }
 
   customerPickerValue(customer: Customer): string {
-    const cardName = String(customer.cardName ?? '').trim();
     const cardCode = String(customer.cardCode ?? '').trim();
-    if (!cardName) return cardCode;
-    if (!cardCode) return cardName;
-    return `${cardName} (${cardCode})`;
+    return cardCode;
   }
 
   private extractCardCode(value: string): string {
@@ -884,12 +882,6 @@ export class DocumentFormComponent implements OnInit {
 
     const asName = customers.find(c => String(c.cardName ?? '').trim().toLowerCase() === raw.toLowerCase());
     if (asName?.cardCode) return asName.cardCode;
-
-    const parenthesizedCode = raw.match(/\(([^)]+)\)\s*$/);
-    if (parenthesizedCode?.[1]) {
-      const extracted = parenthesizedCode[1].trim();
-      if (extracted) return extracted;
-    }
 
     const separatorIndex = raw.indexOf(' - ');
     if (separatorIndex > 0) {

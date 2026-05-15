@@ -16,6 +16,10 @@ html, body {
   background: #f5f7fa;
 }
 
+body {
+  overflow: hidden;
+}
+
 a {
   color: #1976d2;
   text-decoration: none;
@@ -31,6 +35,21 @@ table {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+img, svg, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+input, select, textarea, button {
+  max-width: 100%;
+}
+
+.page-wrapper > * {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
 }
 
 thead {
@@ -197,4 +216,39 @@ th {
 /* Offset body if demo mode is active */
 body:has(.demo-badge-container) {
   padding-top: 30px;
+}
+
+@media (max-width: 900px) {
+  html, body {
+    font-size: 13px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+  }
+
+  .header {
+    margin-bottom: 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  .stats-grid {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
 }

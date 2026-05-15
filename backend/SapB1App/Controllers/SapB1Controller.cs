@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SapB1App.Data;
 using SapB1App.DTOs;
 using SapB1App.Interfaces;
@@ -21,19 +22,22 @@ public class SapB1Controller : ControllerBase
     private readonly AppDbContext _db;
     private readonly IConfiguration _configuration;
     private readonly ILogger<SapB1Controller> _logger;
+    private readonly IMemoryCache _cache;
 
     public SapB1Controller(
         ISapB1Service sapService,
         ICurrentUserService currentUserService,
         AppDbContext db,
         IConfiguration configuration,
-        ILogger<SapB1Controller> logger)
+        ILogger<SapB1Controller> logger,
+        IMemoryCache cache)
     {
         _sapService = sapService;
         _currentUserService = currentUserService;
         _db = db;
         _configuration = configuration;
         _logger = logger;
+        _cache = cache;
     }
 
     [HttpPost("login")]
@@ -95,6 +99,10 @@ public class SapB1Controller : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems(CancellationToken cancellationToken)
     {
+        const string itemsCacheKey = "sap:items:all";
+        if (_cache.TryGetValue(itemsCacheKey, out List<SapItemDto>? cachedItems) && cachedItems is not null)
+            return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, cachedItems, cachedItems.Count));
+
         var configuredPriceList = await ResolveDefaultPriceListAsync(cancellationToken);
 
         var sql = @"
@@ -156,6 +164,7 @@ ORDER BY I.ItemCode;";
             return StatusCode(500, SapError("Erreur SQL lors du chargement du catalogue."));
         }
 
+        _cache.Set(itemsCacheKey, items, TimeSpan.FromMinutes(2));
         return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, items.Count));
     }
 
@@ -163,6 +172,10 @@ ORDER BY I.ItemCode;";
     [AllowAnonymous]
     public async Task<ActionResult<ApiResponse<object>>> GetItemGroups(CancellationToken cancellationToken)
     {
+        const string itemGroupsCacheKey = "sap:item-groups:all";
+        if (_cache.TryGetValue(itemGroupsCacheKey, out List<object>? cachedGroups) && cachedGroups is not null)
+            return Ok(new ApiResponse<IReadOnlyList<object>>(true, null, cachedGroups, cachedGroups.Count));
+
         const string sql = @"
 SELECT
     ISNULL(B.ItmsGrpCod, 0) AS GroupCode,
@@ -202,6 +215,7 @@ ORDER BY B.ItmsGrpNam, B.ItmsGrpCod;";
             return StatusCode(500, SapError("Erreur SQL lors du chargement des groupes d articles."));
         }
 
+        _cache.Set(itemGroupsCacheKey, groups, TimeSpan.FromMinutes(5));
         return Ok(new ApiResponse<IReadOnlyList<object>>(true, null, groups, groups.Count));
     }
 
@@ -261,6 +275,7 @@ ORDER BY B.ItmsGrpNam, B.ItmsGrpCod;";
         if (string.IsNullOrWhiteSpace(safeItemCode))
             return BadRequest(SapError("ItemCode image invalide."));
 
+        // Images: priorité Service Layer ItemImages, puis fallback local SQL/fichier.
         var (sessionOk, sessionId, _, _, sessionError) = await _sapService.LoginServiceLayerWithSessionIdAsync(cancellationToken);
         if (sessionOk && !string.IsNullOrWhiteSpace(sessionId))
         {
@@ -297,7 +312,6 @@ ORDER BY B.ItmsGrpNam, B.ItmsGrpCod;";
             _logger.LogWarning("Session Service Layer indisponible pour image item {ItemCode}. Error={Error}", safeItemCode, sessionError);
         }
 
-        // Fallback fichier local via PicturName si ItemImages n'est pas exposé.
         var pictureName = await ResolvePictureNameByItemCodeAsync(safeItemCode, cancellationToken);
         if (!string.IsNullOrWhiteSpace(pictureName))
             return await GetItemImage(pictureName, cancellationToken);
@@ -1224,7 +1238,7 @@ WHERE CardCode IN ({inSql});";
         CancellationToken cancellationToken)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Max(1, pageSize);
+        pageSize = Math.Clamp(pageSize, 1, 500);
         var allItems = new List<DocumentViewDto>();
         var isAdmin = _currentUserService.IsAdmin();
         var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
@@ -1312,6 +1326,10 @@ WHERE CardCode IN ({inSql});";
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
 
+        var cacheKey = $"reporting:commercial:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{isAdmin}:{scopedSalesPersonCode?.ToString() ?? "none"}";
+        if (_cache.TryGetValue(cacheKey, out CommercialReportingResponseDto? cached) && cached is not null)
+            return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, cached));
+
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
         if (conn is null)
             return StatusCode(500, SapError("Connexion SQL impossible."));
@@ -1381,6 +1399,7 @@ WHERE CardCode IN ({inSql});";
             .Where(member => !response.TeamPerformances.Any(t => t.SalesPersonCode == member.SalesPersonCode && (t.QuotesCount + t.OrdersCount + t.InvoicesCount) > 0))
             .ToList();
 
+        _cache.Set(cacheKey, response, TimeSpan.FromSeconds(30));
         return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, response));
     }
 
@@ -1421,6 +1440,11 @@ WHERE CardCode IN ({inSql});";
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
 
+        var normalizedSearch = (search ?? string.Empty).Trim().ToLowerInvariant();
+        var cacheKey = $"reporting:partners-activity:{periodStart:yyyyMMddHHmm}:{periodEnd:yyyyMMddHHmm}:{scopedSalesPersonCode?.ToString() ?? "none"}:{activity}:{normalizedSearch}";
+        if (_cache.TryGetValue(cacheKey, out List<CommercialPartnerActivityDto>? cached) && cached is not null)
+            return Ok(new ApiResponse<List<CommercialPartnerActivityDto>>(true, null, cached, cached.Count));
+
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
         if (conn is null)
             return StatusCode(500, SapError("Connexion SQL impossible."));
@@ -1436,6 +1460,7 @@ WHERE CardCode IN ({inSql});";
                 search,
                 cancellationToken);
 
+            _cache.Set(cacheKey, rows, TimeSpan.FromSeconds(30));
             return Ok(new ApiResponse<List<CommercialPartnerActivityDto>>(true, null, rows, rows.Count));
         }
     }
@@ -1452,6 +1477,10 @@ WHERE CardCode IN ({inSql});";
 
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
+
+        var cacheKey = $"reporting:partner-debts:{isAdmin}:{scopedSalesPersonCode?.ToString() ?? "none"}";
+        if (_cache.TryGetValue(cacheKey, out List<PartnerDebtDto>? cached) && cached is not null)
+            return Ok(new ApiResponse<List<PartnerDebtDto>>(true, null, cached, cached.Count));
 
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
         if (conn is null)
@@ -1519,6 +1548,7 @@ ORDER BY BP.CardName, BP.CardCode;";
                 .Where(r => r.PartnerOwesCompanyAmount > 0m || r.CompanyOwesPartnerAmount > 0m)
                 .ToList();
 
+            _cache.Set(cacheKey, rows, TimeSpan.FromSeconds(45));
             return Ok(new ApiResponse<List<PartnerDebtDto>>(true, null, rows, rows.Count));
         }
     }
@@ -1545,6 +1575,10 @@ ORDER BY BP.CardName, BP.CardCode;";
         var currentSalesPerson = _currentUserService.GetSapSalesPersonCode();
         var scopedSalesPersonCode = isAdmin ? salesPersonCode : currentSalesPerson;
         if (!isAdmin && scopedSalesPersonCode <= 0) return Forbid();
+
+        var cacheKey = $"reporting:advanced:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(itemCode ?? string.Empty).Trim().ToLowerInvariant()}:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:{isAdmin}";
+        if (_cache.TryGetValue(cacheKey, out AdvancedReportingResponseDto? cached) && cached is not null)
+            return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, cached));
 
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
         if (conn is null)
@@ -1611,6 +1645,7 @@ ORDER BY BP.CardName, BP.CardCode;";
             response.SelectedSalesPersonName = response.TeamMembers
                 .FirstOrDefault(x => x.SalesPersonCode == response.SelectedSalesPersonCode)?.SalesPersonName;
 
+            _cache.Set(cacheKey, response, TimeSpan.FromSeconds(30));
             return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, response));
         }
     }
@@ -2506,7 +2541,18 @@ ORDER BY BP.CardName, BP.CardCode;";
             ? "(ISNULL(CANCELED,'N') <> 'Y' AND (ISNULL(DocStatus,'') = 'C' OR ((ISNULL(DocTotal,0) - ISNULL(PaidToDate,0)) <= 0 AND (ISNULL(DocTotalFC,0) - ISNULL(PaidFC,0)) <= 0)))"
             : "(ISNULL(CANCELED,'N') <> 'Y' AND ISNULL(DocStatus,'C') = 'C')";
         var salesScopeCondition = applySalesScope
-            ? "      AND (@isAdmin = 1 OR (@salesPersonCode > 0 AND SlpCode = @salesPersonCode))"
+            ? @"      AND (
+                    @isAdmin = 1
+                    OR (
+                        @salesPersonCode > 0
+                        AND EXISTS (
+                            SELECT 1
+                            FROM OCRD BP
+                            WHERE BP.CardCode = CardCode
+                              AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+                        )
+                    )
+                  )"
             : string.Empty;
 
         var sql = $@"
@@ -5511,5 +5557,6 @@ public class SapItemWarehouseDto
     public string WarehouseCode { get; set; } = string.Empty;
     public decimal InStock { get; set; }
 }
+
 
 

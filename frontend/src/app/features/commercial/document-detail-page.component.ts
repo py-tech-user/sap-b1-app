@@ -69,6 +69,12 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
               {{ statusLabel(doc()!.status) }}
             </strong>
           </div>
+          @if (doc()!.comments && doc()!.comments!.trim() !== '') {
+            <div class="card comments-card">
+              <label>Commentaires</label>
+              <strong>{{ doc()!.comments }}</strong>
+            </div>
+          }
         </div>
 
         <div class="card">
@@ -157,20 +163,21 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     </div>
   `,
   styles: [`
-    .page { display: flex; flex-direction: column; gap: 0.7rem; }
-    .header { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: start; }
-    .header h1 { margin: 0; font-size: 1.2rem; line-height: 1.25; }
-    .header-relations { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.35rem 0.5rem; background: #fcfcfd; min-height: 2.1rem; }
+    .page { display: flex; flex-direction: column; gap: 0.55rem; }
+    .header { display: grid; grid-template-columns: auto 1fr auto; gap: 0.55rem; align-items: start; }
+    .header h1 { margin: 0; font-size: 1.08rem; line-height: 1.2; }
+    .header-relations { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.28rem 0.42rem; background: #fcfcfd; min-height: 1.85rem; }
     .header-rel-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
     .chips-wrap { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-    .header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .card { background: #fff; border-radius: 8px; padding: 0.7rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .header-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    .card { background: #fff; border-radius: 8px; padding: 0.55rem; box-shadow: 0 1px 2px rgba(0,0,0,0.07); }
     .action-hint { margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; }
-    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; }
-    .card label { display: block; color: #666; font-size: 0.78rem; margin-bottom: 0.25rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45rem; }
+    .comments-card { grid-column: 1 / -1; }
+    .card label { display: block; color: #666; font-size: 0.74rem; margin-bottom: 0.2rem; }
     .total-card { display: flex; justify-content: flex-end; align-items: baseline; gap: 0.6rem; }
-    .total-card label { margin-bottom: 0; font-size: 0.9rem; color: #374151; }
-    .total-card strong { font-size: 1.1rem; }
+    .total-card label { margin-bottom: 0; font-size: 0.82rem; color: #374151; }
+    .total-card strong { font-size: 1rem; }
     .status-badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.82rem; }
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }
     .status-badge.closed { background: #f3f4f6; color: #374151; }
@@ -183,13 +190,23 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .btn-disabled { opacity: 0.5; cursor: not-allowed; }
     h4 { margin-top: 0.5rem; margin-bottom: 0.4rem; }
     .links { margin: 0; padding-left: 1.1rem; }
-    .action-feedback { font-weight: 700; font-size: 0.9rem; }
+    .action-feedback { font-weight: 700; font-size: 0.82rem; }
     .action-feedback.success { color: #1b5e20; }
     .error { color: #b00020; }
     .empty { color: #888; }
+    table { font-size: 0.86rem; }
+    th, td { padding: 0.38rem 0.42rem; }
     @media (max-width: 1024px) {
       .header { grid-template-columns: 1fr; }
       .info-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 720px) {
+      .page { gap: 0.45rem; }
+      .card { padding: 0.5rem; }
+      .header h1 { font-size: 1rem; }
+      .header-actions .btn-primary, .header-actions .btn-danger { padding: 0.38rem 0.52rem; font-size: 0.78rem; }
+      .info-grid { grid-template-columns: 1fr; }
+      th, td { padding: 0.32rem 0.35rem; font-size: 0.8rem; }
     }
   `]
 })

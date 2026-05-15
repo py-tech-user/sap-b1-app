@@ -71,6 +71,7 @@ builder.Services.AddScoped<ITrackingService, TrackingService>();
 // ─── SAP B1 DI API Service (Scoped pour gestion de connexion par requête) ───
 builder.Services.AddScoped<ISapB1Service, SapB1Service>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 
 // ─── JWT Authentication ─────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
