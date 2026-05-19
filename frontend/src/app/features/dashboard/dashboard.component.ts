@@ -8,6 +8,9 @@ import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 
+type SortDirection = 'none' | 'asc' | 'desc';
+type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partnerOwesCompanyAmount' | 'companyOwesPartnerAmount';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -138,11 +141,11 @@ import { AuthService } from '../../core/services/auth.service';
         <table>
           <thead>
             <tr>
-              @if (isAdminMode()) { <th>Commercial</th> }
-              <th>Code partenaire</th>
-              <th>Nom partenaire</th>
-              <th>Partenaire doit a l'entreprise</th>
-              <th>L'entreprise doit au partenaire</th>
+              @if (isAdminMode()) { <th><button type="button" class="sort-btn" (click)="togglePartnerDebtSort('salesPersonName')">Commercial {{ sortIndicator(partnerDebtSortKey(), partnerDebtSortDirection(), 'salesPersonName') }}</button></th> }
+              <th><button type="button" class="sort-btn" (click)="togglePartnerDebtSort('cardCode')">Code partenaire {{ sortIndicator(partnerDebtSortKey(), partnerDebtSortDirection(), 'cardCode') }}</button></th>
+              <th><button type="button" class="sort-btn" (click)="togglePartnerDebtSort('cardName')">Nom partenaire {{ sortIndicator(partnerDebtSortKey(), partnerDebtSortDirection(), 'cardName') }}</button></th>
+              <th><button type="button" class="sort-btn" (click)="togglePartnerDebtSort('partnerOwesCompanyAmount')">Partenaire doit a l'entreprise {{ sortIndicator(partnerDebtSortKey(), partnerDebtSortDirection(), 'partnerOwesCompanyAmount') }}</button></th>
+              <th><button type="button" class="sort-btn" (click)="togglePartnerDebtSort('companyOwesPartnerAmount')">L'entreprise doit au partenaire {{ sortIndicator(partnerDebtSortKey(), partnerDebtSortDirection(), 'companyOwesPartnerAmount') }}</button></th>
             </tr>
           </thead>
           <tbody>
@@ -159,6 +162,11 @@ import { AuthService } from '../../core/services/auth.service';
             }
           </tbody>
         </table>
+        @if (canExpandPartnerDebts()) {
+          <div class="table-actions">
+            <button type="button" (click)="expandPartnerDebts()" [disabled]="loadingMorePartnerDebts()">Expand (+10)</button>
+          </div>
+        }
       </section>
     </div>
   `,
@@ -185,6 +193,10 @@ import { AuthService } from '../../core/services/auth.service';
     .debts-card table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
     .debts-card th, .debts-card td { border-bottom: 1px solid #edf0f4; padding: .5rem; text-align: left; }
     .debts-card th { background: #f8fafc; color: #475569; }
+    .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 700; }
+    .table-actions { display: flex; justify-content: center; margin-top: .75rem; }
+    .table-actions button { border: 1px solid #d1d5db; background: #fff; border-radius: 8px; padding: .45rem .9rem; cursor: pointer; }
+    .table-actions button[disabled] { opacity: .55; cursor: default; }
     @media (max-width: 900px) {
       .transform-grid { grid-template-columns: 1fr; }
       .header-left { width: 100%; }
@@ -213,13 +225,24 @@ export class DashboardComponent implements OnInit {
   readonly partnerDebtSearch = signal('');
   readonly report = signal<CommercialReportingPayload | null>(null);
   readonly partnerDebts = signal<PartnerDebtItem[]>([]);
+  readonly partnerDebtsTotal = signal(0);
+  readonly loadingMorePartnerDebts = signal(false);
+  readonly partnerDebtSortKey = signal<PartnerDebtSortKey | null>(null);
+  readonly partnerDebtSortDirection = signal<SortDirection>('none');
+  readonly canExpandPartnerDebts = computed(() => this.partnerDebts().length < this.partnerDebtsTotal());
+  private partnerDebtsPage = 1;
+  private readonly partnerDebtsPageSize = 10;
   readonly filteredPartnerDebts = computed(() => {
     const q = this.partnerDebtSearch().trim().toLowerCase();
-    if (!q) return this.partnerDebts();
-    return this.partnerDebts().filter((row) =>
+    const baseRows = !q ? this.partnerDebts() : this.partnerDebts().filter((row) =>
       String(row.cardCode ?? '').toLowerCase().includes(q) ||
       String(row.cardName ?? '').toLowerCase().includes(q)
     );
+    const sortKey = this.partnerDebtSortKey();
+    const sortDirection = this.partnerDebtSortDirection();
+    if (!sortKey || sortDirection === 'none') return baseRows;
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...baseRows].sort((a, b) => this.comparePartnerDebt(a, b, sortKey) * direction);
   });
   readonly partnerDebtSuggestions = computed(() =>
     this.partnerDebts()
@@ -260,19 +283,29 @@ export class DashboardComponent implements OnInit {
         this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined
       ),
       partnerDebts: this.reportingApi.getPartnerDebts(
-        this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined
-      ),
-      customers: this.http.get<any>(`${this.api}/sap/partners?page=1&pageSize=1`),
-      products: this.http.get<any>(`${this.api}/sap/items?page=1&pageSize=1`)
+        this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
+        1,
+        this.partnerDebtsPageSize
+      )
     }).subscribe({
-      next: ({ reporting, partnerDebts, customers, products }) => {
+      next: ({ reporting, partnerDebts }) => {
+        this.partnerDebtsPage = 1;
         this.report.set(reporting.data);
         this.partnerDebts.set(partnerDebts.data ?? []);
-        this.partnersCount.set(this.extractTotal(customers));
-        this.catalogCount.set(this.extractTotal(products));
+        this.partnerDebtsTotal.set(Number(partnerDebts.totalCount ?? (partnerDebts.data?.length ?? 0)));
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
+    });
+
+    this.http.get<any>(`${this.api}/sap/partners?page=1&pageSize=1`).subscribe({
+      next: (customers) => this.partnersCount.set(this.extractTotal(customers)),
+      error: () => this.partnersCount.set(0)
+    });
+
+    this.http.get<any>(`${this.api}/sap/items?page=1&pageSize=1`).subscribe({
+      next: (products) => this.catalogCount.set(this.extractTotal(products)),
+      error: () => this.catalogCount.set(0)
     });
   }
 
@@ -286,6 +319,50 @@ export class DashboardComponent implements OnInit {
 
   onPartnerDebtSearchChange(value: string): void {
     this.partnerDebtSearch.set(String(value ?? ''));
+  }
+
+  togglePartnerDebtSort(key: PartnerDebtSortKey): void {
+    const currentKey = this.partnerDebtSortKey();
+    const currentDirection = this.partnerDebtSortDirection();
+    if (currentKey !== key) {
+      this.partnerDebtSortKey.set(key);
+      this.partnerDebtSortDirection.set('asc');
+      return;
+    }
+    if (currentDirection === 'asc') {
+      this.partnerDebtSortDirection.set('desc');
+      return;
+    }
+    if (currentDirection === 'desc') {
+      this.partnerDebtSortDirection.set('none');
+      this.partnerDebtSortKey.set(null);
+      return;
+    }
+    this.partnerDebtSortDirection.set('asc');
+  }
+
+  sortIndicator(activeKey: string | null, activeDirection: SortDirection, key: string): string {
+    if (activeKey !== key || activeDirection === 'none') return '';
+    return activeDirection === 'asc' ? '↑' : '↓';
+  }
+
+  expandPartnerDebts(): void {
+    if (!this.canExpandPartnerDebts() || this.loadingMorePartnerDebts()) return;
+    this.loadingMorePartnerDebts.set(true);
+    const nextPage = this.partnerDebtsPage + 1;
+    this.reportingApi.getPartnerDebts(
+      this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
+      nextPage,
+      this.partnerDebtsPageSize
+    ).subscribe({
+      next: (res) => {
+        this.partnerDebtsPage = nextPage;
+        this.partnerDebts.set([...this.partnerDebts(), ...(res.data ?? [])]);
+        this.partnerDebtsTotal.set(Number(res.totalCount ?? this.partnerDebtsTotal()));
+        this.loadingMorePartnerDebts.set(false);
+      },
+      error: () => this.loadingMorePartnerDebts.set(false)
+    });
   }
 
   private extractTotal(res: any): number {
@@ -314,5 +391,17 @@ export class DashboardComponent implements OnInit {
     const [y, m] = this.month().split('-').map(Number);
     const end = new Date(y, (m || 1), 1, 0, 0, 0, 0);
     return end.toISOString();
+  }
+
+  private comparePartnerDebt(a: PartnerDebtItem, b: PartnerDebtItem, key: PartnerDebtSortKey): number {
+    if (key === 'partnerOwesCompanyAmount' || key === 'companyOwesPartnerAmount') {
+      return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
+    }
+    if (key === 'salesPersonName') {
+      const av = String(a.salesPersonName || `#${a.salesPersonCode || 0}`).toLowerCase();
+      const bv = String(b.salesPersonName || `#${b.salesPersonCode || 0}`).toLowerCase();
+      return av.localeCompare(bv);
+    }
+    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
   }
 }

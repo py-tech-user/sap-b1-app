@@ -6,6 +6,10 @@ import { AdvancedReportingPayload, ReportingApiService } from '../../core/servic
 
 type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
 type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | 'impayes';
+type SortDirection = 'none' | 'asc' | 'desc';
+type UnpaidSortKey = 'cardName' | 'dueAmount' | 'itemName' | 'salesPersonName' | 'dueDate' | 'overdueDays';
+type TopProductSortKey = 'itemName' | 'salesCount' | 'revenue' | 'salesPeopleCount' | 'mainClientName';
+type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' | 'contractsCount' | 'mainSalesPersonName';
 
 @Component({
   selector: 'app-reporting',
@@ -65,7 +69,7 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
 
       @if (chargement()) { <p>Chargement...</p> }
 
-      @if (!chargement() && data(); as rapport) {
+      @if (data(); as rapport) {
         <section class="panel">
           <h2>Indicateurs clés de performance</h2>
           <div class="kpi-grid">
@@ -83,9 +87,6 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
             </article>
             <article class="kpi" [class.active]="metriqueActive === 'impayes'" (click)="activerMetrique('impayes')">
               <h3>Impayés</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
-            </article>
-            <article class="kpi">
-              <h3>Progression du chiffre d'affaires</h3><p>{{ variation(rapport.kpis.netRevenue, rapport.previousKpis.netRevenue) }}</p>
             </article>
           </div>
         </section>
@@ -110,37 +111,59 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
         <section class="panel">
           <h2>Classements globaux</h2>
           <table>
-            <thead><tr><th>Article</th><th>Nombre de ventes</th><th>Chiffre d'affaires</th><th>Nombre de commerciaux</th><th>Client principal</th></tr></thead>
-            <tbody>@for (p of rapport.topProducts; track p.itemCode) {<tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ p.salesCount }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.salesPeopleCount }}</td><td>{{ p.mainClientName || '-' }}</td></tr>}</tbody>
+            <thead>
+              <tr>
+                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('itemName')">Article {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'itemName') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('salesCount')">Nombre de ventes {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'salesCount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('revenue')">Chiffre d'affaires {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'revenue') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('salesPeopleCount')">Nombre de commerciaux {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'salesPeopleCount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('mainClientName')">Client principal {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'mainClientName') }}</button></th>
+              </tr>
+            </thead>
+            <tbody>@for (p of sortedTopProducts(rapport); track p.itemCode) {<tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ p.salesCount }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.salesPeopleCount }}</td><td>{{ p.mainClientName || '-' }}</td></tr>}</tbody>
           </table>
           <table>
-            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant paye</th><th>Montant en attente</th><th>Nombre de contrats</th><th>Commercial principal</th></tr></thead>
-            <tbody>@for (c of rapport.topClients; track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.mainSalesPersonName || '-' }}</td></tr>}</tbody>
+            <thead>
+              <tr>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('cardName')">Client {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'cardName') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('revenue')">Chiffre d'affaires {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'revenue') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('paidAmount')">Montant paye {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'paidAmount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('pendingAmount')">Montant en attente {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'pendingAmount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('contractsCount')">Nombre de contrats {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'contractsCount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('mainSalesPersonName')">Commercial principal {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'mainSalesPersonName') }}</button></th>
+              </tr>
+            </thead>
+            <tbody>@for (c of sortedTopClients(rapport); track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.mainSalesPersonName || '-' }}</td></tr>}</tbody>
           </table>
-        </section>
-
-        <section class="panel">
-          <h2>Analyses détaillées</h2>
-          <table>
-            <thead><tr><th>Article</th><th>Quantité vendue</th><th>Chiffre d'affaires</th><th>Nombre de clients</th><th>Client principal</th><th>Évolution</th></tr></thead>
-            <tbody>@for (r of rapport.productDetails; track r.itemCode) {<tr><td>{{ r.itemName || r.itemCode }}</td><td>{{ r.quantitySold }}</td><td>{{ monnaie(r.revenue) }}</td><td>{{ r.clientsCount }}</td><td>{{ r.mainClientName || '-' }}</td><td>{{ pourcentage(r.trendPercent) }}</td></tr>}</tbody>
-          </table>
-          <table>
-            <thead><tr><th>Client</th><th>Chiffre d'affaires</th><th>Montant payé</th><th>Montant en attente</th><th>Pourcentage de paiement</th><th>Nombre de contrats</th><th>Article favori</th></tr></thead>
-            <tbody>@for (c of rapport.clientDetails; track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ pourcentage(c.paymentRate) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.favoriteItemName || '-' }}</td></tr>}</tbody>
-          </table>
-          <table>
-            <thead><tr><th>Partenaire</th><th>Chiffre d'affaires</th><th>Nombre de devis</th><th>Articles vendus</th><th>Commerciaux utilisateurs</th></tr></thead>
-            <tbody>@for (p of rapport.partnerDetails; track p.partnerCode) {<tr><td>{{ p.partnerName }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.quotesCount }}</td><td>{{ p.productsCount }}</td><td>{{ p.salesPeopleCount }}</td></tr>}</tbody>
-          </table>
+          @if (canExpandTable(rapport.topClients.length) || canCollapseTables()) {
+            <div class="table-actions">
+              @if (canCollapseTables()) { <button type="button" (click)="reduceTables()">Voir moins (-10)</button> }
+              @if (canExpandTable(rapport.topClients.length)) { <button type="button" (click)="expandTables()">Voir plus (+10)</button> }
+            </div>
+          }
         </section>
 
         <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
           <h2>Impayés</h2>
           <table>
-            <thead><tr><th>Client</th><th>Montant du</th><th>Article</th><th>Commercial</th><th>Date limite</th><th>Jours de retard</th></tr></thead>
-            <tbody>@for (u of rapport.unpaidItems; track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>
+            <thead>
+              <tr>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('cardName')">Client {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'cardName') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('dueAmount')">Montant du {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'dueAmount') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('itemName')">Article {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'itemName') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('salesPersonName')">Commercial {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'salesPersonName') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('dueDate')">Date limite {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'dueDate') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('overdueDays')">Jours de retard {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'overdueDays') }}</button></th>
+              </tr>
+            </thead>
+            <tbody>@for (u of sortedUnpaidItems(rapport); track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>
           </table>
+          @if (canExpandTable(rapport.unpaidItems.length) || canCollapseTables()) {
+            <div class="table-actions">
+              @if (canCollapseTables()) { <button type="button" (click)="reduceTables()">Voir moins (-10)</button> }
+              @if (canExpandTable(rapport.unpaidItems.length)) { <button type="button" (click)="expandTables()">Voir plus (+10)</button> }
+            </div>
+          }
         </section>
       }
     </div>
@@ -166,6 +189,9 @@ type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | '
     table { width: 100%; border-collapse: collapse; margin-top: .7rem; }
     th, td { border-bottom: 1px solid #ecf1f6; padding: .45rem; text-align: left; font-size: .9rem; }
     th { background: #f8fbff; color: #51657e; }
+    .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 700; }
+    .table-actions { display: flex; justify-content: center; margin-top: .65rem; }
+    .table-actions button { border: 1px solid #cad7e5; border-radius: 8px; background: #fff; padding: .45rem .85rem; cursor: pointer; }
     .muted { color: #6b7280; font-size: .9rem; }
     .highlight { border-color: #f59e0b; }
     @media (max-width: 1100px) { .filters, .kpi-grid { grid-template-columns: 1fr 1fr; } .camembert-zone { grid-template-columns: 1fr; } }
@@ -188,8 +214,16 @@ export class ReportingComponent {
 
   rechercheCommercial = '';
   metriqueActive: MetriqueActive = 'chiffreAffaires';
+  detailsLimit = 10;
 
   private delaiRecherche: ReturnType<typeof setTimeout> | null = null;
+  private pendingScrollRestoreY: number | null = null;
+  unpaidSortKey: UnpaidSortKey | null = null;
+  unpaidSortDirection: SortDirection = 'none';
+  topProductsSortKey: TopProductSortKey | null = null;
+  topProductsSortDirection: SortDirection = 'none';
+  topClientsSortKey: TopClientSortKey | null = null;
+  topClientsSortDirection: SortDirection = 'none';
 
   readonly estModeAdministrateur = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
   readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(sp => String(sp.salesPersonName).trim().toLowerCase() !== 'administrateur'));
@@ -206,8 +240,14 @@ export class ReportingComponent {
       startDate: this.modePeriode === 'custom' ? this.dateDebut : undefined,
       endDate: this.modePeriode === 'custom' ? this.dateFin : undefined,
       salesPersonCode: this.codeCommercialSelectionne()
+      ,
+      detailsLimit: this.detailsLimit
     }).subscribe({
-      next: (res) => { this.data.set(res.data); this.chargement.set(false); },
+      next: (res) => {
+        this.data.set(res.data);
+        this.chargement.set(false);
+        this.restoreScrollIfNeeded();
+      },
       error: () => this.chargement.set(false)
     });
   }
@@ -218,11 +258,107 @@ export class ReportingComponent {
   }
 
   surSaisieCommercial(): void {
+    this.detailsLimit = 10;
     this.chargerAvecDelai();
+  }
+
+  expandTables(): void {
+    this.reloadWithPreservedScroll(this.detailsLimit + 10);
+  }
+
+  canExpandTable(currentLength: number): boolean {
+    return currentLength >= this.detailsLimit;
+  }
+
+  canCollapseTables(): boolean {
+    return this.detailsLimit > 10;
+  }
+
+  reduceTables(): void {
+    this.reloadWithPreservedScroll(Math.max(10, this.detailsLimit - 10));
+  }
+
+  private reloadWithPreservedScroll(nextLimit: number): void {
+    const currentScrollY = window.scrollY;
+    this.pendingScrollRestoreY = currentScrollY;
+    this.detailsLimit = nextLimit;
+    this.charger();
+  }
+
+  private restoreScrollIfNeeded(): void {
+    if (this.pendingScrollRestoreY === null) return;
+    const targetY = this.pendingScrollRestoreY;
+    this.pendingScrollRestoreY = null;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, behavior: 'auto' });
+      });
+    });
   }
 
   activerMetrique(metrique: MetriqueActive): void {
     this.metriqueActive = metrique;
+  }
+
+  toggleUnpaidSort(key: UnpaidSortKey): void {
+    if (this.unpaidSortKey !== key) {
+      this.unpaidSortKey = key;
+      this.unpaidSortDirection = 'asc';
+      return;
+    }
+    if (this.unpaidSortDirection === 'asc') {
+      this.unpaidSortDirection = 'desc';
+      return;
+    }
+    if (this.unpaidSortDirection === 'desc') {
+      this.unpaidSortDirection = 'none';
+      this.unpaidSortKey = null;
+      return;
+    }
+    this.unpaidSortDirection = 'asc';
+  }
+
+  toggleTopProductsSort(key: TopProductSortKey): void {
+    if (this.topProductsSortKey !== key) { this.topProductsSortKey = key; this.topProductsSortDirection = 'asc'; return; }
+    if (this.topProductsSortDirection === 'asc') { this.topProductsSortDirection = 'desc'; return; }
+    if (this.topProductsSortDirection === 'desc') { this.topProductsSortDirection = 'none'; this.topProductsSortKey = null; return; }
+    this.topProductsSortDirection = 'asc';
+  }
+
+  toggleTopClientsSort(key: TopClientSortKey): void {
+    if (this.topClientsSortKey !== key) { this.topClientsSortKey = key; this.topClientsSortDirection = 'asc'; return; }
+    if (this.topClientsSortDirection === 'asc') { this.topClientsSortDirection = 'desc'; return; }
+    if (this.topClientsSortDirection === 'desc') { this.topClientsSortDirection = 'none'; this.topClientsSortKey = null; return; }
+    this.topClientsSortDirection = 'asc';
+  }
+
+  sortedTopProducts(rapport: AdvancedReportingPayload): AdvancedReportingPayload['topProducts'] {
+    const rows = [...(rapport.topProducts ?? [])];
+    if (!this.topProductsSortKey || this.topProductsSortDirection === 'none') return rows;
+    const direction = this.topProductsSortDirection === 'asc' ? 1 : -1;
+    rows.sort((a, b) => this.compareTopProduct(a, b, this.topProductsSortKey!) * direction);
+    return rows;
+  }
+
+  sortedTopClients(rapport: AdvancedReportingPayload): AdvancedReportingPayload['topClients'] {
+    const rows = [...(rapport.topClients ?? [])];
+    if (!this.topClientsSortKey || this.topClientsSortDirection === 'none') return rows;
+    const direction = this.topClientsSortDirection === 'asc' ? 1 : -1;
+    rows.sort((a, b) => this.compareTopClient(a, b, this.topClientsSortKey!) * direction);
+    return rows;
+  }
+
+  sortedUnpaidItems(rapport: AdvancedReportingPayload): AdvancedReportingPayload['unpaidItems'] {
+    const rows = [...(rapport.unpaidItems ?? [])];
+    if (!this.unpaidSortKey || this.unpaidSortDirection === 'none') return rows;
+    const direction = this.unpaidSortDirection === 'asc' ? 1 : -1;
+    rows.sort((a, b) => this.compareUnpaid(a, b, this.unpaidSortKey!) * direction);
+    return rows;
+  }
+
+  sortIndicator(activeKey: string | null, activeDirection: SortDirection, key: string): string {
+    if (activeKey !== key || activeDirection === 'none') return '';
+    return activeDirection === 'asc' ? '↑' : '↓';
   }
 
   legendeCommerciaux(): Array<{ code: number; nom: string; pourcentage: string; couleur: string }> {
@@ -269,9 +405,11 @@ export class ReportingComponent {
   }
 
   variation(courant: number, precedent: number): string {
+    const valeurCourante = Number(courant || 0);
     const base = Number(precedent || 0);
-    if (base <= 0) return '+100.00%';
-    return this.pourcentage(((Number(courant || 0) - base) * 100) / base);
+    if (base <= 0 && valeurCourante <= 0) return '0.00%';
+    if (base <= 0 && valeurCourante > 0) return '+100.00%';
+    return this.pourcentage(((valeurCourante - base) * 100) / base);
   }
 
   monnaie(valeur: number): string {
@@ -280,6 +418,41 @@ export class ReportingComponent {
 
   pourcentage(valeur: number): string {
     return `${Number(valeur || 0).toFixed(2)}%`;
+  }
+
+  private compareUnpaid(a: AdvancedReportingPayload['unpaidItems'][number], b: AdvancedReportingPayload['unpaidItems'][number], key: UnpaidSortKey): number {
+    if (key === 'dueAmount' || key === 'overdueDays') {
+      return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
+    }
+    if (key === 'dueDate') {
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    }
+    if (key === 'itemName') {
+      const av = String(a.itemName || a.itemCode || '').toLowerCase();
+      const bv = String(b.itemName || b.itemCode || '').toLowerCase();
+      return av.localeCompare(bv);
+    }
+    if (key === 'salesPersonName') {
+      const av = String(a.salesPersonName || `#${a.salesPersonCode || 0}`).toLowerCase();
+      const bv = String(b.salesPersonName || `#${b.salesPersonCode || 0}`).toLowerCase();
+      return av.localeCompare(bv);
+    }
+    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
+  }
+
+  private compareTopProduct(a: AdvancedReportingPayload['topProducts'][number], b: AdvancedReportingPayload['topProducts'][number], key: TopProductSortKey): number {
+    if (key === 'salesCount' || key === 'revenue' || key === 'salesPeopleCount') return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
+    if (key === 'itemName') {
+      const av = String(a.itemName || a.itemCode || '').toLowerCase();
+      const bv = String(b.itemName || b.itemCode || '').toLowerCase();
+      return av.localeCompare(bv);
+    }
+    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
+  }
+
+  private compareTopClient(a: AdvancedReportingPayload['topClients'][number], b: AdvancedReportingPayload['topClients'][number], key: TopClientSortKey): number {
+    if (key === 'revenue' || key === 'paidAmount' || key === 'pendingAmount' || key === 'contractsCount') return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
+    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
   }
 
   private codeCommercialSelectionne(): number | undefined {
@@ -305,4 +478,3 @@ export class ReportingComponent {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
-

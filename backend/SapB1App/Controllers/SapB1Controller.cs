@@ -1354,6 +1354,7 @@ WHERE CardCode IN ({inSql});";
         }
 
         response.TeamMembers = await _db.Users
+            .AsNoTracking()
             .Where(u => u.IsActive)
             .Select(u => new CommercialSalesPersonInfoDto
             {
@@ -1399,7 +1400,7 @@ WHERE CardCode IN ({inSql});";
             .Where(member => !response.TeamPerformances.Any(t => t.SalesPersonCode == member.SalesPersonCode && (t.QuotesCount + t.OrdersCount + t.InvoicesCount) > 0))
             .ToList();
 
-        _cache.Set(cacheKey, response, TimeSpan.FromSeconds(30));
+        _cache.Set(cacheKey, response, TimeSpan.FromSeconds(120));
         return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, response));
     }
 
@@ -1469,8 +1470,13 @@ WHERE CardCode IN ({inSql});";
     [Authorize]
     public async Task<ActionResult<ApiResponse<List<PartnerDebtDto>>>> GetPartnerDebts(
         [FromQuery] int? salesPersonCode = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         var isAdmin = _currentUserService.IsAdmin();
         var currentSalesPerson = _currentUserService.GetSapSalesPersonCode();
         var scopedSalesPersonCode = isAdmin ? salesPersonCode : currentSalesPerson;
@@ -1534,6 +1540,7 @@ ORDER BY BP.CardName, BP.CardCode;";
             }
 
             var userNamesByCode = await _db.Users
+                .AsNoTracking()
                 .Where(u => u.IsActive)
                 .Select(u => new { u.SapSalesPersonCode, u.FullName })
                 .ToDictionaryAsync(x => x.SapSalesPersonCode, x => x.FullName, cancellationToken);
@@ -1548,8 +1555,14 @@ ORDER BY BP.CardName, BP.CardCode;";
                 .Where(r => r.PartnerOwesCompanyAmount > 0m || r.CompanyOwesPartnerAmount > 0m)
                 .ToList();
 
-            _cache.Set(cacheKey, rows, TimeSpan.FromSeconds(45));
-            return Ok(new ApiResponse<List<PartnerDebtDto>>(true, null, rows, rows.Count));
+            _cache.Set(cacheKey, rows, TimeSpan.FromSeconds(120));
+
+            var totalCount = rows.Count;
+            var paged = rows
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            return Ok(new ApiResponse<List<PartnerDebtDto>>(true, null, paged, totalCount));
         }
     }
 
@@ -1565,8 +1578,11 @@ ORDER BY BP.CardName, BP.CardCode;";
         [FromQuery] int? salesPersonCode = null,
         [FromQuery] string? itemCode = null,
         [FromQuery] string? cardCode = null,
+        [FromQuery] int detailsLimit = 10,
         CancellationToken cancellationToken = default)
     {
+        detailsLimit = Math.Clamp(detailsLimit, 10, 200);
+
         var (periodStart, periodEnd, periodLabel) = ResolveReportingPeriod(periodType, month, quarter, year, startDate, endDate);
         var previousStart = periodStart.AddMonths(-1);
         var previousEnd = periodStart;
@@ -1576,7 +1592,7 @@ ORDER BY BP.CardName, BP.CardCode;";
         var scopedSalesPersonCode = isAdmin ? salesPersonCode : currentSalesPerson;
         if (!isAdmin && scopedSalesPersonCode <= 0) return Forbid();
 
-        var cacheKey = $"reporting:advanced:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(itemCode ?? string.Empty).Trim().ToLowerInvariant()}:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:{isAdmin}";
+        var cacheKey = $"reporting:advanced:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(itemCode ?? string.Empty).Trim().ToLowerInvariant()}:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:{detailsLimit}:{isAdmin}";
         if (_cache.TryGetValue(cacheKey, out AdvancedReportingResponseDto? cached) && cached is not null)
             return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, cached));
 
@@ -1600,13 +1616,15 @@ ORDER BY BP.CardName, BP.CardCode;";
             response.PreviousKpis = await LoadReportingKpisAsync(conn, previousStart, previousEnd, scopedSalesPersonCode, cancellationToken);
             response.MonthlyRevenue = await LoadMonthlyRevenueAsync(conn, periodStart.AddMonths(-11), periodEnd, scopedSalesPersonCode, cancellationToken);
             response.MonthlyRevenuePreviousYear = await LoadMonthlyRevenueAsync(conn, periodStart.AddMonths(-23), periodEnd.AddYears(-1), scopedSalesPersonCode, cancellationToken);
-            response.TopProducts = await LoadTopProductsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, itemCode, 10, cancellationToken);
-            response.TopClients = await LoadTopClientsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, 10, cancellationToken);
-            response.TopPartners = await LoadTopPartnersAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, 10, cancellationToken);
-            response.UnpaidItems = await LoadUnpaidItemsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, 30, cancellationToken);
-            response.ProductDetails = await LoadProductDetailsAsync(conn, periodStart, periodEnd, previousStart, previousEnd, scopedSalesPersonCode, itemCode, 30, cancellationToken);
-            response.ClientDetails = await LoadClientDetailsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, 30, cancellationToken);
-            response.PartnerDetails = await LoadPartnerDetailsAsync(conn, periodStart, periodEnd, previousStart, previousEnd, scopedSalesPersonCode, 30, cancellationToken);
+            response.TopProducts = await LoadTopProductsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, itemCode, detailsLimit, cancellationToken);
+            response.TopClients = await LoadTopClientsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, detailsLimit, cancellationToken);
+            response.TopPartners = await LoadTopPartnersAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, detailsLimit, cancellationToken);
+            response.UnpaidItems = await LoadUnpaidItemsAsync(conn, scopedSalesPersonCode, detailsLimit, cancellationToken);
+            // Les tableaux détaillés ont été retirés du frontend reporting:
+            // on évite ces requêtes SQL coûteuses pour réduire le temps de chargement.
+            response.ProductDetails = new List<ReportingProductDetailDto>();
+            response.ClientDetails = new List<ReportingClientDetailDto>();
+            response.PartnerDetails = new List<ReportingPartnerDetailDto>();
             response.TopCommercials = await LoadReportingTeamPerformanceAsync(conn, periodStart, periodEnd, isAdmin ? null : scopedSalesPersonCode, cancellationToken);
             response.TopCommercials = response.TopCommercials
                 .OrderByDescending(x => x.NetRevenue)
@@ -1614,6 +1632,7 @@ ORDER BY BP.CardName, BP.CardCode;";
                 .ToList();
 
             response.TeamMembers = await _db.Users
+                .AsNoTracking()
                 .Where(u => u.IsActive)
                 .Select(u => new CommercialSalesPersonInfoDto
                 {
@@ -1645,7 +1664,7 @@ ORDER BY BP.CardName, BP.CardCode;";
             response.SelectedSalesPersonName = response.TeamMembers
                 .FirstOrDefault(x => x.SalesPersonCode == response.SelectedSalesPersonCode)?.SalesPersonName;
 
-            _cache.Set(cacheKey, response, TimeSpan.FromSeconds(30));
+            _cache.Set(cacheKey, response, TimeSpan.FromSeconds(120));
             return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, response));
         }
     }
@@ -1901,7 +1920,7 @@ ORDER BY ISNULL(P.Revenue,0) DESC, ISNULL(Q.QuotesCount,0) DESC;";
     }
 
     private async Task<List<ReportingUnpaidDto>> LoadUnpaidItemsAsync(
-        SqlConnection conn, DateTime start, DateTime end, int? salesPersonCode, int limit, CancellationToken cancellationToken)
+        SqlConnection conn, int? salesPersonCode, int limit, CancellationToken cancellationToken)
     {
         var sql = $@"
 SELECT TOP ({limit})
@@ -1911,15 +1930,13 @@ SELECT TOP ({limit})
   ISNULL(I.DocDueDate, I.DocDate) AS DueDate
 FROM OINV I
 LEFT JOIN INV1 L ON L.DocEntry = I.DocEntry AND L.LineNum = 0
-WHERE I.DocDate >= @dateFrom AND I.DocDate < @dateTo
-  AND ISNULL(I.CANCELED,'N') <> 'Y'
+WHERE ISNULL(I.CANCELED,'N') <> 'Y'
   AND (ISNULL(I.DocTotal,0) - ISNULL(I.PaidToDate,0)) > 0.0001
   AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
 ORDER BY DueAmount DESC, DueDate ASC;";
 
         var result = new List<ReportingUnpaidDto>();
         await using var cmd = new SqlCommand(sql, conn);
-        AddReportingPeriodParameters(cmd, start, end);
         AddReportingScopeParameters(cmd, salesPersonCode);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

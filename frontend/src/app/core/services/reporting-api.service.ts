@@ -108,6 +108,7 @@ export interface ApiResponse<T> {
   success: boolean;
   message?: string | null;
   data: T;
+  totalCount?: number;
 }
 
 export interface AdvancedReportingMonthlyRevenuePoint {
@@ -259,6 +260,7 @@ export class ReportingApiService {
     salesPersonCode?: number;
     itemCode?: string;
     cardCode?: string;
+    detailsLimit?: number;
   }): Observable<ApiResponse<AdvancedReportingPayload>> {
     const query = new URLSearchParams();
     query.set('periodType', params.periodType);
@@ -270,12 +272,15 @@ export class ReportingApiService {
     if (params.salesPersonCode && params.salesPersonCode > 0) query.set('salesPersonCode', String(params.salesPersonCode));
     if (params.itemCode && params.itemCode.trim()) query.set('itemCode', params.itemCode.trim());
     if (params.cardCode && params.cardCode.trim()) query.set('cardCode', params.cardCode.trim());
+    if (params.detailsLimit && params.detailsLimit >= 10) query.set('detailsLimit', String(params.detailsLimit));
     return this.api.get<ApiResponse<AdvancedReportingPayload>>(`reporting/advanced?${query.toString()}`);
   }
 
-  getPartnerDebts(salesPersonCode?: number): Observable<ApiResponse<PartnerDebtItem[]>> {
+  getPartnerDebts(salesPersonCode?: number, page = 1, pageSize = 10): Observable<ApiResponse<PartnerDebtItem[]>> {
     const query = new URLSearchParams();
     if (salesPersonCode && salesPersonCode > 0) query.set('salesPersonCode', String(salesPersonCode));
+    query.set('page', String(Math.max(1, page)));
+    query.set('pageSize', String(Math.max(1, pageSize)));
     return this.api.get<ApiResponse<PartnerDebtItem[]>>(`reporting/partner-debts?${query.toString()}`);
   }
 }

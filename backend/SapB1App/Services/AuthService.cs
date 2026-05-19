@@ -8,6 +8,7 @@ using SapB1App.DTOs;
 using SapB1App.Interfaces;
 using SapB1App.Models;
 using System.Text.Json;
+using System.Globalization;
 
 namespace SapB1App.Services;
 
@@ -36,48 +37,30 @@ public class AuthService : IAuthService
         {
             _logger.LogInformation("Tentative de connexion pour: {Username}", request.Username);
 
-            var adminUser = await _db.Users.AsTracking().FirstOrDefaultAsync(u =>
-                u.Username == request.Username &&
-                u.IsActive &&
-                (u.Role == Roles.Admin || u.Role == Roles.Manager));
-
-            if (adminUser is not null)
+            var sapUser = await AuthenticateAgainstSapAsync(request);
+            if (sapUser is not null)
             {
-                var adminAuthOk = await AuthenticateAdminAgainstSapEmployeeAsync(request);
-                if (!adminAuthOk)
+                if (!Roles.IsValid(sapUser.Value.Role))
                 {
-                    _logger.LogWarning("Authentification salarie SAP invalide pour admin/manager '{Username}'", request.Username);
+                    _logger.LogWarning(
+                        "Acces refuse pour '{Username}': role SAP '{Role}' non autorise",
+                        request.Username,
+                        sapUser.Value.Role);
                     return null;
                 }
 
-                adminUser.LastLogin = DateTime.UtcNow;
+                var commercialUser = await EnsureLocalUserAsync(
+                    username: sapUser.Value.Username,
+                    fullName: sapUser.Value.FullName,
+                    role: sapUser.Value.Role,
+                    sapSalesPersonCode: sapUser.Value.SalesPersonCode);
+                commercialUser.LastLogin = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-
-                return BuildLoginResponse(adminUser);
+                return BuildLoginResponse(commercialUser);
             }
-
-            var sapUser = await AuthenticateAgainstSapAsync(request);
-            if (sapUser is null)
-            {
-                _logger.LogWarning("Utilisateur SAP invalide pour '{Username}'", request.Username);
-                return null;
-            }
-
-            var user = await _db.Users.AsTracking().FirstOrDefaultAsync(u =>
-                u.SapSalesPersonCode == sapUser.Value.SalesPersonCode && u.IsActive);
-
-            if (user is null)
-            {
-                _logger.LogWarning(
-                    "Utilisateur local lie au SlpCode '{SlpCode}' introuvable ou inactif",
-                    sapUser.Value.SalesPersonCode);
-                return null;
-            }
-
-            user.LastLogin = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-
-            return BuildLoginResponse(user);
+            
+            _logger.LogWarning("Utilisateur SAP invalide pour '{Username}'", request.Username);
+            return null;
         }
         catch (Exception ex)
         {
@@ -110,7 +93,7 @@ public class AuthService : IAuthService
         };
     }
 
-    private async Task<(int SalesPersonCode, string Username)? > AuthenticateAgainstSapAsync(LoginRequest request)
+    private async Task<(int SalesPersonCode, string Username, string FullName, string Role)? > AuthenticateAgainstSapAsync(LoginRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
@@ -121,7 +104,7 @@ public class AuthService : IAuthService
         var escapedPassword = EscapeOdataString(request.Password);
 
         var relativeUrl =
-            $"SalesPersons?$select=SalesEmployeeCode,U_NomUtilisateur,U_MotPasseWeb&$filter=U_NomUtilisateur eq '{escapedUsername}' and U_MotPasseWeb eq '{escapedPassword}'";
+            $"SalesPersons?$select=SalesEmployeeCode,SalesEmployeeName,U_NomUtilisateur,U_MotPasseWeb,U_AppRole&$filter=U_NomUtilisateur eq '{escapedUsername}' and U_MotPasseWeb eq '{escapedPassword}'";
 
         var response = await _sapB1Service.ServiceLayerGetAsync(relativeUrl);
         if (!response.Success || response.Response is null)
@@ -151,55 +134,12 @@ public class AuthService : IAuthService
                 ? usernameNode.GetString() ?? request.Username
                 : request.Username;
 
-            return (salesPersonCode, username);
+            var fullName = GetStringProperty(item, "SalesEmployeeName") ?? username;
+            var role = NormalizeAppRole(GetStringProperty(item, "U_AppRole"));
+            return (salesPersonCode, username, fullName, role);
         }
 
         return null;
-    }
-
-    private async Task<bool> AuthenticateAdminAgainstSapEmployeeAsync(LoginRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            return false;
-        }
-
-        var escapedUsername = EscapeOdataString(request.Username.Trim());
-        var relativeUrl = $"EmployeesInfo?$filter=FirstName eq '{escapedUsername}'";
-
-        var response = await _sapB1Service.ServiceLayerGetAsync(relativeUrl);
-        if (!response.Success || response.Response is null)
-        {
-            _logger.LogWarning("Echec verification salarie SAP pour '{Username}': {Error}", request.Username, response.ErrorMessage);
-            return false;
-        }
-
-        if (response.Response.Value.ValueKind != JsonValueKind.Object ||
-            !response.Response.Value.TryGetProperty("value", out var valueNode) ||
-            valueNode.ValueKind != JsonValueKind.Array ||
-            valueNode.GetArrayLength() == 0)
-        {
-            return false;
-        }
-
-        foreach (var employee in valueNode.EnumerateArray())
-        {
-            var firstName = GetStringProperty(employee, "FirstName");
-            if (!string.Equals(firstName, request.Username.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var extEmpNo = GetStringProperty(employee, "ExtEmpNo")
-                ?? GetStringProperty(employee, "ExternalEmployeeNumber");
-
-            if (string.Equals(extEmpNo, request.Password, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static string EscapeOdataString(string input) => input.Replace("'", "''");
@@ -223,6 +163,68 @@ public class AuthService : IAuthService
             JsonValueKind.False => "false",
             _ => null
         };
+    }
+
+    private async Task<AppUser> EnsureLocalUserAsync(string username, string fullName, string role, int sapSalesPersonCode)
+    {
+        var normalizedUsername = username.Trim();
+        var existing = await _db.Users.AsTracking().FirstOrDefaultAsync(u =>
+            u.Username == normalizedUsername || u.SapSalesPersonCode == sapSalesPersonCode);
+
+        if (existing is not null)
+        {
+            existing.Username = normalizedUsername;
+            existing.FullName = fullName;
+            existing.Role = role;
+            existing.IsActive = true;
+            if (sapSalesPersonCode > 0 || existing.SapSalesPersonCode <= 0)
+            {
+                existing.SapSalesPersonCode = sapSalesPersonCode;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.Email))
+            {
+                existing.Email = BuildFallbackEmail(normalizedUsername);
+            }
+
+            return existing;
+        }
+
+        var (hash, salt) = DbSeeder.HashPassword(Guid.NewGuid().ToString("N"));
+        var user = new AppUser
+        {
+            Username = normalizedUsername,
+            Email = BuildFallbackEmail(normalizedUsername),
+            FullName = fullName,
+            Role = role,
+            SapSalesPersonCode = sapSalesPersonCode,
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Users.Add(user);
+        return user;
+    }
+
+    private static string BuildFallbackEmail(string username)
+    {
+        var compact = username.Trim().ToLowerInvariant().Replace(" ", ".");
+        return $"{compact}@sap.local";
+    }
+
+    private static string NormalizeAppRole(string? rawRole)
+    {
+        if (string.IsNullOrWhiteSpace(rawRole))
+        {
+            return "Unauthorized";
+        }
+
+        if (rawRole.Equals(Roles.Admin, StringComparison.OrdinalIgnoreCase)) return Roles.Admin;
+        if (rawRole.Equals(Roles.Manager, StringComparison.OrdinalIgnoreCase)) return Roles.Manager;
+        if (rawRole.Equals(Roles.Commercial, StringComparison.OrdinalIgnoreCase)) return Roles.Commercial;
+        return "Unauthorized";
     }
 
     private string GenerateJwtToken(AppUser user, DateTime expires)
