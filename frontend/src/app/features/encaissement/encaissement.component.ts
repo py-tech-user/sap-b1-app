@@ -271,11 +271,23 @@ export class EncaissementComponent {
     return text === '' ? '-' : text;
   }
 
-  onClientChange(cardCode: string): void {
+  onClientChange(cardCode: string, preferredDisplayValue?: string): void {
     const nextCode = String(cardCode ?? '').trim();
     this.selectedCardCode.set(nextCode);
     const match = this.clients().find(c => c.cardCode.toLowerCase() === nextCode.toLowerCase());
-    this.selectedClientInput.set(match ? this.clientPickerValue(match) : nextCode);
+    const typed = String(preferredDisplayValue ?? '').trim();
+    if (match && typed) {
+      const code = match.cardCode.toLowerCase();
+      const name = match.cardName.toLowerCase();
+      const normalizedTyped = typed.toLowerCase();
+      if (normalizedTyped === name || normalizedTyped === code) {
+        this.selectedClientInput.set(typed);
+      } else {
+        this.selectedClientInput.set(this.clientPickerValue(match));
+      }
+    } else {
+      this.selectedClientInput.set(match ? this.clientPickerValue(match) : nextCode);
+    }
     this.cashSum.set(0);
     this.error.set('');
     this.success.set('');
@@ -299,7 +311,7 @@ export class EncaissementComponent {
       return;
     }
 
-    this.onClientChange(exact.cardCode);
+    this.onClientChange(exact.cardCode, typed);
   }
 
   onCashSumChange(value: unknown): void {
