@@ -1664,7 +1664,7 @@ ORDER BY BP.CardName, BP.CardCode;";
             response.SelectedSalesPersonName = response.TeamMembers
                 .FirstOrDefault(x => x.SalesPersonCode == response.SelectedSalesPersonCode)?.SalesPersonName;
 
-            _cache.Set(cacheKey, response, TimeSpan.FromSeconds(120));
+            _cache.Set(cacheKey, response, TimeSpan.FromSeconds(30));
             return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, response));
         }
     }
@@ -1933,7 +1933,7 @@ LEFT JOIN INV1 L ON L.DocEntry = I.DocEntry AND L.LineNum = 0
 WHERE ISNULL(I.CANCELED,'N') <> 'Y'
   AND (ISNULL(I.DocTotal,0) - ISNULL(I.PaidToDate,0)) > 0.0001
   AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
-ORDER BY DueAmount DESC, DueDate ASC;";
+ORDER BY ISNULL(I.DocDate, ISNULL(I.DocDueDate, GETDATE())) DESC, DueAmount DESC;";
 
         var result = new List<ReportingUnpaidDto>();
         await using var cmd = new SqlCommand(sql, conn);
@@ -2562,6 +2562,7 @@ ORDER BY BP.CardName, BP.CardCode;";
                     @isAdmin = 1
                     OR (
                         @salesPersonCode > 0
+                        AND ISNULL(SlpCode, 0) = @salesPersonCode
                         AND EXISTS (
                             SELECT 1
                             FROM OCRD BP
@@ -3107,12 +3108,16 @@ WHERE (@openOnly = 0 OR {openCondition})
             {
 
                 var headerSql = isInvoice
-                    ? $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, PaidToDate, DocStatus, CANCELED, Comments, DocCur, SlpCode
-FROM {headerTable}
-WHERE DocEntry = @docEntry;"
-                    : $@"SELECT TOP 1 DocEntry, DocNum, CardCode, CardName, DocDate, DocDueDate, DocTotal, DocStatus, CANCELED, Comments, DocCur, SlpCode
-FROM {headerTable}
-WHERE DocEntry = @docEntry;";
+                    ? $@"SELECT TOP 1 H.DocEntry, H.DocNum, H.CardCode, H.CardName, H.DocDate, H.DocDueDate, H.DocTotal, H.PaidToDate, H.DocStatus, H.CANCELED, H.Comments, H.DocCur, H.SlpCode,
+       ISNULL(BP.SlpCode, 0) AS PartnerSlpCode
+FROM {headerTable} H
+LEFT JOIN OCRD BP ON BP.CardCode = H.CardCode
+WHERE H.DocEntry = @docEntry;"
+                    : $@"SELECT TOP 1 H.DocEntry, H.DocNum, H.CardCode, H.CardName, H.DocDate, H.DocDueDate, H.DocTotal, H.DocStatus, H.CANCELED, H.Comments, H.DocCur, H.SlpCode,
+       ISNULL(BP.SlpCode, 0) AS PartnerSlpCode
+FROM {headerTable} H
+LEFT JOIN OCRD BP ON BP.CardCode = H.CardCode
+WHERE H.DocEntry = @docEntry;";
 
             await using var headerCmd = new SqlCommand(headerSql, conn);
             headerCmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
@@ -3123,6 +3128,16 @@ WHERE DocEntry = @docEntry;";
                 return Ok(new ApiResponse<object>(true, null, null));
 
             var salesPersonCode = headerReader["SlpCode"] is DBNull ? 0 : Convert.ToInt32(headerReader["SlpCode"]);
+            var partnerSalesPersonCode = headerReader["PartnerSlpCode"] is DBNull ? 0 : Convert.ToInt32(headerReader["PartnerSlpCode"]);
+            var isAdmin = _currentUserService.IsAdmin();
+            var currentSalesPersonCode = _currentUserService.GetSapSalesPersonCode();
+            if (!isAdmin)
+            {
+                if (currentSalesPersonCode <= 0)
+                    return Forbid();
+                if (salesPersonCode != currentSalesPersonCode || partnerSalesPersonCode != currentSalesPersonCode)
+                    return Forbid();
+            }
             var header = new Dictionary<string, object?>
             {
                 ["DocEntry"] = Convert.ToInt32(headerReader["DocEntry"]),
