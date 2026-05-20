@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 
 type SortDirection = 'none' | 'asc' | 'desc';
 type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partnerOwesCompanyAmount' | 'companyOwesPartnerAmount';
+type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,25 +19,68 @@ type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partner
   template: `
     <div class="dashboard">
       <div class="header">
-        <div class="header-left">
-          <h1>Tableau de bord</h1>
-          <label class="month-filter">
-            Mois
-            <input type="month" [value]="month()" (change)="onMonthChange($event)" />
-          </label>
-          @if (isAdminMode() && visibleTeamMembers().length) {
-            <label class="month-filter">
-              Commercial
-              <select [(ngModel)]="selectedSalesPersonCode" (change)="load()">
-                <option [ngValue]="0">Toute l'equipe</option>
-                @for (sp of visibleTeamMembers(); track sp.salesPersonCode) {
-                  <option [ngValue]="sp.salesPersonCode">{{ sp.salesPersonName }}</option>
-                }
-              </select>
-            </label>
-          }
-        </div>
+        <h1>Tableau de bord</h1>
       </div>
+
+      <section class="filters-panel">
+        <label class="filter-field">
+          Période
+          <select [(ngModel)]="modePeriode" (change)="load()">
+            <option value="month">Mois</option>
+            <option value="quarter">Trimestre</option>
+            <option value="year">Année</option>
+            <option value="custom">Personnalisée</option>
+          </select>
+        </label>
+        @if (modePeriode === 'month') {
+          <label class="filter-field">
+            Mois
+            <input type="month" [(ngModel)]="mois" (change)="load()" />
+          </label>
+        }
+        @if (modePeriode === 'quarter') {
+          <label class="filter-field">
+            Trimestre
+            <select [(ngModel)]="trimestre" (change)="load()">
+              <option [ngValue]="1">Premier trimestre</option>
+              <option [ngValue]="2">Deuxième trimestre</option>
+              <option [ngValue]="3">Troisième trimestre</option>
+              <option [ngValue]="4">Quatrième trimestre</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            Année
+            <input type="number" [(ngModel)]="annee" (change)="load()" />
+          </label>
+        }
+        @if (modePeriode === 'year') {
+          <label class="filter-field">
+            Année
+            <input type="number" [(ngModel)]="annee" (change)="load()" />
+          </label>
+        }
+        @if (modePeriode === 'custom') {
+          <label class="filter-field">
+            Date début
+            <input type="date" [(ngModel)]="dateDebut" (change)="load()" />
+          </label>
+          <label class="filter-field">
+            Date fin
+            <input type="date" [(ngModel)]="dateFin" (change)="load()" />
+          </label>
+        }
+        @if (isAdminMode() && visibleTeamMembers().length) {
+          <label class="filter-field">
+            Commercial
+            <select [(ngModel)]="selectedSalesPersonCode" (change)="load()">
+              <option [ngValue]="0">Toute l'equipe</option>
+              @for (sp of visibleTeamMembers(); track sp.salesPersonCode) {
+                <option [ngValue]="sp.salesPersonCode">{{ sp.salesPersonName }}</option>
+              }
+            </select>
+          </label>
+        }
+      </section>
 
       @if (loading()) {
         <div class="loading">Chargement des statistiques...</div>
@@ -48,28 +92,40 @@ type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partner
           <span class="stat-label">Partenaires</span>
         </a>
 
-        <a [routerLink]="['/dashboard/documents']" [queryParams]="{ type: 'quotes', month: month(), salesPersonCode: selectedSalesPersonCode || null }" class="stat-card">
+        <a routerLink="/quotes" class="stat-card">
           <span class="stat-value">{{ report()?.kpis?.quotesCount ?? 0 }}</span>
           <span class="stat-label">Devis</span>
           <span class="stat-sub">{{ formatMoney(report()?.kpis?.quotesAmount ?? 0) }}</span>
         </a>
 
-        <a [routerLink]="['/dashboard/documents']" [queryParams]="{ type: 'orders', month: month(), salesPersonCode: selectedSalesPersonCode || null }" class="stat-card">
+        <a routerLink="/orders" class="stat-card">
           <span class="stat-value">{{ report()?.kpis?.ordersCount ?? 0 }}</span>
-          <span class="stat-label">Commandes</span>
+          <span class="stat-label">Bon de commande</span>
           <span class="stat-sub">CA: {{ formatMoney(report()?.kpis?.ordersAmount ?? 0) }}</span>
         </a>
 
-        <a [routerLink]="['/dashboard/documents']" [queryParams]="{ type: 'deliverynotes', month: month(), salesPersonCode: selectedSalesPersonCode || null }" class="stat-card">
+        <a routerLink="/deliverynotes" class="stat-card">
           <span class="stat-value">{{ report()?.kpis?.deliveryNotesCount ?? 0 }}</span>
-          <span class="stat-label">Bons de livraison</span>
+          <span class="stat-label">Bon de livraison</span>
           <span class="stat-sub">CA: {{ formatMoney(report()?.kpis?.deliveryNotesAmount ?? 0) }}</span>
         </a>
 
-        <a [routerLink]="['/dashboard/documents']" [queryParams]="{ type: 'invoices', month: month(), salesPersonCode: selectedSalesPersonCode || null }" class="stat-card">
+        <a routerLink="/factures" class="stat-card">
           <span class="stat-value">{{ report()?.kpis?.invoicesCount ?? 0 }}</span>
-          <span class="stat-label">Factures</span>
+          <span class="stat-label">Facture</span>
           <span class="stat-sub">CA: {{ formatMoney(report()?.kpis?.invoicesAmount ?? 0) }}</span>
+        </a>
+
+        <a routerLink="/creditnotes" class="stat-card">
+          <span class="stat-value">{{ report()?.kpis?.creditNotesCount ?? 0 }}</span>
+          <span class="stat-label">Avoir</span>
+          <span class="stat-sub">{{ formatMoney(report()?.kpis?.creditNotesAmount ?? 0) }}</span>
+        </a>
+
+        <a routerLink="/returns" class="stat-card">
+          <span class="stat-value">{{ report()?.kpis?.returnsCount ?? 0 }}</span>
+          <span class="stat-label">Retour</span>
+          <span class="stat-sub">{{ formatMoney(report()?.kpis?.returnsAmount ?? 0) }}</span>
         </a>
 
         <a routerLink="/products" class="stat-card">
@@ -78,30 +134,20 @@ type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partner
         </a>
 
         @if (isAdminMode()) {
-          <a class="stat-card" [routerLink]="['/dashboard/commercials-performance']" [queryParams]="{ month: month() }">
+          <a class="stat-card" [routerLink]="['/dashboard/commercials-performance']" [queryParams]="{ month: monthKeyForLinks() }">
             <span class="stat-value">{{ report()?.teamMembers?.length ?? 0 }}</span>
             <span class="stat-label">Commerciaux</span>
           </a>
         }
-        <a class="stat-card" [routerLink]="['/dashboard/partners-activity']" [queryParams]="{ month: month(), startDate: monthStartIso(), endDate: monthEndIso(), activity: 'active', salesPersonCode: selectedSalesPersonCode || null }">
-          <span class="stat-value">{{ report()?.kpis?.activePartnersCount ?? 0 }}</span>
-          <span class="stat-label">Partenaires actifs</span>
-        </a>
-
-        <a class="stat-card" [routerLink]="['/dashboard/partners-activity']" [queryParams]="{ month: month(), startDate: monthStartIso(), endDate: monthEndIso(), activity: 'inactive', salesPersonCode: selectedSalesPersonCode || null }">
-          <span class="stat-value">{{ report()?.kpis?.inactivePartnersCount ?? 0 }}</span>
-          <span class="stat-label">Partenaires inactifs</span>
-        </a>
-
-        <a class="stat-card">
+        <div class="stat-card">
           <span class="stat-value">{{ formatMoney(report()?.kpis?.netRevenue ?? 0) }}</span>
           <span class="stat-label">CA net (Facture - Avoir)</span>
-        </a>
+        </div>
 
-        <a class="stat-card">
+        <div class="stat-card">
           <span class="stat-value">{{ formatMoney(report()?.kpis?.pendingRevenue ?? 0) }}</span>
           <span class="stat-label">CA en attente (BC + BL ouverts)</span>
-        </a>
+        </div>
       </div>
 
       <div class="transform-grid">
@@ -172,10 +218,11 @@ type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partner
   `,
   styles: [`
     .dashboard { display: grid; gap: 1rem; }
-    .header { display: flex; justify-content: space-between; align-items: end; gap: 1rem; flex-wrap: wrap; }
-    .header-left { display: flex; align-items: end; gap: .75rem; flex-wrap: wrap; }
-    .month-filter { display: grid; gap: .35rem; font-weight: 600; }
-    .month-filter input { border: 1px solid #d0d7de; border-radius: 8px; padding: .45rem .6rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .header h1 { margin: 0; }
+    .filters-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .85rem; display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: .7rem; }
+    .filter-field { display: grid; gap: .32rem; font-weight: 600; color: #374151; }
+    .filter-field input, .filter-field select { border: 1px solid #d1d5db; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
     .loading { text-align: center; padding: 1rem; color: #666; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .85rem; }
     .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .9rem; display: grid; gap: .2rem; text-decoration: none; color: inherit; }
@@ -199,9 +246,7 @@ type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partner
     .table-actions button[disabled] { opacity: .55; cursor: default; }
     @media (max-width: 900px) {
       .transform-grid { grid-template-columns: 1fr; }
-      .header-left { width: 100%; }
-      .month-filter { width: 100%; }
-      .month-filter input, .month-filter select { width: 100%; }
+      .filters-panel { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: 1fr; }
       .stat-card { padding: .8rem; }
       .stat-value { font-size: 1.2rem; }
@@ -220,7 +265,12 @@ export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
-  readonly month = signal(this.defaultMonth());
+  modePeriode: ModePeriode = 'month';
+  mois = this.defaultMonth();
+  trimestre = 1;
+  annee = new Date().getFullYear();
+  dateDebut = this.firstDayOfMonth();
+  dateFin = this.todayIso();
   selectedSalesPersonCode = 0;
   readonly partnerDebtSearch = signal('');
   readonly report = signal<CommercialReportingPayload | null>(null);
@@ -268,20 +318,11 @@ export class DashboardComponent implements OnInit {
     this.load();
   }
 
-  onMonthChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.month.set(input.value || this.defaultMonth());
-    this.load();
-  }
-
   load(): void {
     this.loading.set(true);
 
     forkJoin({
-      reporting: this.reportingApi.getCommercialReporting(
-        this.month(),
-        this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined
-      ),
+      reporting: this.reportingApi.getCommercialReporting(this.buildReportingParams()),
       partnerDebts: this.reportingApi.getPartnerDebts(
         this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
         1,
@@ -381,16 +422,8 @@ export class DashboardComponent implements OnInit {
     return `${y}-${m}`;
   }
 
-  monthStartIso(): string {
-    const [y, m] = this.month().split('-').map(Number);
-    const start = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0);
-    return start.toISOString();
-  }
-
-  monthEndIso(): string {
-    const [y, m] = this.month().split('-').map(Number);
-    const end = new Date(y, (m || 1), 1, 0, 0, 0, 0);
-    return end.toISOString();
+  monthKeyForLinks(): string {
+    return this.modePeriode === 'month' ? this.mois : this.defaultMonth();
   }
 
   private comparePartnerDebt(a: PartnerDebtItem, b: PartnerDebtItem, key: PartnerDebtSortKey): number {
@@ -404,4 +437,35 @@ export class DashboardComponent implements OnInit {
     }
     return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
   }
+
+  private buildReportingParams(): {
+    periodType: 'month' | 'quarter' | 'year' | 'custom';
+    month?: string;
+    quarter?: number;
+    year?: number;
+    startDate?: string;
+    endDate?: string;
+    salesPersonCode?: number;
+  } {
+    return {
+      periodType: this.modePeriode,
+      month: this.modePeriode === 'month' ? this.mois : undefined,
+      quarter: this.modePeriode === 'quarter' ? this.trimestre : undefined,
+      year: this.modePeriode === 'quarter' || this.modePeriode === 'year' ? this.annee : undefined,
+      startDate: this.modePeriode === 'custom' ? this.dateDebut : undefined,
+      endDate: this.modePeriode === 'custom' ? this.dateFin : undefined,
+      salesPersonCode: this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined
+    };
+  }
+
+  private firstDayOfMonth(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  private todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 }
+

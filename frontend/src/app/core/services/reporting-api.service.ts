@@ -17,7 +17,10 @@ export interface ReportingKpis {
   orderToDeliveryRate: number;
   deliveryToInvoiceRate: number;
   conversionRate: number;
+  creditNotesCount: number;
   creditNotesAmount: number;
+  returnsCount: number;
+  returnsAmount: number;
   netRevenue: number;
   pendingRevenue: number;
   activePartnersCount: number;
@@ -219,13 +222,47 @@ export interface AdvancedReportingPayload {
 export class ReportingApiService {
   private readonly api = inject(SapApiService);
 
-  getCommercialReporting(month: string, salesPersonCode?: number): Observable<ApiResponse<CommercialReportingPayload>> {
+  getCommercialReporting(
+    month: string,
+    salesPersonCode?: number
+  ): Observable<ApiResponse<CommercialReportingPayload>>;
+  getCommercialReporting(params: {
+    periodType: 'month' | 'quarter' | 'year' | 'custom';
+    month?: string;
+    quarter?: number;
+    year?: number;
+    startDate?: string;
+    endDate?: string;
+    salesPersonCode?: number;
+  }): Observable<ApiResponse<CommercialReportingPayload>>;
+  getCommercialReporting(
+    monthOrParams: string | {
+      periodType: 'month' | 'quarter' | 'year' | 'custom';
+      month?: string;
+      quarter?: number;
+      year?: number;
+      startDate?: string;
+      endDate?: string;
+      salesPersonCode?: number;
+    },
+    salesPersonCode?: number
+  ): Observable<ApiResponse<CommercialReportingPayload>> {
     const query = new URLSearchParams();
-    query.set('month', month);
-    if (salesPersonCode && salesPersonCode > 0) {
-      query.set('salesPersonCode', String(salesPersonCode));
+    if (typeof monthOrParams === 'string') {
+      query.set('periodType', 'month');
+      query.set('month', monthOrParams);
+      if (salesPersonCode && salesPersonCode > 0) query.set('salesPersonCode', String(salesPersonCode));
+    } else {
+      query.set('periodType', monthOrParams.periodType);
+      if (monthOrParams.month) query.set('month', monthOrParams.month);
+      if (monthOrParams.quarter) query.set('quarter', String(monthOrParams.quarter));
+      if (monthOrParams.year) query.set('year', String(monthOrParams.year));
+      if (monthOrParams.startDate) query.set('startDate', monthOrParams.startDate);
+      if (monthOrParams.endDate) query.set('endDate', monthOrParams.endDate);
+      if (monthOrParams.salesPersonCode && monthOrParams.salesPersonCode > 0) {
+        query.set('salesPersonCode', String(monthOrParams.salesPersonCode));
+      }
     }
-
     return this.api.get<ApiResponse<CommercialReportingPayload>>(`reporting/commercial?${query.toString()}`);
   }
 

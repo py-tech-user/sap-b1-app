@@ -31,6 +31,9 @@ public class CommercialReportingKpiDto
     public decimal DeliveryToInvoiceRate { get; set; }
     public decimal ConversionRate { get; set; } // Backward-compat: alias QuoteToOrderRate
     public decimal CreditNotesAmount { get; set; }
+    public int CreditNotesCount { get; set; }
+    public decimal ReturnsAmount { get; set; }
+    public int ReturnsCount { get; set; }
     public decimal NetRevenue { get; set; } // CA = Factures - Avoirs
     public decimal PendingRevenue { get; set; } // BC open + BL open
     public int ActivePartnersCount { get; set; }

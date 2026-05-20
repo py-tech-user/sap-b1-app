@@ -24,13 +24,13 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
           <div class="header-relations">
             @if (sourceDocument()) {
               <div class="header-rel-row">
-                <span class="rel-label">Source</span>
+                <span class="rel-label">Document de base</span>
                 <a class="link-chip" [routerLink]="sourceDocument()!.route">{{ sourceDocument()!.label }}</a>
               </div>
             }
             @if (generatedDocuments().length > 0) {
               <div class="header-rel-row">
-                <span class="rel-label">Generes</span>
+                <span class="rel-label">Document cible</span>
                 <div class="chips-wrap">
                   @for (l of generatedDocuments(); track l.label) {
                     <a class="link-chip" [routerLink]="l.route">{{ l.label }}</a>

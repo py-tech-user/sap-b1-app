@@ -51,6 +51,13 @@ export class ProductApiService {
     );
   }
 
+  getByGroup(groupCode: number): Observable<Product[]> {
+    const params = new HttpParams().set('groupCode', String(groupCode));
+    return this.http.get<any>(this.apiUrl, { params }).pipe(
+      map((res) => this.normalizeList(res, 1, 0).items)
+    );
+  }
+
   getGroups(): Observable<ProductGroup[]> {
     return this.http.get<any>(`${environment.apiUrl}/sap/item-groups`).pipe(
       map((res) => {

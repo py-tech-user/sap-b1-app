@@ -30,10 +30,10 @@ type PartnerDocFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoice
           <select [(ngModel)]="docFilter" (change)="noop()">
             <option value="all">Tous</option>
             <option value="quotes">Devis</option>
-            <option value="orders">Commandes</option>
-            <option value="deliverynotes">BL</option>
-            <option value="invoices">Factures</option>
-            <option value="creditnotes">Avoirs</option>
+            <option value="orders">Bon de commande</option>
+            <option value="deliverynotes">Bon de livraison</option>
+            <option value="invoices">Facture</option>
+            <option value="creditnotes">Avoir</option>
             <option value="net">CA net</option>
           </select>
         </label>
@@ -68,8 +68,8 @@ type PartnerDocFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoice
               <th *ngIf="showQuotes()">Devis Nb</th><th *ngIf="showQuotes()">Devis Montant</th>
               <th *ngIf="showOrders()">BC Nb</th><th *ngIf="showOrders()">BC Montant</th>
               <th *ngIf="showDelivery()">BL Nb</th><th *ngIf="showDelivery()">BL Montant</th>
-              <th *ngIf="showInvoices()">Factures Nb</th><th *ngIf="showInvoices()">Factures Montant</th>
-              <th *ngIf="showCredit()">Avoirs Nb</th><th *ngIf="showCredit()">Avoirs Montant</th>
+              <th *ngIf="showInvoices()">Facture Nb</th><th *ngIf="showInvoices()">Facture Montant</th>
+              <th *ngIf="showCredit()">Avoir Nb</th><th *ngIf="showCredit()">Avoir Montant</th>
               <th *ngIf="showNet()">CA net</th>
             </tr>
           </thead>
@@ -84,10 +84,10 @@ type PartnerDocFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoice
                 <td *ngIf="showOrders()" data-label="BC Montant">{{ money(p.ordersAmount) }}</td>
                 <td *ngIf="showDelivery()" data-label="BL Nb">{{ p.deliveryNotesCount }}</td>
                 <td *ngIf="showDelivery()" data-label="BL Montant">{{ money(p.deliveryNotesAmount) }}</td>
-                <td *ngIf="showInvoices()" data-label="Factures Nb">{{ p.invoicesCount }}</td>
-                <td *ngIf="showInvoices()" data-label="Factures Montant">{{ money(p.invoicesAmount) }}</td>
-                <td *ngIf="showCredit()" data-label="Avoirs Nb">{{ p.creditNotesCount }}</td>
-                <td *ngIf="showCredit()" data-label="Avoirs Montant">{{ money(p.creditNotesAmount) }}</td>
+                <td *ngIf="showInvoices()" data-label="Facture Nb">{{ p.invoicesCount }}</td>
+                <td *ngIf="showInvoices()" data-label="Facture Montant">{{ money(p.invoicesAmount) }}</td>
+                <td *ngIf="showCredit()" data-label="Avoir Nb">{{ p.creditNotesCount }}</td>
+                <td *ngIf="showCredit()" data-label="Avoir Montant">{{ money(p.creditNotesAmount) }}</td>
                 <td *ngIf="showNet()" data-label="CA net">{{ money(p.netRevenue) }}</td>
               </tr>
             } @empty {

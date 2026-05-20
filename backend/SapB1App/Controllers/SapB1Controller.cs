@@ -97,9 +97,12 @@ public class SapB1Controller : ControllerBase
 
     [HttpGet("items")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems([FromQuery] int? groupCode, CancellationToken cancellationToken)
     {
-        const string itemsCacheKey = "sap:items:all";
+        var hasGroupFilter = groupCode.HasValue && groupCode.Value >= 0;
+        var itemsCacheKey = hasGroupFilter
+            ? $"sap:items:group:{groupCode!.Value}"
+            : "sap:items:all";
         if (_cache.TryGetValue(itemsCacheKey, out List<SapItemDto>? cachedItems) && cachedItems is not null)
             return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, cachedItems, cachedItems.Count));
 
@@ -118,6 +121,7 @@ SELECT
 FROM OITM I
 LEFT JOIN OITB G ON G.ItmsGrpCod = I.ItmsGrpCod
 LEFT JOIN ITM1 PL_CFG ON PL_CFG.ItemCode = I.ItemCode AND PL_CFG.PriceList = @priceList
+WHERE (@groupCode IS NULL OR ISNULL(I.ItmsGrpCod, 0) = @groupCode)
 ORDER BY I.ItemCode;";
 
         var items = new List<SapItemDto>();
@@ -134,6 +138,7 @@ ORDER BY I.ItemCode;";
             {
                 cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
                 cmd.Parameters.Add(new SqlParameter("@priceList", SqlDbType.Int) { Value = configuredPriceList > 0 ? configuredPriceList : 1 });
+                cmd.Parameters.Add(new SqlParameter("@groupCode", SqlDbType.Int) { Value = hasGroupFilter ? groupCode!.Value : DBNull.Value });
                 await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
@@ -1308,17 +1313,16 @@ WHERE CardCode IN ({inSql});";
     [HttpGet("reporting/commercial")]
     [Authorize]
     public async Task<ActionResult<ApiResponse<CommercialReportingResponseDto>>> GetCommercialReporting(
+        [FromQuery] string periodType = "month",
         [FromQuery] string? month = null,
+        [FromQuery] int? quarter = null,
+        [FromQuery] int? year = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
         [FromQuery] int? salesPersonCode = null,
         CancellationToken cancellationToken = default)
     {
-        var periodStart = DateTime.Today;
-        if (!string.IsNullOrWhiteSpace(month) && DateTime.TryParseExact(month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedMonth))
-            periodStart = new DateTime(parsedMonth.Year, parsedMonth.Month, 1);
-        else
-            periodStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-
-        var periodEnd = periodStart.AddMonths(1);
+        var (periodStart, periodEnd, periodLabel) = ResolveReportingPeriod(periodType, month, quarter, year, startDate, endDate);
         var isAdmin = _currentUserService.IsAdmin();
         var currentSalesPerson = _currentUserService.GetSapSalesPersonCode();
         var scopedSalesPersonCode = isAdmin ? salesPersonCode : currentSalesPerson;
@@ -1326,7 +1330,7 @@ WHERE CardCode IN ({inSql});";
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
 
-        var cacheKey = $"reporting:commercial:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{isAdmin}:{scopedSalesPersonCode?.ToString() ?? "none"}";
+        var cacheKey = $"reporting:commercial:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{isAdmin}:{scopedSalesPersonCode?.ToString() ?? "none"}";
         if (_cache.TryGetValue(cacheKey, out CommercialReportingResponseDto? cached) && cached is not null)
             return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, cached));
 
@@ -1337,7 +1341,7 @@ WHERE CardCode IN ({inSql});";
         var response = new CommercialReportingResponseDto
         {
             Mode = isAdmin ? "Admin" : "Commercial",
-            PeriodLabel = periodStart.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-FR")),
+            PeriodLabel = periodLabel,
             SelectedSalesPersonCode = scopedSalesPersonCode > 0 ? scopedSalesPersonCode : null
         };
 
@@ -2169,11 +2173,14 @@ SELECT
   (SELECT ISNULL(SUM(DocTotal), 0) FROM OQUT WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS QuotesAmount,
   (SELECT COUNT(1) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS OrdersCount,
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS OrdersAmount,
-  (SELECT COUNT(1) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesCount,
-  (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesAmount,
-  (SELECT COUNT(1) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesCount,
-  (SELECT ISNULL(SUM(DocTotal), 0) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesAmount,
-  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesAmount,
+  (SELECT COUNT(1) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesAmount,
+  (SELECT COUNT(1) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesAmount,
+  (SELECT COUNT(1) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesAmount,
+  (SELECT COUNT(1) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsAmount,
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) +
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS PendingRevenue,
   (SELECT COUNT(1) FROM OCRD C
@@ -2225,6 +2232,7 @@ SELECT
             DeliveryNotesAmount = Convert.ToDecimal(reader["DeliveryNotesAmount"]),
             InvoicesCount = invoiceCount,
             InvoicesAmount = invoicesAmount,
+            CreditNotesCount = Convert.ToInt32(reader["CreditNotesCount"]),
             UnpaidInvoicesCount = Convert.ToInt32(reader["UnpaidInvoicesCount"]),
             UnpaidInvoicesAmount = Convert.ToDecimal(reader["UnpaidInvoicesAmount"]),
             QuoteToOrderRate = quoteToOrder,
@@ -2232,6 +2240,8 @@ SELECT
             DeliveryToInvoiceRate = deliveryToInvoice,
             ConversionRate = quoteToOrder,
             CreditNotesAmount = creditNotesAmount,
+            ReturnsCount = Convert.ToInt32(reader["ReturnsCount"]),
+            ReturnsAmount = Convert.ToDecimal(reader["ReturnsAmount"]),
             NetRevenue = invoicesAmount - creditNotesAmount,
             PendingRevenue = pendingRevenue,
             ActivePartnersCount = Convert.ToInt32(reader["ActivePartnersCount"]),

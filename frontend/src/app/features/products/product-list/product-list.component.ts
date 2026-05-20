@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { EMPTY, from } from 'rxjs';
+import { catchError, concatMap, finalize, map } from 'rxjs/operators';
 import { Product, ProductApiService, ProductGroup } from '../../../core/services/product-api.service';
 import { CatalogCartLine, CatalogCartService } from '../../../core/services/catalog-cart.service';
 
@@ -64,7 +66,7 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
                 <div class="product-content">
                   <div class="mini-table">
                     <div class="title" [title]="product.itemName || '-'">{{ product.itemName || '-' }}</div>
-                    <div class="meta">{{ product.itemCode || '-' }} • {{ product.groupName || '-' }}</div>
+                    <div class="meta">{{ product.itemCode || '-' }} - {{ product.groupName || '-' }}</div>
                     <div class="price">{{ product.price | number:'1.2-2' }} {{ currencyOf(product) }}</div>
                     <div class="stock" [class.low-stock]="product.stock < 10">Stock: {{ product.stock }}</div>
                   </div>
@@ -180,19 +182,29 @@ export class ProductListComponent implements OnInit {
   loading = signal(true);
   error = signal('');
   private brokenImageIds = signal<Set<number>>(new Set<number>());
+  private readonly productsByGroup = new Map<number, Product[]>();
 
   constructor(private productApi: ProductApiService) {}
 
   ngOnInit(): void {
     this.cartLines.set(this.cart.getLines());
     this.loadGroups();
-    this.loadProductsInBackground();
   }
 
   selectGroup(groupCode: number): void {
     this.selectedGroupCode.set(groupCode);
+    const cached = this.productsByGroup.get(groupCode);
+    if (cached) {
+      this.visibleProducts.set(cached);
+      return;
+    }
+
     const filtered = this.products().filter((p) => Number(p.groupCode ?? 0) === groupCode);
     this.visibleProducts.set(filtered);
+
+    if (filtered.length === 0) {
+      this.loadSingleGroup(groupCode);
+    }
   }
 
   backToGroups(): void {
@@ -274,6 +286,7 @@ export class ProductListComponent implements OnInit {
     this.productApi.getGroups().subscribe({
       next: (groups) => {
         this.groups.set(groups);
+        this.preloadProductsByGroupInBackground(groups);
         this.loadingGroups.set(false);
         this.loading.set(false);
       },
@@ -285,31 +298,71 @@ export class ProductListComponent implements OnInit {
     });
   }
 
-  private loadProductsInBackground(): void {
+  private preloadProductsByGroupInBackground(groups: ProductGroup[]): void {
+    const validGroups = groups
+      .filter((g) => Number.isFinite(g.groupCode))
+      .sort((a, b) => a.groupCode - b.groupCode);
+    if (validGroups.length === 0) return;
+
     this.loadingProducts.set(true);
 
-    this.productApi.getAll(1, 50000).subscribe({
-      next: (res) => {
-        const items = res.items ?? [];
+    from(validGroups).pipe(
+      concatMap((group) =>
+        this.productApi.getByGroup(group.groupCode).pipe(
+          map((items) => ({ groupCode: group.groupCode, items })),
+          catchError(() => EMPTY),
+          finalize(() => {
+            const selected = this.selectedGroupCode();
+            if (selected !== null && selected === group.groupCode) {
+              const cached = this.productsByGroup.get(group.groupCode) ?? [];
+              this.visibleProducts.set(cached);
+            }
+          })
+        )
+      ),
+      finalize(() => this.loadingProducts.set(false))
+    ).subscribe(({ groupCode, items }) => {
+      const enriched = items.map((p) => ({
+        ...p,
+        imageUrl: p.imageUrl || this.catalogImageFor(p)
+      }));
+      this.productsByGroup.set(groupCode, enriched);
+      this.preloadImagesInBackground(enriched);
+      this.mergeProducts(enriched);
+    });
+  }
+
+  private loadSingleGroup(groupCode: number): void {
+    this.loadingProducts.set(true);
+    this.productApi.getByGroup(groupCode).subscribe({
+      next: (items) => {
         const enriched = items.map((p) => ({
           ...p,
           imageUrl: p.imageUrl || this.catalogImageFor(p)
         }));
-        this.products.set(enriched);
+        this.productsByGroup.set(groupCode, enriched);
         this.preloadImagesInBackground(enriched);
-
-        const selected = this.selectedGroupCode();
-        if (selected !== null) {
-          this.visibleProducts.set(enriched.filter((p) => Number(p.groupCode ?? 0) === selected));
+        this.mergeProducts(enriched);
+        if (this.selectedGroupCode() === groupCode) {
+          this.visibleProducts.set(enriched);
         }
-
-        this.loadingProducts.set(false);
       },
       error: (err) => {
         this.error.set(err?.error?.message || err?.error?.error || 'Erreur chargement des articles');
-        this.loadingProducts.set(false);
-      }
+      },
+      complete: () => this.loadingProducts.set(false)
     });
+  }
+
+  private mergeProducts(incoming: Product[]): void {
+    const merged = new Map<string, Product>();
+    for (const p of this.products()) {
+      merged.set(String(p.itemCode ?? p.id), p);
+    }
+    for (const p of incoming) {
+      merged.set(String(p.itemCode ?? p.id), p);
+    }
+    this.products.set(Array.from(merged.values()));
   }
 
   private preloadImagesInBackground(products: Product[]): void {
@@ -357,3 +410,4 @@ export class ProductListComponent implements OnInit {
     return undefined;
   }
 }
+

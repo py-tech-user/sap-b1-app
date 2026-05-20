@@ -26,9 +26,9 @@ type DocTypeFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoices';
           <select [(ngModel)]="type" (change)="onTypeChange()">
             <option value="all">Tous</option>
             <option value="quotes">Devis</option>
-            <option value="orders">Commandes</option>
-            <option value="deliverynotes">Bons de livraison</option>
-            <option value="invoices">Factures</option>
+            <option value="orders">Bon de commande</option>
+            <option value="deliverynotes">Bon de livraison</option>
+            <option value="invoices">Facture</option>
           </select>
         </label>
         <label>

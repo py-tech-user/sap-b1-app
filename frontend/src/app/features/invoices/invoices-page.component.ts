@@ -12,7 +12,7 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
   template: `
     <div class="page">
       <div class="header">
-      <h1>Factures</h1>
+      <h1>Facture</h1>
         <a class="btn-primary" [routerLink]="['/factures/new']">+ Nouvelle facture</a>
       </div>
 

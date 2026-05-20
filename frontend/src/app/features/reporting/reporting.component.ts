@@ -5,7 +5,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AdvancedReportingPayload, ReportingApiService } from '../../core/services/reporting-api.service';
 
 type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
-type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commandes' | 'factures' | 'impayes';
+type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commande' | 'facture' | 'impayes';
 type SortDirection = 'none' | 'asc' | 'desc';
 type UnpaidSortKey = 'cardName' | 'dueAmount' | 'itemName' | 'salesPersonName' | 'dueDate' | 'overdueDays';
 type TopProductSortKey = 'itemName' | 'salesCount' | 'revenue' | 'salesPeopleCount' | 'mainClientName';
@@ -73,19 +73,19 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
         <section class="panel">
           <h2>Indicateurs clés de performance</h2>
           <div class="kpi-grid">
-            <article class="kpi" [class.active]="metriqueActive === 'chiffreAffaires'" (click)="activerMetrique('chiffreAffaires')">
+            <article class="kpi">
               <h3>Chiffre d'affaires net</h3><p>{{ monnaie(rapport.kpis.netRevenue) }}</p>
             </article>
-            <article class="kpi" [class.active]="metriqueActive === 'devis'" (click)="activerMetrique('devis')">
+            <article class="kpi">
               <h3>Devis</h3><p>{{ rapport.kpis.quotesCount }}</p><span>{{ monnaie(rapport.kpis.quotesAmount) }}</span>
             </article>
-            <article class="kpi" [class.active]="metriqueActive === 'commandes'" (click)="activerMetrique('commandes')">
-              <h3>Commandes</h3><p>{{ rapport.kpis.ordersCount }}</p><span>{{ monnaie(rapport.kpis.ordersAmount) }}</span>
+            <article class="kpi">
+              <h3>Bon de commande</h3><p>{{ rapport.kpis.ordersCount }}</p><span>{{ monnaie(rapport.kpis.ordersAmount) }}</span>
             </article>
-            <article class="kpi" [class.active]="metriqueActive === 'factures'" (click)="activerMetrique('factures')">
-              <h3>Factures</h3><p>{{ rapport.kpis.invoicesCount }}</p><span>{{ monnaie(rapport.kpis.invoicesAmount) }}</span>
+            <article class="kpi">
+              <h3>Facture</h3><p>{{ rapport.kpis.invoicesCount }}</p><span>{{ monnaie(rapport.kpis.invoicesAmount) }}</span>
             </article>
-            <article class="kpi" [class.active]="metriqueActive === 'impayes'" (click)="activerMetrique('impayes')">
+            <article class="kpi">
               <h3>Impayés</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
             </article>
           </div>
@@ -177,7 +177,7 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
     label { display: grid; gap: .3rem; font-weight: 600; color: #2b3a4a; }
     input, select, button { border: 1px solid #cad7e5; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
     .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: .7rem; }
-    .kpi { border: 1px solid #e4ebf3; border-radius: 10px; padding: .7rem; background: linear-gradient(145deg, #fff, #f7fbff); cursor: pointer; }
+    .kpi { border: 1px solid #e4ebf3; border-radius: 10px; padding: .7rem; background: linear-gradient(145deg, #fff, #f7fbff); }
     .kpi.active { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
     .kpi h3 { margin: 0; font-size: .88rem; color: #52657d; }
     .kpi p { margin: .3rem 0; font-size: 1.2rem; font-weight: 700; }

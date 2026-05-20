@@ -42,12 +42,14 @@ public class CurrentUserService : ICurrentUserService
 
     public string? GetRole()
     {
-        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Role);
+        var role = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Role);
+        return string.IsNullOrWhiteSpace(role) ? null : role.Trim();
     }
 
     public bool IsAdmin()
     {
         var role = GetRole();
+        if (string.IsNullOrWhiteSpace(role)) return false;
         return string.Equals(role, Roles.Admin, StringComparison.OrdinalIgnoreCase)
                || string.Equals(role, Roles.Manager, StringComparison.OrdinalIgnoreCase);
     }

@@ -15,31 +15,31 @@ export const COMMERCIAL_META: Record<CommercialResource, CommercialMeta> = {
     icon: ''
   },
   orders: {
-    title: 'Bons de commande',
+    title: 'Bon de commande',
     singular: 'bon de commande',
-    createLabel: 'Nouveau BC',
+    createLabel: 'Nouveau bon de commande',
     icon: ''
   },
   deliverynotes: {
-    title: 'Bons de livraison',
+    title: 'Bon de livraison',
     singular: 'bon de livraison',
-    createLabel: 'Nouveau BL',
+    createLabel: 'Nouveau bon de livraison',
     icon: ''
   },
   invoices: {
-    title: 'Factures',
+    title: 'Facture',
     singular: 'facture',
     createLabel: 'Nouvelle facture',
     icon: ''
   },
   creditnotes: {
-    title: 'Avoirs',
+    title: 'Avoir',
     singular: 'avoir',
     createLabel: 'Nouvel avoir',
     icon: ''
   },
   returns: {
-    title: 'Retours',
+    title: 'Retour',
     singular: 'retour',
     createLabel: 'Nouveau retour',
     icon: ''

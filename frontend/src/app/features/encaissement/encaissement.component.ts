@@ -77,7 +77,7 @@ interface InvoiceSelection {
       </div>
 
       <div class="card">
-        <h3>Factures ouvertes</h3>
+        <h3>Facture ouverte</h3>
 
         @if (loadingClients()) {
           <p>Chargement des partenaires...</p>
