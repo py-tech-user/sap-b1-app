@@ -8,7 +8,7 @@ using SapB1App.DTOs;
 using SapB1App.Interfaces;
 using SapB1App.Models;
 using System.Text.Json;
-using System.Globalization;
+using System.Security.Cryptography;
 
 namespace SapB1App.Services;
 
@@ -101,10 +101,8 @@ public class AuthService : IAuthService
         }
 
         var escapedUsername = EscapeOdataString(request.Username.Trim());
-        var escapedPassword = EscapeOdataString(request.Password);
-
         var relativeUrl =
-            $"SalesPersons?$select=SalesEmployeeCode,SalesEmployeeName,U_NomUtilisateur,U_MotPasseWeb,U_AppRole&$filter=U_NomUtilisateur eq '{escapedUsername}' and U_MotPasseWeb eq '{escapedPassword}'";
+            $"SalesPersons?$select=SalesEmployeeCode,SalesEmployeeName,U_NomUtilisateur,U_MotPasseWeb,U_AppRole&$filter=U_NomUtilisateur eq '{escapedUsername}'";
 
         var response = await _sapB1Service.ServiceLayerGetAsync(relativeUrl);
         if (!response.Success || response.Response is null)
@@ -126,6 +124,12 @@ public class AuthService : IAuthService
             if (!item.TryGetProperty("SalesEmployeeCode", out var salesCodeNode) ||
                 !salesCodeNode.TryGetInt32(out var salesPersonCode) ||
                 salesPersonCode <= 0)
+            {
+                continue;
+            }
+
+            var storedPasswordHash = GetStringProperty(item, "U_MotPasseWeb");
+            if (!VerifySapPasswordHash(request.Password, storedPasswordHash))
             {
                 continue;
             }
@@ -225,6 +229,42 @@ public class AuthService : IAuthService
         if (rawRole.Equals(Roles.Manager, StringComparison.OrdinalIgnoreCase)) return Roles.Manager;
         if (rawRole.Equals(Roles.Commercial, StringComparison.OrdinalIgnoreCase)) return Roles.Commercial;
         return "Unauthorized";
+    }
+
+    private static bool VerifySapPasswordHash(string password, string? storedHash)
+    {
+        if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(storedHash))
+        {
+            return false;
+        }
+
+        var normalizedHash = storedHash.Trim();
+        var hashCandidates = new[]
+        {
+            ComputeSha256Hex(password).ToLowerInvariant(),
+            ComputeSha256Hex(password).ToUpperInvariant(),
+            ComputeSha256Hex(password, Encoding.Unicode).ToLowerInvariant(),
+            ComputeSha256Hex(password, Encoding.Unicode).ToUpperInvariant(),
+            ComputeSha256Base64(password)
+        };
+
+        return hashCandidates.Any(candidate =>
+            string.Equals(candidate, normalizedHash, StringComparison.Ordinal));
+    }
+
+    private static string ComputeSha256Hex(string input)
+        => ComputeSha256Hex(input, Encoding.UTF8);
+
+    private static string ComputeSha256Hex(string input, Encoding encoding)
+    {
+        var bytes = SHA256.HashData(encoding.GetBytes(input));
+        return Convert.ToHexString(bytes);
+    }
+
+    private static string ComputeSha256Base64(string input)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return Convert.ToBase64String(bytes);
     }
 
     private string GenerateJwtToken(AppUser user, DateTime expires)

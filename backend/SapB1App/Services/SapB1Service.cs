@@ -386,7 +386,7 @@ public class SapB1Service : ISapB1Service
 
         var httpClient = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(30),
+            Timeout = Timeout.InfiniteTimeSpan,
             BaseAddress = new Uri(serviceLayerUrl.EndsWith("/", StringComparison.Ordinal) ? serviceLayerUrl : serviceLayerUrl + "/")
         };
 
@@ -414,8 +414,8 @@ public class SapB1Service : ISapB1Service
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Service Layer login timeout");
-            return (false, null, (int)HttpStatusCode.RequestTimeout, "Timeout lors de la connexion au Service Layer.");
+            _logger.LogError(ex, "Service Layer login cancelled");
+            return (false, null, (int)HttpStatusCode.RequestTimeout, "Connexion au Service Layer annulee.");
         }
         catch (Exception ex)
         {
@@ -441,8 +441,8 @@ public class SapB1Service : ISapB1Service
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Service Layer request timeout");
-            return (false, null, (int)HttpStatusCode.RequestTimeout, "Timeout lors de l'appel Service Layer.");
+            _logger.LogError(ex, "Service Layer request cancelled");
+            return (false, null, (int)HttpStatusCode.RequestTimeout, "Appel Service Layer annule.");
         }
         catch (Exception ex)
         {
@@ -599,8 +599,8 @@ public class SapB1Service : ISapB1Service
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Service Layer request timeout");
-            return (false, null, (int)HttpStatusCode.RequestTimeout, "Timeout lors de l'appel Service Layer.");
+            _logger.LogError(ex, "Service Layer request cancelled");
+            return (false, null, (int)HttpStatusCode.RequestTimeout, "Appel Service Layer annule.");
         }
         catch (Exception ex)
         {

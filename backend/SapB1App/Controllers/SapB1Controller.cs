@@ -97,14 +97,21 @@ public class SapB1Controller : ControllerBase
 
     [HttpGet("items")]
     [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems([FromQuery] int? groupCode, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<SapItemDto>>>> GetItems(
+        [FromQuery] int? groupCode,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 200,
+        CancellationToken cancellationToken = default)
     {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50000);
         var hasGroupFilter = groupCode.HasValue && groupCode.Value >= 0;
         var itemsCacheKey = hasGroupFilter
             ? $"sap:items:group:{groupCode!.Value}"
             : "sap:items:all";
-        if (_cache.TryGetValue(itemsCacheKey, out List<SapItemDto>? cachedItems) && cachedItems is not null)
-            return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, cachedItems, cachedItems.Count));
+        var pagedCacheKey = $"{itemsCacheKey}:p{page}:s{pageSize}";
+        if (_cache.TryGetValue(pagedCacheKey, out ApiResponse<IReadOnlyList<SapItemDto>>? cachedPaged) && cachedPaged is not null)
+            return Ok(cachedPaged);
 
         var configuredPriceList = await ResolveDefaultPriceListAsync(cancellationToken);
 
@@ -122,9 +129,16 @@ FROM OITM I
 LEFT JOIN OITB G ON G.ItmsGrpCod = I.ItmsGrpCod
 LEFT JOIN ITM1 PL_CFG ON PL_CFG.ItemCode = I.ItemCode AND PL_CFG.PriceList = @priceList
 WHERE (@groupCode IS NULL OR ISNULL(I.ItmsGrpCod, 0) = @groupCode)
-ORDER BY I.ItemCode;";
+ORDER BY I.ItemCode
+OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;";
+
+        var countSql = @"
+SELECT COUNT(1)
+FROM OITM I
+WHERE (@groupCode IS NULL OR ISNULL(I.ItmsGrpCod, 0) = @groupCode);";
 
         var items = new List<SapItemDto>();
+        int totalCount;
         try
         {
             var conn = await OpenSapSqlConnectionAsync(cancellationToken);
@@ -134,32 +148,43 @@ ORDER BY I.ItemCode;";
             }
 
             await using (conn)
-            await using (var cmd = new SqlCommand(sql, conn))
             {
-                cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
-                cmd.Parameters.Add(new SqlParameter("@priceList", SqlDbType.Int) { Value = configuredPriceList > 0 ? configuredPriceList : 1 });
-                cmd.Parameters.Add(new SqlParameter("@groupCode", SqlDbType.Int) { Value = hasGroupFilter ? groupCode!.Value : DBNull.Value });
-                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-                while (await reader.ReadAsync(cancellationToken))
+                await using (var countCmd = new SqlCommand(countSql, conn))
                 {
-                    var itemName = reader["ItemName"]?.ToString() ?? string.Empty;
-                    var picture = reader["PicturName"]?.ToString() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(picture))
+                    countCmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                    countCmd.Parameters.Add(new SqlParameter("@groupCode", SqlDbType.Int) { Value = hasGroupFilter ? groupCode!.Value : DBNull.Value });
+                    totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(cancellationToken) ?? 0);
+                }
+
+                await using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
+                    cmd.Parameters.Add(new SqlParameter("@priceList", SqlDbType.Int) { Value = configuredPriceList > 0 ? configuredPriceList : 1 });
+                    cmd.Parameters.Add(new SqlParameter("@groupCode", SqlDbType.Int) { Value = hasGroupFilter ? groupCode!.Value : DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@offset", SqlDbType.Int) { Value = (page - 1) * pageSize });
+                    cmd.Parameters.Add(new SqlParameter("@pageSize", SqlDbType.Int) { Value = pageSize });
+                    await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                    while (await reader.ReadAsync(cancellationToken))
                     {
-                        picture = GuessPictureFileNameFromItemName(itemName);
+                        var itemName = reader["ItemName"]?.ToString() ?? string.Empty;
+                        var picture = reader["PicturName"]?.ToString() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(picture))
+                        {
+                            picture = GuessPictureFileNameFromItemName(itemName);
+                        }
+                        items.Add(new SapItemDto
+                        {
+                            ItemCode = reader["ItemCode"]?.ToString() ?? string.Empty,
+                            ItemName = reader["ItemName"]?.ToString() ?? string.Empty,
+                            GroupCode = reader["GroupCode"] is DBNull ? 0 : Convert.ToInt32(reader["GroupCode"]),
+                            GroupName = reader["GroupName"]?.ToString() ?? string.Empty,
+                            ImageUrl = BuildItemImageUrl(reader["ItemCode"]?.ToString() ?? string.Empty, picture),
+                            Price = reader["Price"] is DBNull ? 0m : Convert.ToDecimal(reader["Price"]),
+                            Currency = reader["PriceCurrency"]?.ToString() ?? string.Empty,
+                            StockTotal = reader["OnHand"] is DBNull ? 0m : Convert.ToDecimal(reader["OnHand"]),
+                            Warehouses = []
+                        });
                     }
-                    items.Add(new SapItemDto
-                    {
-                        ItemCode = reader["ItemCode"]?.ToString() ?? string.Empty,
-                        ItemName = reader["ItemName"]?.ToString() ?? string.Empty,
-                        GroupCode = reader["GroupCode"] is DBNull ? 0 : Convert.ToInt32(reader["GroupCode"]),
-                        GroupName = reader["GroupName"]?.ToString() ?? string.Empty,
-                        ImageUrl = BuildItemImageUrl(reader["ItemCode"]?.ToString() ?? string.Empty, picture),
-                        Price = reader["Price"] is DBNull ? 0m : Convert.ToDecimal(reader["Price"]),
-                        Currency = reader["PriceCurrency"]?.ToString() ?? string.Empty,
-                        StockTotal = reader["OnHand"] is DBNull ? 0m : Convert.ToDecimal(reader["OnHand"]),
-                        Warehouses = []
-                    });
                 }
             }
         }
@@ -169,8 +194,9 @@ ORDER BY I.ItemCode;";
             return StatusCode(500, SapError("Erreur SQL lors du chargement du catalogue."));
         }
 
-        _cache.Set(itemsCacheKey, items, TimeSpan.FromMinutes(2));
-        return Ok(new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, items.Count));
+        var payload = new ApiResponse<IReadOnlyList<SapItemDto>>(true, null, items, totalCount);
+        _cache.Set(pagedCacheKey, payload, TimeSpan.FromMinutes(2));
+        return Ok(payload);
     }
 
     [HttpGet("item-groups")]
@@ -295,7 +321,7 @@ ORDER BY B.ItmsGrpNam, B.ItmsGrpCod;";
                         handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                     }
 
-                    using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+                    using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
                     using var request = new HttpRequestMessage(HttpMethod.Get, $"{slUrl}/ItemImages('{Uri.EscapeDataString(safeItemCode)}')/$value");
                     request.Headers.Add("Cookie", $"B1SESSION={sessionId}");
                     using var response = await client.SendAsync(request, cancellationToken);
@@ -2911,7 +2937,7 @@ WHERE (@openOnly = 0 OR {openCondition})
         if (!string.IsNullOrWhiteSpace(server) &&
             !string.IsNullOrWhiteSpace(sqlPort) &&
             !server.Contains(',') &&
-            !string.Equals(sqlPort.Trim(), "1433", StringComparison.OrdinalIgnoreCase))
+            !server.Contains('\\'))
         {
             server = $"{server},{sqlPort}";
         }
@@ -2947,7 +2973,8 @@ WHERE (@openOnly = 0 OR {openCondition})
             TrustServerCertificate = true,
             Encrypt = false,
             IntegratedSecurity = useIntegratedSecurity,
-            ConnectTimeout = 5
+            ConnectTimeout = GetSapSqlConnectTimeoutSeconds(),
+            ConnectRetryCount = 0
         };
 
         if (useSqlAuth)
@@ -2972,39 +2999,15 @@ WHERE (@openOnly = 0 OR {openCondition})
         if (string.IsNullOrWhiteSpace(baseDataSource))
             return null;
 
-        var candidates = new List<string> { baseDataSource };
-
-        if (!baseDataSource.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase))
-            candidates.Add($"tcp:{baseDataSource}");
-        else
-            candidates.Add(baseDataSource[4..]);
-
-        var noPrefix = baseDataSource.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase)
-            ? baseDataSource[4..]
-            : baseDataSource;
-
-        if (!noPrefix.Contains(','))
+        const string workingDataSourceCacheKey = "sap:sql:working-datasource";
+        var candidates = new List<string>();
+        if (_cache.TryGetValue(workingDataSourceCacheKey, out string? cachedDataSource) &&
+            !string.IsNullOrWhiteSpace(cachedDataSource))
         {
-            var configuredPort = (_configuration["SapB1:SqlPort"] ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(configuredPort))
-            {
-                candidates.Add($"{noPrefix},{configuredPort}");
-                candidates.Add($"tcp:{noPrefix},{configuredPort}");
-            }
-        }
-        else
-        {
-            var hostOnly = noPrefix.Split(',')[0];
-            if (!string.IsNullOrWhiteSpace(hostOnly))
-            {
-                candidates.Add(hostOnly);
-                candidates.Add($"tcp:{hostOnly}");
-            }
+            candidates.Add(cachedDataSource);
         }
 
-        var host = noPrefix.Split(',')[0].Trim();
-        if (!string.IsNullOrWhiteSpace(host) && !host.Contains('\\'))
-            candidates.Add($@"np:\\{host}\pipe\sql\query");
+        candidates.Add(baseDataSource);
 
         foreach (var dataSource in candidates
                      .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -3021,6 +3024,7 @@ WHERE (@openOnly = 0 OR {openCondition})
             {
                 await conn.OpenAsync(cancellationToken);
                 _logger.LogInformation("[HYBRID-MODE] Connexion SQL ouverte via DataSource={DataSource}", dataSource);
+                _cache.Set(workingDataSourceCacheKey, dataSource, TimeSpan.FromHours(1));
                 return conn;
             }
             catch (Exception ex)
@@ -3037,9 +3041,18 @@ WHERE (@openOnly = 0 OR {openCondition})
     {
         var raw = _configuration["SapB1:SqlCommandTimeoutSeconds"];
         if (!int.TryParse(raw, out var timeout))
-            timeout = 30;
+            return 0;
 
-        return Math.Clamp(timeout, 3, 120);
+        return timeout <= 0 ? 0 : Math.Clamp(timeout, 3, 120);
+    }
+
+    private int GetSapSqlConnectTimeoutSeconds()
+    {
+        var raw = _configuration["SapB1:SqlConnectTimeoutSeconds"];
+        if (!int.TryParse(raw, out var timeout))
+            timeout = 15;
+
+        return Math.Clamp(timeout, 5, 60);
     }
 
     private static string BuildServiceLayerListUrl(string entity, int page, int pageSize)
@@ -5006,6 +5019,10 @@ WHERE DocEntry = @docEntry;";
         if (string.IsNullOrWhiteSpace(configuredName))
             return 1;
 
+        var cacheKey = $"sap:default-price-list:{configuredName.ToLowerInvariant()}";
+        if (_cache.TryGetValue(cacheKey, out int cachedPriceList) && cachedPriceList > 0)
+            return cachedPriceList;
+
         try
         {
             var conn = await OpenSapSqlConnectionAsync(cancellationToken);
@@ -5021,7 +5038,11 @@ WHERE DocEntry = @docEntry;";
                 if (obj is not null && obj != DBNull.Value)
                 {
                     var parsed = Convert.ToInt32(obj);
-                    if (parsed > 0) return parsed;
+                    if (parsed > 0)
+                    {
+                        _cache.Set(cacheKey, parsed, TimeSpan.FromHours(6));
+                        return parsed;
+                    }
                 }
             }
         }
@@ -5050,7 +5071,11 @@ ORDER BY ListName ASC, ListNum ASC", conn))
                 if (obj is not null && obj != DBNull.Value)
                 {
                     var parsed = Convert.ToInt32(obj);
-                    if (parsed > 0) return parsed;
+                    if (parsed > 0)
+                    {
+                        _cache.Set(cacheKey, parsed, TimeSpan.FromHours(6));
+                        return parsed;
+                    }
                 }
             }
         }

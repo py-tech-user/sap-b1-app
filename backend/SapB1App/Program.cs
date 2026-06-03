@@ -36,7 +36,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions =>
         {
-            sqlOptions.CommandTimeout(30); // Timeout de 30 secondes pour les commandes SQL
+            sqlOptions.CommandTimeout(0); // Attendre la fin des calculs SQL, sans limite de temps.
             sqlOptions.EnableRetryOnFailure(
                 maxRetryCount: 3,
                 maxRetryDelay: TimeSpan.FromSeconds(5),

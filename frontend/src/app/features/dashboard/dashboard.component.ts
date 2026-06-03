@@ -2,7 +2,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
 import { ReportingApiService, CommercialReportingPayload, PartnerDebtItem } from '../../core/services/reporting-api.service';
 import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
@@ -321,32 +320,40 @@ export class DashboardComponent implements OnInit {
   load(): void {
     this.loading.set(true);
 
-    forkJoin({
-      reporting: this.reportingApi.getCommercialReporting(this.buildReportingParams()),
-      partnerDebts: this.reportingApi.getPartnerDebts(
-        this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
-        1,
-        this.partnerDebtsPageSize
-      )
-    }).subscribe({
-      next: ({ reporting, partnerDebts }) => {
+    this.reportingApi.getCommercialReporting(this.buildReportingParams()).subscribe({
+      next: (reporting) => {
         this.partnerDebtsPage = 1;
         this.report.set(reporting.data);
-        this.partnerDebts.set(partnerDebts.data ?? []);
-        this.partnerDebtsTotal.set(Number(partnerDebts.totalCount ?? (partnerDebts.data?.length ?? 0)));
+        this.partnersCount.set(Number(reporting.data?.kpis?.activePartnersCount ?? 0));
         this.loading.set(false);
+        this.loadPartnerDebts();
+        this.loadCatalogCount();
       },
       error: () => this.loading.set(false)
     });
+  }
 
-    this.http.get<any>(`${this.api}/sap/partners?page=1&pageSize=1`).subscribe({
-      next: (customers) => this.partnersCount.set(this.extractTotal(customers)),
-      error: () => this.partnersCount.set(0)
-    });
-
+  private loadCatalogCount(): void {
     this.http.get<any>(`${this.api}/sap/items?page=1&pageSize=1`).subscribe({
       next: (products) => this.catalogCount.set(this.extractTotal(products)),
       error: () => this.catalogCount.set(0)
+    });
+  }
+
+  private loadPartnerDebts(): void {
+    this.reportingApi.getPartnerDebts(
+      this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
+      1,
+      this.partnerDebtsPageSize
+    ).subscribe({
+      next: (partnerDebts) => {
+        this.partnerDebts.set(partnerDebts.data ?? []);
+        this.partnerDebtsTotal.set(Number(partnerDebts.totalCount ?? (partnerDebts.data?.length ?? 0)));
+      },
+      error: () => {
+        this.partnerDebts.set([]);
+        this.partnerDebtsTotal.set(0);
+      }
     });
   }
 
