@@ -5,7 +5,7 @@
 |--------|------------|
 | Frontend | Angular 21.1.4 (Standalone Components, Signals) |
 | Backend | .NET 10 Web API |
-| Base de données | SQL Server Express |
+| Base de données | Serveur SAP B1 |
 | ORM | Entity Framework Core 9 |
 | Auth | JWT Bearer Tokens |
 | CSS | Angular Material + SCSS |
