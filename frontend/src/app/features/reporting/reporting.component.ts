@@ -145,6 +145,34 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
 
         <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
           <h2>Impayés</h2>
+          <div class="table-filters">
+            <label>
+              Rechercher client
+              <input
+                type="text"
+                list="suggestions-impayes-clients"
+                [(ngModel)]="rechercheImpayesClient"
+                placeholder="Code ou nom client"
+              />
+              <datalist id="suggestions-impayes-clients">
+                @for (s of suggestionsImpayesClients(); track s) { <option [value]="s"></option> }
+              </datalist>
+            </label>
+            @if (estModeAdministrateur()) {
+              <label>
+                Rechercher commercial
+                <input
+                  type="text"
+                  list="suggestions-impayes-commerciaux"
+                  [(ngModel)]="rechercheImpayesCommercial"
+                  placeholder="Nom ou code commercial"
+                />
+                <datalist id="suggestions-impayes-commerciaux">
+                  @for (s of suggestionsImpayesCommerciaux(); track s) { <option [value]="s"></option> }
+                </datalist>
+              </label>
+            }
+          </div>
           <table>
             <thead>
               <tr>
@@ -156,7 +184,7 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
                 <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('overdueDays')">Jours de retard {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'overdueDays') }}</button></th>
               </tr>
             </thead>
-            <tbody>@for (u of sortedUnpaidItems(rapport); track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>}</tbody>
+            <tbody>@for (u of sortedUnpaidItems(rapport); track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>} @empty { <tr><td colspan="6">Aucun impayé pour cette recherche.</td></tr> }</tbody>
           </table>
           @if (canExpandTable(rapport.unpaidItems.length) || canCollapseTables()) {
             <div class="table-actions">
@@ -176,6 +204,7 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
     .filters { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: .7rem; }
     label { display: grid; gap: .3rem; font-weight: 600; color: #2b3a4a; }
     input, select, button { border: 1px solid #cad7e5; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
+    .table-filters { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: .7rem; margin: .45rem 0 .7rem; max-width: 780px; }
     .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: .7rem; }
     .kpi { border: 1px solid #e4ebf3; border-radius: 10px; padding: .7rem; background: linear-gradient(145deg, #fff, #f7fbff); }
     .kpi.active { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
@@ -195,7 +224,7 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
     .muted { color: #6b7280; font-size: .9rem; }
     .highlight { border-color: #f59e0b; }
     @media (max-width: 1100px) { .filters, .kpi-grid { grid-template-columns: 1fr 1fr; } .camembert-zone { grid-template-columns: 1fr; } }
-    @media (max-width: 680px) { .filters, .kpi-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .filters, .kpi-grid, .table-filters { grid-template-columns: 1fr; } }
   `]
 })
 export class ReportingComponent {
@@ -213,6 +242,8 @@ export class ReportingComponent {
   dateFin = this.dateDuJour();
 
   rechercheCommercial = '';
+  rechercheImpayesClient = '';
+  rechercheImpayesCommercial = '';
   metriqueActive: MetriqueActive = 'chiffreAffaires';
   detailsLimit = 10;
 
@@ -225,9 +256,24 @@ export class ReportingComponent {
   topClientsSortKey: TopClientSortKey | null = null;
   topClientsSortDirection: SortDirection = 'none';
 
-  readonly estModeAdministrateur = computed(() => ['Admin', 'Manager'].includes(this.auth.role()));
+  readonly estModeAdministrateur = computed(() => this.auth.hasRole(['Admin', 'Manager']));
   readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(sp => String(sp.salesPersonName).trim().toLowerCase() !== 'administrateur'));
   readonly suggestionsCommerciaux = computed(() => this.commerciaux().map(s => s.salesPersonName));
+  readonly suggestionsImpayesClients = computed(() =>
+    [...new Set((this.data()?.unpaidItems ?? [])
+      .flatMap((u) => [String(u.cardCode ?? ''), String(u.cardName ?? '')])
+      .map((value) => value.trim())
+      .filter(Boolean))]
+      .slice(0, 150)
+  );
+  readonly suggestionsImpayesCommerciaux = computed(() =>
+    this.estModeAdministrateur()
+      ? [...new Set((this.data()?.unpaidItems ?? [])
+      .flatMap((u) => [String(u.salesPersonName || '').trim(), String(u.salesPersonCode ?? '').trim()])
+      .filter(Boolean))]
+      .slice(0, 150)
+      : []
+  );
   constructor() { this.charger(); }
 
   charger(): void {
@@ -349,11 +395,22 @@ export class ReportingComponent {
   }
 
   sortedUnpaidItems(rapport: AdvancedReportingPayload): AdvancedReportingPayload['unpaidItems'] {
-    const rows = [...(rapport.unpaidItems ?? [])];
+    const clientQuery = this.normalizeSearch(this.rechercheImpayesClient);
+    const commercialQuery = this.estModeAdministrateur()
+      ? this.normalizeSearch(this.rechercheImpayesCommercial)
+      : '';
+    const rows = (rapport.unpaidItems ?? []).filter((row) => {
+      const matchesClient = !clientQuery ||
+        this.normalizeSearch(row.cardCode).includes(clientQuery) ||
+        this.normalizeSearch(row.cardName).includes(clientQuery);
+      const matchesCommercial = !commercialQuery ||
+        this.normalizeSearch(row.salesPersonName).includes(commercialQuery) ||
+        this.normalizeSearch(row.salesPersonCode).includes(commercialQuery);
+      return matchesClient && matchesCommercial;
+    });
     if (!this.unpaidSortKey || this.unpaidSortDirection === 'none') return rows;
     const direction = this.unpaidSortDirection === 'asc' ? 1 : -1;
-    rows.sort((a, b) => this.compareUnpaid(a, b, this.unpaidSortKey!) * direction);
-    return rows;
+    return [...rows].sort((a, b) => this.compareUnpaid(a, b, this.unpaidSortKey!) * direction);
   }
 
   sortIndicator(activeKey: string | null, activeDirection: SortDirection, key: string): string {
@@ -461,6 +518,10 @@ export class ReportingComponent {
     if (!saisie) return undefined;
     const commercial = this.commerciaux().find((x) => x.salesPersonName.trim().toLowerCase().includes(saisie));
     return commercial?.salesPersonCode;
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase();
   }
 
   private moisParDefaut(): string {

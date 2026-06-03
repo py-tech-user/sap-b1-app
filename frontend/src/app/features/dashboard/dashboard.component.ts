@@ -182,6 +182,23 @@ type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
               }
             </datalist>
           </label>
+          @if (isAdminMode()) {
+            <label>
+              Rechercher commercial
+              <input
+                type="text"
+                list="partner-debt-commercial-suggestions"
+                [ngModel]="partnerDebtCommercialSearch()"
+                (ngModelChange)="onPartnerDebtCommercialSearchChange($event)"
+                placeholder="Nom commercial"
+              />
+              <datalist id="partner-debt-commercial-suggestions">
+                @for (s of partnerDebtCommercialSuggestions(); track s) {
+                  <option [value]="s"></option>
+                }
+              </datalist>
+            </label>
+          }
         </div>
         <table>
           <thead>
@@ -209,7 +226,7 @@ type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
         </table>
         @if (canExpandPartnerDebts()) {
           <div class="table-actions">
-            <button type="button" (click)="expandPartnerDebts()" [disabled]="loadingMorePartnerDebts()">Expand (+10)</button>
+            <button type="button" (click)="expandPartnerDebts()" [disabled]="loadingMorePartnerDebts()">Voir plus (+10)</button>
           </div>
         }
       </section>
@@ -233,7 +250,7 @@ type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
     .transform-card h3 { margin: 0 0 .35rem; font-size: .9rem; color: #4b5563; }
     .transform-card p { margin: 0; font-size: 1.2rem; font-weight: 700; color: #111827; }
     .debts-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .85rem; }
-    .debts-filters { margin: .35rem 0 .6rem; max-width: 420px; }
+    .debts-filters { margin: .35rem 0 .6rem; display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: .7rem; max-width: 780px; }
     .debts-filters label { display: grid; gap: .3rem; font-weight: 600; color: #374151; }
     .debts-filters input { border: 1px solid #d1d5db; border-radius: 8px; padding: .45rem .6rem; }
     .debts-card table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
@@ -246,6 +263,7 @@ type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
     @media (max-width: 900px) {
       .transform-grid { grid-template-columns: 1fr; }
       .filters-panel { grid-template-columns: 1fr; }
+      .debts-filters { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: 1fr; }
       .stat-card { padding: .8rem; }
       .stat-value { font-size: 1.2rem; }
@@ -272,6 +290,7 @@ export class DashboardComponent implements OnInit {
   dateFin = this.todayIso();
   selectedSalesPersonCode = 0;
   readonly partnerDebtSearch = signal('');
+  readonly partnerDebtCommercialSearch = signal('');
   readonly report = signal<CommercialReportingPayload | null>(null);
   readonly partnerDebts = signal<PartnerDebtItem[]>([]);
   readonly partnerDebtsTotal = signal(0);
@@ -282,11 +301,19 @@ export class DashboardComponent implements OnInit {
   private partnerDebtsPage = 1;
   private readonly partnerDebtsPageSize = 10;
   readonly filteredPartnerDebts = computed(() => {
-    const q = this.partnerDebtSearch().trim().toLowerCase();
-    const baseRows = !q ? this.partnerDebts() : this.partnerDebts().filter((row) =>
-      String(row.cardCode ?? '').toLowerCase().includes(q) ||
-      String(row.cardName ?? '').toLowerCase().includes(q)
-    );
+    const partnerQuery = this.normalizeSearch(this.partnerDebtSearch());
+    const commercialQuery = this.isAdminMode()
+      ? this.normalizeSearch(this.partnerDebtCommercialSearch())
+      : '';
+    const baseRows = this.partnerDebts().filter((row) => {
+      const matchesPartner = !partnerQuery ||
+        this.normalizeSearch(row.cardCode).includes(partnerQuery) ||
+        this.normalizeSearch(row.cardName).includes(partnerQuery);
+      const matchesCommercial = !commercialQuery ||
+        this.normalizeSearch(row.salesPersonName).includes(commercialQuery) ||
+        this.normalizeSearch(row.salesPersonCode).includes(commercialQuery);
+      return matchesPartner && matchesCommercial;
+    });
     const sortKey = this.partnerDebtSortKey();
     const sortDirection = this.partnerDebtSortDirection();
     if (!sortKey || sortDirection === 'none') return baseRows;
@@ -302,6 +329,14 @@ export class DashboardComponent implements OnInit {
       .filter(Boolean)
       .slice(0, 150)
   );
+  readonly partnerDebtCommercialSuggestions = computed(() =>
+    this.isAdminMode()
+      ? [...new Set(this.partnerDebts()
+      .flatMap((row) => [String(row.salesPersonName || '').trim(), String(row.salesPersonCode ?? '').trim()])
+      .filter(Boolean))]
+      .slice(0, 150)
+      : []
+  );
   readonly visibleTeamMembers = computed(() =>
     (this.report()?.teamMembers ?? []).filter(sp => {
       const name = String(sp.salesPersonName ?? '').trim().toLowerCase();
@@ -313,7 +348,7 @@ export class DashboardComponent implements OnInit {
   readonly isAdminMode = signal(false);
 
   ngOnInit(): void {
-    this.isAdminMode.set(['Admin', 'Manager'].includes(this.auth.role()));
+    this.isAdminMode.set(this.auth.hasRole(['Admin', 'Manager']));
     this.load();
   }
 
@@ -367,6 +402,14 @@ export class DashboardComponent implements OnInit {
 
   onPartnerDebtSearchChange(value: string): void {
     this.partnerDebtSearch.set(String(value ?? ''));
+  }
+
+  onPartnerDebtCommercialSearchChange(value: string): void {
+    if (!this.isAdminMode()) {
+      this.partnerDebtCommercialSearch.set('');
+      return;
+    }
+    this.partnerDebtCommercialSearch.set(String(value ?? ''));
   }
 
   togglePartnerDebtSort(key: PartnerDebtSortKey): void {
@@ -443,6 +486,10 @@ export class DashboardComponent implements OnInit {
       return av.localeCompare(bv);
     }
     return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase();
   }
 
   private buildReportingParams(): {
