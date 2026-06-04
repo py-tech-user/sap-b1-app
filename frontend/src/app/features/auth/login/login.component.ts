@@ -11,8 +11,8 @@ import { AuthService } from '../../../core/services/auth.service';
   template: `
     <div class="login-container">
       <div class="login-card">
-        <h1>SAP B1 App</h1>
-        <h2>Connexion</h2>
+        <h1>Connexion</h1>
+        
         
         @if (error()) {
           <div class="error-message">{{ error() }}</div>
@@ -47,9 +47,7 @@ import { AuthService } from '../../../core/services/auth.service';
             {{ loading() ? 'Connexion...' : 'Se connecter' }}
           </button>
 
-          <div class="mock-hint">
-            <small>Mode dev : admin/admin A· manager/manager A· commercial/commercial</small>
-          </div>
+          
         </form>
       </div>
     </div>

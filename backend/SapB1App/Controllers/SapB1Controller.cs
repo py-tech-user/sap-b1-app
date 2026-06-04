@@ -1277,9 +1277,6 @@ WHERE CardCode IN ({inSql});";
             return Forbid();
 
         var queryBase = "BusinessPartners?$select=CardCode,CardName,Phone1,Cellular,EmailAddress,Currency,CreditLimit,CardType,GroupCode,Country,City,Address,SalesPersonCode";
-        if (!isAdmin)
-            queryBase += $"&$filter=SalesPersonCode eq {salesPersonCode}";
-
         var nextUrl = $"{queryBase}&$orderby=CardCode desc&$top=10000";
         var guard = 0;
 
@@ -1291,6 +1288,13 @@ WHERE CardCode IN ({inSql});";
 
             allItems.AddRange(MapBusinessPartners(result.Response));
             nextUrl = ExtractServiceLayerNextLink(result.Response);
+        }
+
+        if (!isAdmin)
+        {
+            allItems = allItems
+                .Where(x => x.SalesPersonCode == salesPersonCode)
+                .ToList();
         }
 
         var totalCount = allItems.Count;
@@ -2598,12 +2602,14 @@ ORDER BY BP.CardName, BP.CardCode;";
                     @isAdmin = 1
                     OR (
                         @salesPersonCode > 0
-                        AND ISNULL(SlpCode, 0) = @salesPersonCode
-                        AND EXISTS (
+                        AND (
+                          ISNULL(SlpCode, 0) = @salesPersonCode
+                          OR EXISTS (
                             SELECT 1
                             FROM OCRD BP
-                            WHERE BP.CardCode = CardCode
+                            WHERE BP.CardCode = H.CardCode
                               AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+                          )
                         )
                     )
                   )"
@@ -2614,7 +2620,7 @@ ORDER BY BP.CardName, BP.CardCode;";
 (
     SELECT {selectColumns},
            ROW_NUMBER() OVER (ORDER BY DocEntry DESC) AS RowNum
-    FROM {tableName}
+    FROM {tableName} H
     WHERE (@openOnly = 0 OR {openCondition})
       AND (@search = '' OR CardCode LIKE @searchLike OR CardName LIKE @searchLike OR CAST(DocNum AS NVARCHAR(50)) LIKE @searchLike)
       AND (@customer = '' OR CardCode LIKE @customerLike OR CardName LIKE @customerLike)
@@ -2635,7 +2641,7 @@ ORDER BY RowNum;";
 
         var countSql = $@"
 SELECT COUNT(1)
-FROM {tableName}
+FROM {tableName} H
 WHERE (@openOnly = 0 OR {openCondition})
   AND (@search = '' OR CardCode LIKE @searchLike OR CardName LIKE @searchLike OR CAST(DocNum AS NVARCHAR(50)) LIKE @searchLike)
   AND (@customer = '' OR CardCode LIKE @customerLike OR CardName LIKE @customerLike)
@@ -3158,7 +3164,7 @@ WHERE H.DocEntry = @docEntry;";
             {
                 if (currentSalesPersonCode <= 0)
                     return Forbid();
-                if (salesPersonCode != currentSalesPersonCode || partnerSalesPersonCode != currentSalesPersonCode)
+                if (salesPersonCode != currentSalesPersonCode && partnerSalesPersonCode != currentSalesPersonCode)
                     return Forbid();
             }
             var header = new Dictionary<string, object?>
@@ -4533,6 +4539,7 @@ GROUP BY L.BaseLine;";
                 Country = GetString(node, "Country"),
                 City = GetString(node, "City"),
                 Address = GetString(node, "Address"),
+                SalesPersonCode = GetInt(node, "SalesPersonCode"),
                 ContactPerson = GetString(node, "ContactPerson"),
                 OpenOrdersBalance = GetDecimal(node, "OpenOrdersBalance"),
                 DebitorAccount = GetString(node, "DebitorAccount"),
@@ -5597,6 +5604,7 @@ public class DocumentViewDto
     public int DocNum { get; set; }
     public string CardCode { get; set; } = string.Empty;
     public string CardName { get; set; } = string.Empty;
+    public int SalesPersonCode { get; set; }
     public DateTime? Date { get; set; }
     public decimal Total { get; set; }
     public decimal PaidToDate { get; set; }
