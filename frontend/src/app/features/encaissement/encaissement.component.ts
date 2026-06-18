@@ -37,6 +37,9 @@ interface InvoiceSelection {
   selected: boolean;
 }
 
+type InvoiceSortKey = 'entry' | 'number' | 'date' | 'dueDate' | 'total' | 'paid' | 'open' | 'status' | 'allocation';
+type SortDirection = 'none' | 'asc' | 'desc';
+
 @Component({
   selector: 'app-encaissement',
   standalone: true,
@@ -100,20 +103,20 @@ interface InvoiceSelection {
             <thead>
               <tr>
                 <th></th>
-                <th>No entrée</th>
-                <th>No document</th>
-                <th>Date</th>
-                <th>Date échéance</th>
-                <th>Total</th>
-                <th>Payé</th>
-                <th>Reste</th>
-                <th>Statut</th>
-                <th>Affecte auto</th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('entry')">No entrée {{ sortIndicator('entry') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('number')">No document {{ sortIndicator('number') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('date')">Date {{ sortIndicator('date') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('dueDate')">Date échéance {{ sortIndicator('dueDate') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('total')">Total {{ sortIndicator('total') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('paid')">Payé {{ sortIndicator('paid') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('open')">Reste {{ sortIndicator('open') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('status')">Statut {{ sortIndicator('status') }}</button></th>
+                <th><button type="button" class="sort-header" (click)="toggleInvoiceSort('allocation')">Affecte auto {{ sortIndicator('allocation') }}</button></th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              @for (invoice of invoices(); track invoice.docEntry) {
+              @for (invoice of displayedInvoices(); track invoice.docEntry) {
                 <tr>
                   <td>
                     <input
@@ -189,6 +192,8 @@ interface InvoiceSelection {
     .suggestions button:hover { background: #eff6ff; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid #eef2ff; padding: 0.55rem; text-align: left; }
+    .sort-header { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+    .sort-header:hover { color: #2563eb; }
     .table-actions { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
     .actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .action-feedback { font-weight: 700; font-size: 0.9rem; }
@@ -225,6 +230,8 @@ export class EncaissementComponent {
   readonly clients = signal<EncaissementClient[]>([]);
   readonly invoices = signal<EncaissementInvoice[]>([]);
   readonly selections = signal<InvoiceSelection[]>([]);
+  readonly invoiceSortKey = signal<InvoiceSortKey | null>(null);
+  readonly invoiceSortDirection = signal<SortDirection>('none');
 
   readonly selectedCardCode = signal('');
   readonly selectedClientInput = signal('');
@@ -247,6 +254,7 @@ export class EncaissementComponent {
   });
   readonly totalSelectedAmount = computed(() =>
     this.selectedInvoicesOrdered().reduce((sum, invoice) => sum + invoice.openAmount, 0));
+  readonly displayedInvoices = computed(() => this.sortedInvoices(this.invoices()));
   readonly loadingInvoices = signal(false);
   readonly saving = signal(false);
   readonly loadingClients = signal(false);
@@ -363,6 +371,35 @@ export class EncaissementComponent {
     return this.computeAllocations().get(docEntry) ?? 0;
   }
 
+  toggleInvoiceSort(key: InvoiceSortKey): void {
+    if (this.invoiceSortKey() !== key) {
+      this.invoiceSortKey.set(key);
+      this.invoiceSortDirection.set('asc');
+      return;
+    }
+
+    const current = this.invoiceSortDirection();
+    if (current === 'asc') {
+      this.invoiceSortDirection.set('desc');
+      return;
+    }
+
+    if (current === 'desc') {
+      this.invoiceSortKey.set(null);
+      this.invoiceSortDirection.set('none');
+      return;
+    }
+
+    this.invoiceSortDirection.set('asc');
+  }
+
+  sortIndicator(key: InvoiceSortKey): string {
+    if (this.invoiceSortKey() !== key) return '';
+    if (this.invoiceSortDirection() === 'asc') return '↑';
+    if (this.invoiceSortDirection() === 'desc') return '↓';
+    return '';
+  }
+
   toggleInvoice(docEntry: number, selected: boolean): void {
     if (!Number.isFinite(docEntry) || docEntry <= 0) {
       console.warn('[encaissement] ignored selection for invalid docEntry', docEntry);
@@ -377,7 +414,7 @@ export class EncaissementComponent {
   }
 
   selectAllDisplayedInvoices(): void {
-    const next = this.invoices()
+    const next = this.displayedInvoices()
       .filter((invoice) => this.canSelect(invoice))
       .map((invoice) => ({ docEntry: invoice.docEntry, selected: true }));
 
@@ -729,6 +766,42 @@ export class EncaissementComponent {
     return a.docEntry - b.docEntry;
   }
 
+  private sortedInvoices(rows: EncaissementInvoice[]): EncaissementInvoice[] {
+    const key = this.invoiceSortKey();
+    const direction = this.invoiceSortDirection();
+    if (!key || direction === 'none') return rows;
+
+    const multiplier = direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => this.compareInvoicesForDisplay(a, b, key) * multiplier);
+  }
+
+  private compareInvoicesForDisplay(a: EncaissementInvoice, b: EncaissementInvoice, key: InvoiceSortKey): number {
+    if (key === 'entry') return this.compareNumber(a.docEntry, b.docEntry);
+    if (key === 'number') return this.compareNumber(a.docNum, b.docNum);
+    if (key === 'date') return this.compareDate(a.docDate, b.docDate);
+    if (key === 'dueDate') return this.compareDate(a.docDueDate, b.docDueDate);
+    if (key === 'total') return this.compareNumber(a.docTotal, b.docTotal);
+    if (key === 'paid') return this.compareNumber(a.paidToDate, b.paidToDate);
+    if (key === 'open') return this.compareNumber(a.openAmount, b.openAmount);
+    if (key === 'status') return this.compareText(this.isOpenDocStatus(a.docStatus) ? 'Ouverte' : 'Clôturée', this.isOpenDocStatus(b.docStatus) ? 'Ouverte' : 'Clôturée');
+    if (key === 'allocation') return this.compareNumber(this.allocationOf(a.docEntry), this.allocationOf(b.docEntry));
+    return 0;
+  }
+
+  private compareNumber(a: unknown, b: unknown): number {
+    return Number(a ?? 0) - Number(b ?? 0);
+  }
+
+  private compareText(a: unknown, b: unknown): number {
+    return String(a ?? '').localeCompare(String(b ?? ''), 'fr', { sensitivity: 'base', numeric: true });
+  }
+
+  private compareDate(a: string | undefined, b: string | undefined): number {
+    const left = a ? new Date(a).getTime() : 0;
+    const right = b ? new Date(b).getTime() : 0;
+    return left - right;
+  }
+
   private applyLocalPaymentResult(allocations: Map<number, number>): void {
     const updated = this.invoices()
       .map(invoice => {
@@ -757,6 +830,7 @@ export class EncaissementComponent {
     this.cashSum.set(this.totalSelectedAmount());
   }
 }
+
 
 
 

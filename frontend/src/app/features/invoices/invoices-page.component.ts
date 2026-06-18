@@ -5,6 +5,9 @@ import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoices-api.service';
 
+type InvoiceSortKey = 'number' | 'partner' | 'date' | 'status' | 'total';
+type SortDirection = 'none' | 'asc' | 'desc';
+
 @Component({
   selector: 'app-invoices-page',
   standalone: true,
@@ -39,16 +42,16 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
         <table>
           <thead>
             <tr>
-              <th>Numero</th>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Statut</th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('number')">Numero {{ sortIndicator('number') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('partner')">Client {{ sortIndicator('partner') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('date')">Date {{ sortIndicator('date') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('total')">Total {{ sortIndicator('total') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('status')">Statut {{ sortIndicator('status') }}</button></th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (doc of items(); track doc.id) {
+            @for (doc of visibleItems(); track doc.id) {
               <tr>
                 <td>{{ doc.docNum || ('#' + doc.id) }}</td>
                 <td>{{ doc.cardName || doc.cardCode || '-' }}</td>
@@ -86,6 +89,8 @@ import { InvoiceListFilters, InvoiceListItem, InvoicesApiService } from './invoi
     .badge-open { background: #e8f5e9; color: #1b5e20; }
     .badge-closed { background: #f3f4f6; color: #374151; }
     .badge-cancelled { background: #fdecea; color: #c62828; }
+    .sort-header { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+    .sort-header:hover { color: #2563eb; }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
     .pager { display: flex; justify-content: space-between; align-items: center; }
     @media (max-width: 1024px) {
@@ -104,7 +109,10 @@ export class InvoicesPageComponent implements OnInit {
   readonly page = signal(1);
   readonly pageSize = signal(15);
   readonly totalCount = signal(0);
+  readonly sortKey = signal<InvoiceSortKey | null>(null);
+  readonly sortDirection = signal<SortDirection>('none');
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
+  readonly visibleItems = computed(() => this.sortedItems(this.items()));
 
   private readonly pageCache = new Map<string, InvoiceListItem[]>();
   private readonly totalCountCache = new Map<string, number>();
@@ -214,7 +222,9 @@ export class InvoicesPageComponent implements OnInit {
       customer: form.customer || undefined,
       status: statusFilter,
       dateFrom: form.dateFrom || undefined,
-      dateTo: form.dateTo || undefined
+      dateTo: form.dateTo || undefined,
+      sortBy: this.sortDirection() === 'none' ? undefined : this.sortKey() ?? undefined,
+      sortDirection: this.sortDirection() === 'none' ? undefined : this.sortDirection() as 'asc' | 'desc'
     };
   }
 
@@ -247,6 +257,12 @@ export class InvoicesPageComponent implements OnInit {
 
   private buildCacheKey(filters: InvoiceListFilters): string {
     return JSON.stringify(filters);
+  }
+
+  private reloadSortedList(): void {
+    this.clearCaches();
+    this.page.set(1);
+    this.load();
   }
 
   private compactCachesIfNeeded(): void {
@@ -308,9 +324,83 @@ export class InvoicesPageComponent implements OnInit {
     return !this.isOpenStatus(status) && !this.isCancelledStatus(status);
   }
 
+  toggleSort(key: InvoiceSortKey): void {
+    if (this.sortKey() !== key) {
+      this.sortKey.set(key);
+      this.sortDirection.set('asc');
+      this.reloadSortedList();
+      return;
+    }
+
+    const current = this.sortDirection();
+    if (current === 'asc') {
+      this.sortDirection.set('desc');
+      this.reloadSortedList();
+      return;
+    }
+
+    if (current === 'desc') {
+      this.sortKey.set(null);
+      this.sortDirection.set('none');
+      this.reloadSortedList();
+      return;
+    }
+
+    this.sortDirection.set('asc');
+    this.reloadSortedList();
+  }
+
+  sortIndicator(key: InvoiceSortKey): string {
+    if (this.sortKey() !== key) return '';
+    if (this.sortDirection() === 'asc') return '↑';
+    if (this.sortDirection() === 'desc') return '↓';
+    return '';
+  }
+
   statusLabel(status: string): 'En attente' | 'Cloturee' | 'Annulee' {
     if (this.isCancelledStatus(status)) return 'Annulee';
     return this.isOpenStatus(status) ? 'En attente' : 'Cloturee';
+  }
+
+  private sortedItems(rows: InvoiceListItem[]): InvoiceListItem[] {
+    const key = this.sortKey();
+    const direction = this.sortDirection();
+    if (!key || direction === 'none') return rows;
+
+    const multiplier = direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => this.compareInvoices(a, b, key) * multiplier);
+  }
+
+  private compareInvoices(a: InvoiceListItem, b: InvoiceListItem, key: InvoiceSortKey): number {
+    if (key === 'number') return this.compareNumberOrText(a.docNum || `#${a.id}`, b.docNum || `#${b.id}`);
+    if (key === 'partner') return this.compareText(a.cardName || a.cardCode || '-', b.cardName || b.cardCode || '-');
+    if (key === 'date') return this.compareDate(a.docDate, b.docDate);
+    if (key === 'status') return this.compareText(this.statusLabel(a.status), this.statusLabel(b.status));
+    if (key === 'total') return this.compareNumber(a.docTotal, b.docTotal);
+    return 0;
+  }
+
+  private compareText(a: unknown, b: unknown): number {
+    return String(a ?? '').localeCompare(String(b ?? ''), 'fr', { sensitivity: 'base', numeric: true });
+  }
+
+  private compareNumber(a: unknown, b: unknown): number {
+    return Number(a ?? 0) - Number(b ?? 0);
+  }
+
+  private compareNumberOrText(a: unknown, b: unknown): number {
+    const left = Number(String(a ?? '').replace(/[^0-9.-]/g, ''));
+    const right = Number(String(b ?? '').replace(/[^0-9.-]/g, ''));
+    if (Number.isFinite(left) && Number.isFinite(right) && (left !== 0 || right !== 0)) {
+      return left - right;
+    }
+    return this.compareText(a, b);
+  }
+
+  private compareDate(a: string | undefined, b: string | undefined): number {
+    const left = a ? new Date(a).getTime() : 0;
+    const right = b ? new Date(b).getTime() : 0;
+    return left - right;
   }
 }
 

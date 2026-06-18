@@ -126,7 +126,8 @@ type ChartPoint = {
           </section>
 
           <section class="panel">
-            <h3>Articles les plus achetés par ce partenaire</h3>
+            <h3>Articles favoris</h3>
+            <p class="assigned-salesperson">Commercial affecté : <strong>{{ partenaire.salesPersonName || 'Aucun commercial' }}</strong></p>
             <div class="table-toolbar">
               <input type="text" [(ngModel)]="rechercheArticlesPartenaire" (ngModelChange)="resetTable('partnerProducts')" placeholder="Rechercher un article" />
             </div>
@@ -152,41 +153,41 @@ type ChartPoint = {
             </div>
           </section>
 
-          <section class="grid two">
-            <article class="panel">
+          <section class="commercial-overview">
+            <article class="panel target-panel">
               <h3>CA réalisé vs objectif</h3>
               <div class="gauge" [style.background]="gaugeBackground(rapport.kpis.targetAchievementRate)"><span>{{ pourcentage(rapport.kpis.targetAchievementRate) }}</span></div>
               <p class="center">{{ monnaie(rapport.kpis.collectedRevenue) }} encaissé / objectif {{ monnaie(rapport.kpis.periodTarget) }}</p>
             </article>
-            <article class="panel">
-              <h3>Documents émis</h3>
-              <div class="doc-counts">
-                <span>Devis <b>{{ rapport.kpis.quotesCount }}</b></span>
-                <span>BC <b>{{ rapport.kpis.ordersCount }}</b></span>
-                <span>BL <b>{{ rapport.kpis.deliveryNotesCount }}</b></span>
-                <span>Factures <b>{{ rapport.kpis.invoicesCount }}</b></span>
-              </div>
-            </article>
+            <div class="side-stack">
+              <article class="panel docs-panel">
+                <h3>Documents émis</h3>
+                <div class="doc-counts">
+                  <span>Devis <b>{{ rapport.kpis.quotesCount }}</b></span>
+                  <span>BC <b>{{ rapport.kpis.ordersCount }}</b></span>
+                  <span>BL <b>{{ rapport.kpis.deliveryNotesCount }}</b></span>
+                  <span>Factures <b>{{ rapport.kpis.invoicesCount }}</b></span>
+                </div>
+              </article>
+              <article class="panel">
+                <h3>Taux de transformation devis → BC → BL → facture</h3>
+                <div class="funnel">
+                  @for (step of funnel(rapport); track step.label) {
+                    <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
+                  }
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Évolution du CA du commercial sur la période</h3>
+            <ng-container *ngTemplateOutlet="lineChart; context: { points: rapport.monthlyRevenue, color: '#16a34a' }"></ng-container>
           </section>
 
           <section class="grid two">
             <article class="panel">
-              <h3>Taux de transformation devis → BC → BL → facture</h3>
-              <div class="funnel">
-                @for (step of funnel(rapport); track step.label) {
-                  <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
-                }
-              </div>
-            </article>
-            <article class="panel">
-              <h3>Évolution du CA du commercial sur la période</h3>
-              <ng-container *ngTemplateOutlet="lineChart; context: { points: rapport.monthlyRevenue, color: '#16a34a' }"></ng-container>
-            </article>
-          </section>
-
-          <section class="grid two">
-            <article class="panel">
-              <h3>Articles vendus par ce commercial</h3>
+              <h3>Articles les plus vendus</h3>
               <div class="table-toolbar search-box">
                 <input type="text" [(ngModel)]="rechercheArticlesCommercial" (ngModelChange)="surRechercheArticlesCommercial()" (focus)="ouvrirArticlesCommercial = true" placeholder="Rechercher un article" />
                 @if (ouvrirArticlesCommercial && suggestionsArticlesCommercial(rapport.topProducts).length) {
@@ -210,7 +211,7 @@ type ChartPoint = {
               </div>
             </article>
             <article class="panel">
-              <h3>Partenaires qui achètent le plus chez ce commercial</h3>
+              <h3>Top partenaires</h3>
               <div class="table-toolbar search-box">
                 <input type="text" [(ngModel)]="recherchePartenairesCommercial" (ngModelChange)="surRecherchePartenairesCommercial()" (focus)="ouvrirPartenairesCommercialTable = true" placeholder="Rechercher un partenaire" />
                 @if (ouvrirPartenairesCommercialTable && suggestionsPartenairesCommercial(rapport.topPartners).length) {
@@ -272,8 +273,21 @@ type ChartPoint = {
     .suggestions button { border: 0; border-radius: 8px; text-align: left; padding: .55rem .65rem; cursor: pointer; }
     .suggestions button:hover { background: #eff6ff; }
     .grid { display: grid; gap: 1rem; } .two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .title-panel { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
-    .money-strip, .doc-counts { display: flex; gap: .6rem; flex-wrap: wrap; } .money-strip span, .doc-counts span { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .6rem .8rem; } .money-strip b, .doc-counts b { display: block; }
+    .title-panel { display: flex; justify-content: center; gap: 1rem; align-items: center; text-align: center; }
+    .title-panel > div { width: 100%; }
+    .commercial-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .9fr); gap: 1rem; align-items: start; }
+    .side-stack { display: grid; gap: 1rem; }
+    .target-panel { min-height: 100%; display: grid; align-content: center; }
+    .target-panel .gauge { width: 230px; height: 230px; }
+    .target-panel .gauge span { width: 152px; height: 152px; font-size: 1.55rem; }
+    .docs-panel { align-self: start; padding: .85rem; }
+    .docs-panel h3 { text-align: center; margin-bottom: .65rem; }
+    .money-strip { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .doc-counts { display: grid; grid-template-columns: repeat(2, minmax(88px, 1fr)); gap: .5rem; max-width: 360px; margin: 0 auto; }
+    .money-strip span, .doc-counts span { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .6rem .8rem; }
+    .doc-counts span { text-align: center; padding: .5rem .55rem; font-size: .82rem; }
+    .money-strip b, .doc-counts b { display: block; }
+    .doc-counts b { font-size: 1.2rem; line-height: 1.15; margin-top: .15rem; }
     .chart-row { display: grid; grid-template-columns: 190px 1fr; gap: 1rem; align-items: center; }
     .pie { width: 175px; height: 175px; border-radius: 999px; border: 1px solid #e2e8f0; box-shadow: inset 0 0 0 18px #fff; }
     .legend { display: grid; gap: .45rem; } .legend span { display: flex; align-items: center; gap: .45rem; } .legend i { width: 11px; height: 11px; border-radius: 999px; display: inline-block; }
@@ -281,9 +295,13 @@ type ChartPoint = {
     .axis-label { font-size: 11px; fill: #64748b; } .x-label { font-size: 10px; fill: #64748b; text-anchor: middle; }
     .point circle { cursor: help; filter: drop-shadow(0 2px 4px rgba(15,23,42,.22)); }
     .hint { color: #64748b; font-size: .82rem; margin: .35rem 0 0; }
+    .assigned-salesperson { color: #475569; font-size: .9rem; margin: -.35rem 0 .75rem; }
+    .assigned-salesperson strong { color: #111827; }
     .gauge { width: 190px; height: 190px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto; } .gauge span { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; background: #fff; font-weight: 900; font-size: 1.4rem; }
     .center { text-align: center; color: #475569; }
-    .funnel { display: grid; gap: .55rem; justify-items: center; } .funnel-step { min-width: 42%; max-width: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); color: #fff; border-radius: 12px; padding: .65rem .85rem; display: flex; justify-content: space-between; gap: .8rem; }
+    .funnel { display: grid; gap: .55rem; justify-items: center; }
+    .funnel-step { min-width: min(100%, 520px); max-width: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); color: #fff; border-radius: 12px; padding: .65rem .85rem; display: flex; justify-content: space-between; align-items: center; gap: .8rem; }
+    .funnel-step b, .funnel-step span { white-space: nowrap; }
     .table-toolbar { margin-bottom: .65rem; display: flex; justify-content: flex-start; position: relative; width: min(100%, 320px); }
     .table-toolbar input { width: min(100%, 320px); }
     .table-suggestions { top: calc(100% + 4px); width: 100%; }
@@ -293,7 +311,7 @@ type ChartPoint = {
     .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 800; text-align: left; }
     .sort-btn:hover { color: #2563eb; }
     .alert { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; padding: .75rem; border-radius: 12px; } .muted, .empty-state p { color: #64748b; }
-    @media (max-width: 1200px) { .filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .two { grid-template-columns: 1fr; } }
+    @media (max-width: 1200px) { .filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .two, .commercial-overview { grid-template-columns: 1fr; } }
     @media (max-width: 700px) { .title-panel { display: grid; } .filters, .chart-row { grid-template-columns: 1fr; } }
   `]
 })
@@ -338,7 +356,9 @@ export class ReportingComponent implements OnInit {
   };
 
   readonly estAdmin = computed(() => this.auth.hasRole(['Admin', 'Manager']));
-  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(c => c.salesPersonCode > 0));
+  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(c =>
+    c.salesPersonCode > 0 && String(c.role ?? '').trim().toLowerCase() === 'commercial'
+  ));
 
   @HostListener('document:click', ['$event'])
   fermerSuggestionsSiClicDehors(event: MouseEvent): void {
@@ -594,7 +614,15 @@ export class ReportingComponent implements OnInit {
   }
 
   couleur(index: number): string {
-    return ['#2563eb', '#16a34a', '#f97316', '#9333ea', '#dc2626', '#0891b2', '#ca8a04', '#475569'][index % 8];
+    const palette = [
+      '#2563eb', '#16a34a', '#f97316', '#9333ea', '#dc2626',
+      '#0891b2', '#ca8a04', '#475569', '#db2777', '#65a30d',
+      '#7c3aed', '#ea580c', '#0f766e', '#be123c', '#4f46e5',
+      '#84cc16', '#c026d3', '#0284c7', '#a16207', '#15803d',
+      '#e11d48', '#0369a1', '#9333ea', '#854d0e', '#0d9488',
+      '#b91c1c', '#6d28d9', '#1d4ed8', '#4d7c0f', '#c2410c'
+    ];
+    return palette[index % palette.length];
   }
 
   pointsCourbe(points: AdvancedReportingMonthlyRevenuePoint[]): string {
@@ -642,13 +670,27 @@ export class ReportingComponent implements OnInit {
     return `conic-gradient(#16a34a 0 ${safe}%, #e2e8f0 ${safe}% 100%)`;
   }
 
-  funnel(rapport: AdvancedReportingPayload): Array<{ label: string; count: number; rate: number; width: number }> {
-    const q = Math.max(rapport.kpis.quotesCount, 1);
+  funnel(rapport: AdvancedReportingPayload): Array<{ label: string; count: string; rate: number; width: number }> {
+    const widthFromRate = (rate: number) => Math.max(42, Math.min(100, Number(rate || 0)));
     return [
-      { label: 'Devis', count: rapport.kpis.quotesCount, rate: 100, width: 100 },
-      { label: 'BC', count: rapport.kpis.ordersCount, rate: rapport.kpis.quoteToOrderRate, width: Math.max(45, rapport.kpis.ordersCount * 100 / q) },
-      { label: 'BL', count: rapport.kpis.deliveryNotesCount, rate: rapport.kpis.orderToDeliveryRate, width: Math.max(38, rapport.kpis.deliveryNotesCount * 100 / q) },
-      { label: 'Factures', count: rapport.kpis.invoicesCount, rate: rapport.kpis.deliveryToInvoiceRate, width: Math.max(32, rapport.kpis.invoicesCount * 100 / q) }
+      {
+        label: 'Devis → BC',
+        count: `${rapport.kpis.ordersCount} / ${rapport.kpis.quotesCount}`,
+        rate: rapport.kpis.quoteToOrderRate,
+        width: widthFromRate(rapport.kpis.quoteToOrderRate)
+      },
+      {
+        label: 'BC → BL',
+        count: `${rapport.kpis.deliveryNotesCount} / ${rapport.kpis.ordersCount}`,
+        rate: rapport.kpis.orderToDeliveryRate,
+        width: widthFromRate(rapport.kpis.orderToDeliveryRate)
+      },
+      {
+        label: 'BL → Factures',
+        count: `${rapport.kpis.invoicesCount} / ${rapport.kpis.deliveryNotesCount}`,
+        rate: rapport.kpis.deliveryToInvoiceRate,
+        width: widthFromRate(rapport.kpis.deliveryToInvoiceRate)
+      }
     ];
   }
 

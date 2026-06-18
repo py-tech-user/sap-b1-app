@@ -159,6 +159,9 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                   <input type="number" min="0" step="100" [ngModel]="monthlyTargetInput()" (ngModelChange)="monthlyTargetInput.set($event)" (change)="saveMonthlyTarget()" />
                 </label>
                 <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
+                @if (isAdminMode() && selectedSalesPersonCode <= 0) {
+                  <span class="kpi-sub">Total calculé uniquement sur les commerciaux</span>
+                }
               } @else {
                 <span class="kpi-sub">Objectif mensuel: {{ formatMoney(r.kpis.monthlyTarget) }}</span>
                 <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
@@ -522,7 +525,8 @@ export class DashboardComponent implements OnInit {
   readonly visibleTeamMembers = computed(() =>
     (this.report()?.teamMembers ?? []).filter(sp => {
       const name = String(sp.salesPersonName ?? '').trim().toLowerCase();
-      return name !== 'administrateur';
+      const role = String(sp.role ?? '').trim().toLowerCase();
+      return sp.salesPersonCode > 0 && role === 'commercial' && name !== 'administrateur';
     })
   );
 
@@ -574,15 +578,18 @@ export class DashboardComponent implements OnInit {
   readonly revenueBreakdownRows = computed<RevenueBreakdownRow[]>(() => {
     const report = this.report();
     if (!report) return [];
+    const commercialCodes = new Set(this.visibleTeamMembers().map(sp => sp.salesPersonCode));
     const rows = this.shouldBreakdownByCommercial()
       ? (report.teamPerformances ?? [])
+          .filter(row => commercialCodes.has(row.salesPersonCode))
           .map(row => ({ label: row.salesPersonName || `Commercial #${row.salesPersonCode}`, revenue: Number(row.netRevenue || 0) }))
       : (report.topClients ?? [])
           .map(row => ({ label: row.cardName || row.cardCode, revenue: Number(row.revenue || 0) }));
+    const limit = this.shouldBreakdownByCommercial() ? 3 : 5;
     const positiveRows = rows
       .filter(row => row.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, limit);
     const total = positiveRows.reduce((sum, row) => sum + row.revenue, 0);
     return positiveRows.map(row => ({
       ...row,
@@ -646,7 +653,7 @@ export class DashboardComponent implements OnInit {
 
   revenueBreakdownTitle(): string {
     return this.shouldBreakdownByCommercial()
-      ? "Top 5 commerciaux par chiffre d'affaires"
+      ? "Top 3 commerciaux par chiffre d'affaires"
       : "Top 5 partenaires par chiffre d'affaires";
   }
 
@@ -1193,3 +1200,4 @@ export class DashboardComponent implements OnInit {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
+

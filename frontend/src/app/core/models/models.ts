@@ -237,6 +237,8 @@ export interface CommercialListFilters {
   status?: string;
   dateFrom?: string;
   dateTo?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface SaveCommercialDocumentDto {

@@ -96,6 +96,7 @@ public class CommercialSalesPersonInfoDto
 {
     public int SalesPersonCode { get; set; }
     public string SalesPersonName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
 }
 
 public class CommercialPartnerActivityDto

@@ -35,7 +35,7 @@ export interface PartnerListResult {
 @Injectable({ providedIn: 'root' })
 export class PartnerApiService {
   private readonly http = inject(HttpClient);
-  private readonly endpoint = `${environment.apiUrl}/sap/partners`;
+  private readonly endpoint = `${environment.apiUrl}/sap/clients`;
 
   getAll(page = 1, pageSize = 15): Observable<PartnerListResult> {
     const params = new HttpParams()

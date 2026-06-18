@@ -11,6 +11,8 @@ export interface InvoiceListFilters {
   status?: string;
   dateFrom?: string;
   dateTo?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface InvoiceListItem {
@@ -43,6 +45,8 @@ export class InvoicesApiService {
     if (filters.status) params = params.set('status', filters.status);
     if (filters.dateFrom) params = params.set('dateFrom', filters.dateFrom);
     if (filters.dateTo) params = params.set('dateTo', filters.dateTo);
+    if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
+    if (filters.sortDirection) params = params.set('sortDirection', filters.sortDirection);
 
     return this.sapApi.get<any>('factures', params).pipe(
       map((res) => this.normalizeList(res))

@@ -12,6 +12,8 @@ import {
 import { COMMERCIAL_META, STATUS_ACTIONS } from '../commercial-meta';
 
 const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
+type DocumentSortKey = 'number' | 'partner' | 'date' | 'status' | 'total';
+type SortDirection = 'none' | 'asc' | 'desc';
 
 @Component({
   selector: 'app-document-list',
@@ -70,11 +72,11 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
         <table>
           <thead>
             <tr>
-              <th>Numero</th>
-              <th>Raison sociale</th>
-              <th>Date</th>
-              <th>Statut</th>
-              <th>Total</th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('number')">Numero {{ sortIndicator('number') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('partner')">Raison sociale {{ sortIndicator('partner') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('date')">Date {{ sortIndicator('date') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('status')">Statut {{ sortIndicator('status') }}</button></th>
+              <th><button type="button" class="sort-header" (click)="toggleSort('total')">Total {{ sortIndicator('total') }}</button></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -129,6 +131,8 @@ const COMMERCIAL_REFRESH_EVENT = 'commercialDocuments:updated';
     .badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.78rem; }
     .badge-open { background: #e8f5e9; color: #1b5e20; }
     .badge-closed { background: #f3f4f6; color: #374151; }
+    .sort-header { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+    .sort-header:hover { color: #2563eb; }
     .badge-cancelled { background: #fdecea; color: #c62828; }
     .row-actions { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
@@ -156,6 +160,8 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   readonly page = signal(1);
   readonly pageSize = signal(15);
   readonly totalCount = signal(0);
+  readonly sortKey = signal<DocumentSortKey | null>(null);
+  readonly sortDirection = signal<SortDirection>('none');
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
   readonly customerSuggestions = computed(() =>
     [...new Set(this.items().map(doc => this.partnerNameOf(doc)).filter(v => v && v !== '-'))].slice(0, 30)
@@ -177,14 +183,16 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   });
   readonly visibleItems = computed(() => {
     const customerRaw = String(this.filtersForm.getRawValue().customer ?? '').trim().toLowerCase();
-    if (!customerRaw) return this.items();
+    const filtered = !customerRaw
+      ? this.items()
+      : this.items().filter((doc) => {
+        const raw = doc as any;
+        const cardCode = String(raw.cardCode ?? raw.CardCode ?? doc.cardCode ?? '').trim().toLowerCase();
+        const partner = this.partnerNameOf(doc).toLowerCase();
+        return partner.includes(customerRaw) || cardCode.includes(customerRaw);
+      });
 
-    return this.items().filter((doc) => {
-      const raw = doc as any;
-      const cardCode = String(raw.cardCode ?? raw.CardCode ?? doc.cardCode ?? '').trim().toLowerCase();
-      const partner = this.partnerNameOf(doc).toLowerCase();
-      return partner.includes(customerRaw) || cardCode.includes(customerRaw);
-    });
+    return this.sortedItems(filtered);
   });
   private filterDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
@@ -299,6 +307,39 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     return transitions.filter(t => t.from === current);
   }
 
+  toggleSort(key: DocumentSortKey): void {
+    if (this.sortKey() !== key) {
+      this.sortKey.set(key);
+      this.sortDirection.set('asc');
+      this.reloadSortedList();
+      return;
+    }
+
+    const current = this.sortDirection();
+    if (current === 'asc') {
+      this.sortDirection.set('desc');
+      this.reloadSortedList();
+      return;
+    }
+
+    if (current === 'desc') {
+      this.sortKey.set(null);
+      this.sortDirection.set('none');
+      this.reloadSortedList();
+      return;
+    }
+
+    this.sortDirection.set('asc');
+    this.reloadSortedList();
+  }
+
+  sortIndicator(key: DocumentSortKey): string {
+    if (this.sortKey() !== key) return '';
+    if (this.sortDirection() === 'asc') return '↑';
+    if (this.sortDirection() === 'desc') return '↓';
+    return '';
+  }
+
   changeStatus(doc: CommercialDocument, status: string): void {
     if (!confirm(`Confirmer le changement de statut vers ${status} ?`)) return;
     this.api.updateStatus(this.resource(), doc.id, status)
@@ -344,6 +385,47 @@ export class DocumentListComponent implements OnInit, OnDestroy {
 
     const text = String(value ?? '').trim();
     return text || '-';
+  }
+
+  private sortedItems(rows: CommercialDocument[]): CommercialDocument[] {
+    const key = this.sortKey();
+    const direction = this.sortDirection();
+    if (!key || direction === 'none') return rows;
+
+    const multiplier = direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => this.compareDocuments(a, b, key) * multiplier);
+  }
+
+  private compareDocuments(a: CommercialDocument, b: CommercialDocument, key: DocumentSortKey): number {
+    if (key === 'number') return this.compareNumberOrText(this.numberOf(a), this.numberOf(b));
+    if (key === 'partner') return this.compareText(this.partnerNameOf(a), this.partnerNameOf(b));
+    if (key === 'date') return this.compareDate(this.dateOf(a), this.dateOf(b));
+    if (key === 'status') return this.compareText(this.statusPhase(a.status), this.statusPhase(b.status));
+    if (key === 'total') return this.compareNumber(this.totalOf(a), this.totalOf(b));
+    return 0;
+  }
+
+  private compareText(a: unknown, b: unknown): number {
+    return String(a ?? '').localeCompare(String(b ?? ''), 'fr', { sensitivity: 'base', numeric: true });
+  }
+
+  private compareNumber(a: unknown, b: unknown): number {
+    return Number(a ?? 0) - Number(b ?? 0);
+  }
+
+  private compareNumberOrText(a: unknown, b: unknown): number {
+    const left = Number(String(a ?? '').replace(/[^0-9.-]/g, ''));
+    const right = Number(String(b ?? '').replace(/[^0-9.-]/g, ''));
+    if (Number.isFinite(left) && Number.isFinite(right) && (left !== 0 || right !== 0)) {
+      return left - right;
+    }
+    return this.compareText(a, b);
+  }
+
+  private compareDate(a: string | undefined, b: string | undefined): number {
+    const left = a ? new Date(a).getTime() : 0;
+    const right = b ? new Date(b).getTime() : 0;
+    return left - right;
   }
 
   detailQueryParams(): { returnTo: string } {
@@ -425,7 +507,9 @@ export class DocumentListComponent implements OnInit, OnDestroy {
             ? cancelledStatusFilter
             : undefined,
       dateFrom: formValue.dateFrom || undefined,
-      dateTo: formValue.dateTo || undefined
+      dateTo: formValue.dateTo || undefined,
+      sortBy: this.sortDirection() === 'none' ? undefined : this.sortKey() ?? undefined,
+      sortDirection: this.sortDirection() === 'none' ? undefined : this.sortDirection() as 'asc' | 'desc'
     };
   }
 
@@ -471,8 +555,16 @@ export class DocumentListComponent implements OnInit, OnDestroy {
       customer: filters.customer ?? '',
       status: filters.status ?? '',
       dateFrom: filters.dateFrom ?? '',
-      dateTo: filters.dateTo ?? ''
+      dateTo: filters.dateTo ?? '',
+      sortBy: filters.sortBy ?? '',
+      sortDirection: filters.sortDirection ?? ''
     });
+  }
+
+  private reloadSortedList(): void {
+    this.clearCaches();
+    this.page.set(1);
+    this.load();
   }
 
   private compactCachesIfNeeded(): void {

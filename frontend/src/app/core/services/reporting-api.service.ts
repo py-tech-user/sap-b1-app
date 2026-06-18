@@ -106,6 +106,7 @@ export interface PartnerDebtItem {
 export interface ReportingSalesPersonInfo {
   salesPersonCode: number;
   salesPersonName: string;
+  role?: string;
 }
 
 export interface CommercialReportingPayload {

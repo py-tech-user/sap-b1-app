@@ -72,13 +72,6 @@ public class SapB1Controller : ControllerBase
         CancellationToken cancellationToken = default)
         => GetBusinessPartnersViaSqlAsync(page, pageSize, cancellationToken);
 
-    [HttpGet("partners")]
-    [Authorize]
-    public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetPartners(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 15,
-        CancellationToken cancellationToken = default)
-        => GetBusinessPartnersViaSqlAsync(page, pageSize, cancellationToken);
 
     [HttpPost("clients")]
     [Authorize]
@@ -101,10 +94,6 @@ public class SapB1Controller : ControllerBase
         return await CreateRawAsync("BusinessPartners", payload, cancellationToken);
     }
 
-    [HttpPost("partners")]
-    [Authorize]
-    public Task<ActionResult<ApiResponse<object>>> CreatePartner([FromBody] CreateSapClientRequest request, CancellationToken cancellationToken)
-        => CreateClient(request, cancellationToken);
 
     [HttpGet("clients/series")]
     [Authorize]
@@ -1479,7 +1468,7 @@ ORDER BY CardName, CardCode;";
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
 
-        var cacheKey = $"reporting:commercial:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{isAdmin}:card:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:docs:{includeRecentDocuments}:team:{includeTeamPerformance}";
+        var cacheKey = $"reporting:commercial:v2:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{isAdmin}:card:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:docs:{includeRecentDocuments}:team:{includeTeamPerformance}";
         if (_cache.TryGetValue(cacheKey, out CommercialReportingResponseDto? cached) && cached is not null)
             return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, cached));
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
@@ -1514,14 +1503,25 @@ ORDER BY CardName, CardCode;";
 
         response.TeamMembers = await _db.Users
             .AsNoTracking()
-            .Where(u => u.IsActive)
+            .Where(u => u.IsActive && u.Role == Roles.Commercial)
             .Select(u => new CommercialSalesPersonInfoDto
             {
                 SalesPersonCode = u.SapSalesPersonCode,
-                SalesPersonName = u.FullName
+                SalesPersonName = u.FullName,
+                Role = u.Role
             })
             .OrderBy(u => u.SalesPersonName)
             .ToListAsync(cancellationToken);
+
+        var commercialSalesPersonCodes = response.TeamMembers
+            .Select(m => m.SalesPersonCode)
+            .ToHashSet();
+        response.TeamPerformances = response.TeamPerformances
+            .Where(t => commercialSalesPersonCodes.Contains(t.SalesPersonCode))
+            .ToList();
+        allTeamPerformances = allTeamPerformances
+            .Where(t => commercialSalesPersonCodes.Contains(t.SalesPersonCode))
+            .ToList();
 
         var namesByCode = response.TeamMembers.ToDictionary(k => k.SalesPersonCode, v => v.SalesPersonName);
         foreach (var item in response.TeamPerformances)
@@ -2268,7 +2268,7 @@ ORDER BY InvoicesAmount DESC;";
         var scopedSalesPersonCode = isAdmin ? salesPersonCode : currentSalesPerson;
         if (!isAdmin && scopedSalesPersonCode <= 0) return Forbid();
 
-        var cacheKey = $"reporting:advanced:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(itemCode ?? string.Empty).Trim().ToLowerInvariant()}:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:{detailsLimit}:{isAdmin}";
+        var cacheKey = $"reporting:advanced:v2:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(itemCode ?? string.Empty).Trim().ToLowerInvariant()}:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:{detailsLimit}:{isAdmin}";
         if (_cache.TryGetValue(cacheKey, out AdvancedReportingResponseDto? cached) && cached is not null)
             return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, cached));
 
@@ -2290,12 +2290,13 @@ ORDER BY InvoicesAmount DESC;";
 
             response.TeamMembers = await _db.Users
                 .AsNoTracking()
-                .Where(u => u.IsActive)
+                .Where(u => u.IsActive && u.Role == Roles.Commercial)
                 .Select(u => new CommercialSalesPersonInfoDto
                 {
                     SalesPersonCode = u.SapSalesPersonCode,
-                    SalesPersonName = u.FullName
-                })
+                SalesPersonName = u.FullName,
+                Role = u.Role
+            })
                 .OrderBy(u => u.SalesPersonName)
                 .ToListAsync(cancellationToken);
 
@@ -2339,7 +2340,9 @@ ORDER BY InvoicesAmount DESC;";
             response.ClientDetails = new List<ReportingClientDetailDto>();
             response.PartnerDetails = new List<ReportingPartnerDetailDto>();
             response.TopCommercials = await LoadReportingTeamPerformanceAsync(conn, periodStart, periodEnd, isAdmin ? null : scopedSalesPersonCode, cardCode, cancellationToken);
+            var commercialCodes = response.TeamMembers.Select(x => x.SalesPersonCode).ToHashSet();
             response.TopCommercials = response.TopCommercials
+                .Where(x => commercialCodes.Contains(x.SalesPersonCode))
                 .OrderByDescending(x => x.NetRevenue)
                 .Take(10)
                 .ToList();
@@ -3315,7 +3318,8 @@ ORDER BY C.Revenue DESC;";
         result.SalesCycleDays = Math.Round(quoteValidationDays + dso, 1);
 
         var monthlyTarget = await GetMonthlyTargetAsync(salesPersonCode, cancellationToken);
-        var periodTarget = Math.Round(monthlyTarget * ResolveTargetMultiplier(start, end), 2);
+        var targetCommercialCount = await ResolveTargetCommercialCountAsync(salesPersonCode, cancellationToken);
+        var periodTarget = Math.Round(monthlyTarget * targetCommercialCount * ResolveTargetMultiplier(start, end), 2);
         result.MonthlyTarget = monthlyTarget;
         result.PeriodTarget = periodTarget;
         result.TargetAchievementRate = periodTarget > 0 ? Math.Round(collectedRevenue / periodTarget * 100, 2) : 0;
@@ -3367,6 +3371,20 @@ END";
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    private async Task<int> ResolveTargetCommercialCountAsync(int? salesPersonCode, CancellationToken cancellationToken)
+    {
+        if (salesPersonCode.HasValue && salesPersonCode.Value > 0)
+            return 1;
+
+        var count = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.IsActive && u.SapSalesPersonCode > 0 && u.Role == Roles.Commercial)
+            .Select(u => u.SapSalesPersonCode)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        return Math.Max(1, count);
+    }
     private async Task<decimal> GetMonthlyTargetAsync(int? salesPersonCode, CancellationToken cancellationToken)
     {
         await EnsureSalesTargetsTableAsync(cancellationToken);
@@ -3699,6 +3717,28 @@ ORDER BY BP.CardName, BP.CardCode;";
         return result;
     }
 
+    private static string ResolveDocumentListSortOrder(string? sortBy, string? sortDirection, bool isInvoiceTable)
+    {
+        var direction = string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "ASC"
+            : string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase)
+                ? "DESC"
+                : "DESC";
+
+        var column = (sortBy ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "number" => "H.DocNum",
+            "partner" => "H.CardName",
+            "date" => "H.DocDate",
+            "status" => "CASE WHEN ISNULL(H.CANCELED, 'N') = 'Y' THEN 2 WHEN ISNULL(H.DocStatus, 'O') = 'O' THEN 0 ELSE 1 END",
+            "total" => "ISNULL(H.DocTotal, 0)",
+            "paid" when isInvoiceTable => "ISNULL(H.PaidToDate, 0)",
+            "open" when isInvoiceTable => "ISNULL(H.DocTotal, 0) - ISNULL(H.PaidToDate, 0)",
+            _ => "H.DocEntry"
+        };
+
+        return $"{column} {direction}, H.DocEntry DESC";
+    }
     private async Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetDocumentsViaSqlAsync(
         string tableName,
         bool openOnly,
@@ -3717,6 +3757,9 @@ ORDER BY BP.CardName, BP.CardCode;";
         var normalizedSearch = (search ?? string.Empty).Trim();
         var normalizedCustomer = (customer ?? string.Empty).Trim();
         var normalizedStatus = NormalizeDocumentStatusFilter(status);
+        var sortBy = Request.Query["sortBy"].FirstOrDefault();
+        var sortDirection = Request.Query["sortDirection"].FirstOrDefault();
+        var sortOrderExpression = ResolveDocumentListSortOrder(sortBy, sortDirection, isInvoiceTable);
         var applySalesScope = ShouldApplySalesScopeBySalesPerson(tableName);
         var isAdmin = _currentUserService.IsAdmin();
         var salesPersonCode = _currentUserService.GetSapSalesPersonCode();
@@ -3768,7 +3811,7 @@ ORDER BY BP.CardName, BP.CardCode;";
 ;WITH Filtered AS
 (
     SELECT {selectColumns},
-           ROW_NUMBER() OVER (ORDER BY DocEntry DESC) AS RowNum
+           ROW_NUMBER() OVER (ORDER BY {sortOrderExpression}) AS RowNum
     FROM {tableName} H
     WHERE (@openOnly = 0 OR {openCondition})
       AND (@search = '' OR CardCode LIKE @searchLike OR CardName LIKE @searchLike OR CAST(DocNum AS NVARCHAR(50)) LIKE @searchLike)
@@ -7004,6 +7047,15 @@ public class SapItemWarehouseDto
     public string WarehouseCode { get; set; } = string.Empty;
     public decimal InStock { get; set; }
 }
+
+
+
+
+
+
+
+
+
 
 
 
