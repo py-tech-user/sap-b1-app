@@ -112,7 +112,7 @@ public class DeliveryNoteService(AppDbContext db) : IDeliveryNoteService
             BaseType = DocumentBaseType.SalesOrder,
             BaseEntry = order.Id,
             BaseLine = null,
-            Comments = $"Généré depuis BC {order.DocNum}",
+            Comments = string.Empty,
             CreatedAt = DateTime.UtcNow
         };
 

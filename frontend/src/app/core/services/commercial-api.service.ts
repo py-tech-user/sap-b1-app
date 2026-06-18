@@ -552,6 +552,22 @@ export class CommercialApiService {
           mapped['VatPercent'] = vatPct;
         }
 
+        const baseType = String(line.baseType ?? '').trim();
+        const baseEntry = Number(line.baseEntry ?? NaN);
+        const baseLine = Number(line.baseLine ?? NaN);
+
+        if (baseType) {
+          mapped['BaseType'] = baseType;
+        }
+
+        if (Number.isFinite(baseEntry) && baseEntry > 0) {
+          mapped['BaseEntry'] = Math.trunc(baseEntry);
+        }
+
+        if (Number.isFinite(baseLine) && baseLine >= 0) {
+          mapped['BaseLine'] = Math.trunc(baseLine);
+        }
+
         return mapped;
       })
       .filter((line) => String(line['ItemCode'] ?? '') !== '' && Number(line['Quantity'] ?? 0) > 0 && String(line['WarehouseCode'] ?? '') !== '');
@@ -914,6 +930,9 @@ export class CommercialApiService {
       unitPrice: Number(line?.unitPrice ?? line?.UnitPrice ?? line?.Price ?? line?.price ?? line?.UnitPriceAfVAT ?? 0),
       vatPct: Number(line?.vatPct ?? line?.VatPercent ?? line?.TaxRate ?? 0),
       lineTotal: Number(line?.lineTotal ?? line?.LineTotal ?? line?.total ?? line?.Total ?? 0),
+      subtotalHt: Number(line?.subtotalHt ?? line?.SubtotalHt ?? line?.lineTotal ?? line?.LineTotal ?? 0) || undefined,
+      vatAmount: Number(line?.vatAmount ?? line?.VatAmount ?? 0) || undefined,
+      totalTtc: Number(line?.totalTtc ?? line?.TotalTtc ?? line?.lineTotal ?? line?.LineTotal ?? 0) || undefined,
       lineStatus,
       baseType: String(line?.baseType ?? line?.BaseType ?? '').trim() || undefined,
       baseEntry: Number(line?.baseEntry ?? line?.BaseEntry ?? 0) || undefined,

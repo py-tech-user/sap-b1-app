@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { EMPTY, from } from 'rxjs';
@@ -16,7 +16,7 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
         <h1>Catalogue</h1>
         <div class="header-actions">
           <button type="button" class="btn-secondary" (click)="toggleCart()" [disabled]="cartLines().length === 0">
-            Voir panier ({{ cartLines().length }})
+            Voir panier ({{ cartTotalItems() }})
           </button>
           <button type="button" class="btn-primary" (click)="goToOrderFromCart()" [disabled]="cartLines().length === 0">
             Commander
@@ -80,17 +80,11 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
         }
       }
 
-      @if (cartLines().length > 0) {
-        <button type="button" class="cart-fab" (click)="toggleCart()">
-          Voir panier ({{ cartLines().length }})
-        </button>
-      }
-
       @if (showCart() && cartLines().length > 0) {
         <div class="cart-overlay" (click)="closeCart()"></div>
         <aside class="cart-drawer" role="dialog" aria-modal="true" aria-label="Panier">
           <div class="cart-head">
-            <h3>Panier ({{ cartLines().length }})</h3>
+            <h3>Panier ({{ cartTotalItems() }})</h3>
             <button type="button" class="btn-secondary" (click)="closeCart()">Fermer</button>
           </div>
           <div class="cart-body">
@@ -143,7 +137,6 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
     .mini-table .stock { color: #334155; font-size: .74rem; }
     .low-stock { color: #dc2626; font-weight: 700; }
 
-    .cart-fab { position: fixed; right: 14px; bottom: 14px; z-index: 1000; padding: .65rem .9rem; border: 1px solid #1976d2; background: #1976d2; color: #fff; border-radius: 999px; font-weight: 700; box-shadow: 0 8px 18px rgba(25, 118, 210, 0.35); cursor: pointer; }
     .cart-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 1200; }
     .cart-drawer { position: fixed; right: 0; top: 0; height: 100dvh; width: min(420px, 100vw); background: #fff; z-index: 1201; display: flex; flex-direction: column; border-left: 1px solid #e5e7eb; box-shadow: -8px 0 24px rgba(15, 23, 42, 0.2); }
     .cart-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .8rem; border-bottom: 1px solid #e5e7eb; }
@@ -164,7 +157,6 @@ import { CatalogCartLine, CatalogCartService } from '../../../core/services/cata
       .header-actions { width: 100%; justify-content: flex-end; }
       .btn-primary, .btn-secondary { padding: .45rem .7rem; font-size: .82rem; }
       .cart-row { grid-template-columns: 1fr 74px auto; }
-      .cart-fab { right: 10px; bottom: 10px; padding: .6rem .8rem; }
     }
   `]
 })
@@ -175,6 +167,7 @@ export class ProductListComponent implements OnInit {
   products = signal<Product[]>([]);
   visibleProducts = signal<Product[]>([]);
   cartLines = signal<CatalogCartLine[]>([]);
+  cartTotalItems = computed(() => this.cartLines().reduce((sum, l) => sum + l.quantity, 0));
   showCart = signal(false);
   selectedGroupCode = signal<number | null>(null);
   loadingGroups = signal(true);

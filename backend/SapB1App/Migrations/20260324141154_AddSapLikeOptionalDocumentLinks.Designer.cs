@@ -228,45 +228,8 @@ namespace SapB1App.Migrations
                     b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.DailyTrackSummary", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<int>("PointsCount")
-                        .HasColumnType("int");
-
-                    b.Property<double>("TotalDistanceKm")
-                        .HasColumnType("float");
-
-                    b.Property<TimeSpan?>("TotalDuration")
-                        .HasColumnType("time");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VisitsCount")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Date")
-                        .IsUnique();
-
-                    b.ToTable("DailyTrackSummaries");
-                });
 
             modelBuilder.Entity("SapB1App.Models.DeliveryNote", b =>
                 {
@@ -521,44 +484,6 @@ namespace SapB1App.Migrations
                     b.ToTable("InvoiceLines");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.LocationTrack", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double?>("Accuracy")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Altitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Heading")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Latitude")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Longitude")
-                        .HasColumnType("float");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double?>("Speed")
-                        .HasColumnType("float");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "RecordedAt");
-
-                    b.ToTable("LocationTracks");
-                });
 
             modelBuilder.Entity("SapB1App.Models.Order", b =>
                 {
@@ -1005,124 +930,6 @@ namespace SapB1App.Migrations
                     b.ToTable("ReturnLines");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.Visit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CheckInAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double?>("CheckInLatitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("CheckInLongitude")
-                        .HasColumnType("float");
-
-                    b.Property<DateTime?>("CheckOutAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double?>("CheckOutLatitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("CheckOutLongitude")
-                        .HasColumnType("float");
-
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double?>("DistanceKm")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("float");
-
-                    b.Property<int?>("SapDocNum")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("SyncedToSap")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Visits");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.VisitCheckPoint", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double?>("Accuracy")
-                        .HasColumnType("float");
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<double>("Latitude")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Longitude")
-                        .HasColumnType("float");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VisitId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("VisitId");
-
-                    b.ToTable("VisitCheckPoints");
-                });
 
             modelBuilder.Entity("SapB1App.Models.CreditNote", b =>
                 {
@@ -1133,17 +940,6 @@ namespace SapB1App.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.DailyTrackSummary", b =>
-                {
-                    b.HasOne("SapB1App.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SapB1App.Models.DeliveryNote", b =>
@@ -1225,17 +1021,6 @@ namespace SapB1App.Migrations
                     b.Navigation("Invoice");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.LocationTrack", b =>
-                {
-                    b.HasOne("SapB1App.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SapB1App.Models.Order", b =>
@@ -1368,43 +1153,6 @@ namespace SapB1App.Migrations
                     b.Navigation("Return");
                 });
 
-            modelBuilder.Entity("SapB1App.Models.Visit", b =>
-                {
-                    b.HasOne("SapB1App.Models.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SapB1App.Models.VisitCheckPoint", b =>
-                {
-                    b.HasOne("SapB1App.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SapB1App.Models.Visit", "Visit")
-                        .WithMany("CheckPoints")
-                        .HasForeignKey("VisitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-
-                    b.Navigation("Visit");
-                });
-
             modelBuilder.Entity("SapB1App.Models.CreditNote", b =>
                 {
                     b.Navigation("Return");
@@ -1451,12 +1199,8 @@ namespace SapB1App.Migrations
                 {
                     b.Navigation("Lines");
                 });
-
-            modelBuilder.Entity("SapB1App.Models.Visit", b =>
-                {
-                    b.Navigation("CheckPoints");
-                });
 #pragma warning restore 612, 618
         }
     }
 }
+

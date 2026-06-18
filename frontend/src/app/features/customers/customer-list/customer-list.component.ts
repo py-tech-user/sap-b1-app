@@ -131,7 +131,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
             <h1>Partenaires</h1>
           </div>
           <div class="header-actions">
-            <a routerLink="/customers/new" class="btn-primary">+ Creer partenaire</a>
+            <a routerLink="/customers/new" class="btn-primary">+ Créer un partenaire</a>
           </div>
         </div>
 
@@ -172,7 +172,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
           <table class="desktop-table">
           <thead>
             <tr>
-              <th>Details</th>
+              <th>Détails</th>
               <th>Code</th>
               <th>Raison social</th>
               <th>Telephone</th>
@@ -191,7 +191,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
               @for (customer of pagedCustomers(); track customer.code + '-' + $index) {
                 <tr>
                   <td>
-                    <button type="button" class="btn-detail" (click)="openDetails(customer)">Details</button>
+                    <button type="button" class="btn-detail" (click)="openDetails(customer)">Détails</button>
                   </td>
                   <td>{{ customer.code }}</td>
                   <td>{{ customer.name }}</td>
@@ -230,7 +230,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
                   <div><span>Type</span><strong>{{ customer.cardType }}</strong></div>
                   <div><span>Pays</span><strong>{{ customer.country }}</strong></div>
                 </div>
-                <button type="button" class="btn-detail mobile-detail" (click)="openDetails(customer)">Details</button>
+                <button type="button" class="btn-detail mobile-detail" (click)="openDetails(customer)">Détails</button>
               </article>
             }
           }
@@ -245,9 +245,9 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
 
       @if (selectedCustomer()) {
         <div class="drawer-backdrop" (click)="closeDetails()"></div>
-        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Details client">
+        <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détails du partenaire">
           <div class="drawer-header">
-            <h3>Details client {{ selectedCustomerName() }}</h3>
+            <h3>Détails du partenaire {{ selectedCustomerName() }}</h3>
             <button type="button" class="btn-close" (click)="closeDetails()">Fermer</button>
           </div>
           <div class="drawer-body">
@@ -549,19 +549,24 @@ export class CustomerListComponent implements OnInit, OnDestroy {
     if (!selected) return [];
 
     return [
-      { key: 'address', value: toDisplayValue(pickValue(selected, ['address', 'Address', 'Street', 'AddressName'])) },
-      { key: 'contactPerson', value: toDisplayValue(pickValue(selected, ['contactPerson', 'contact', 'ContactPerson', 'CntctPrsn'])) },
-      { key: 'cardCode', value: toDisplayValue(pickValue(selected, ['code', 'cardCode', 'CardCode'])) },
-      { key: 'cardName', value: toDisplayValue(pickValue(selected, ['name', 'cardName', 'CardName'])) },
-      { key: 'status', value: toDisplayValue(pickValue(selected, ['status'])) },
-      { key: 'mobile', value: toDisplayValue(pickValue(selected, ['cellular', 'Cellular', 'mobilePhone', 'MobilePhone'])) },
-      { key: 'groupCode', value: toDisplayValue(pickValue(selected, ['groupCode', 'GroupCode', 'GroupName', 'groupName'])) },
-      { key: 'city', value: toDisplayValue(pickValue(selected, ['city', 'City', 'CityName'])) },
-      { key: 'openOrdersBalance', value: toDisplayValue(pickValue(selected, ['openOrdersBalance', 'OpenOrdersBalance'])) },
-      { key: 'debitorAccount', value: toDisplayValue(pickValue(selected, ['debitorAccount', 'DebitorAccount'])) },
-      { key: 'paymentMethodCode', value: toDisplayValue(pickValue(selected, ['peymentMethodCode', 'paymentMethodCode'])) },
-      { key: 'creditLimit', value: toDisplayValue(pickValue(selected, ['creditLimit', 'CreditLimit', 'CreditLine', 'total', 'Total'])) },
-      { key: 'total', value: toDisplayValue(pickValue(selected, ['total', 'Total'])) }
+      { key: 'Code partenaire', value: toDisplayValue(pickValue(selected, ['code', 'cardCode', 'CardCode'])) },
+      { key: 'Nom du partenaire', value: toDisplayValue(pickValue(selected, ['name', 'cardName', 'CardName'])) },
+      { key: 'Type', value: toDisplayValue(pickValue(selected, ['cardType', 'CardType', 'type', 'U_BPType', 'cardTypeName'])) },
+      { key: 'Nom étranger', value: toDisplayValue(pickValue(selected, ['foreignName', 'ForeignName'])) },
+      { key: 'Groupe', value: toDisplayValue(pickValue(selected, ['groupCode', 'GroupCode', 'GroupName', 'groupName'])) },
+      { key: 'Devise', value: toDisplayValue(pickValue(selected, ['currency', 'Currency'])) },
+      { key: 'N° identification entreprise', value: toDisplayValue(pickValue(selected, ['federalTaxId', 'FederalTaxID', 'LicTradNum'])) },
+      { key: 'Tél. 1', value: toDisplayValue(pickValue(selected, ['phone1', 'Phone1'])) },
+      { key: 'Tél. 2', value: toDisplayValue(pickValue(selected, ['phone2', 'Phone2'])) },
+      { key: 'Mobile', value: toDisplayValue(pickValue(selected, ['cellular', 'Cellular', 'mobilePhone', 'MobilePhone'])) },
+      { key: 'Email', value: toDisplayValue(pickValue(selected, ['emailAddress', 'EmailAddress', 'email', 'E_Mail', 'EMailAddress'])) },
+      { key: 'Adresse', value: toDisplayValue(pickValue(selected, ['address', 'Address', 'Street', 'AddressName'])) },
+      { key: 'Ville', value: toDisplayValue(pickValue(selected, ['city', 'City', 'CityName'])) },
+      { key: 'Pays', value: toDisplayValue(pickValue(selected, ['country', 'Country', 'CountryCode'])) },
+      { key: 'Contact', value: toDisplayValue(pickValue(selected, ['contactPerson', 'contact', 'ContactPerson', 'CntctPrsn'])) },
+      { key: 'N° identification supplémentaire', value: toDisplayValue(pickValue(selected, ['additionalIdentificationNumber', 'AdditionalIdentificationNumber'])) },
+      { key: 'N° identification fiscale unifiée', value: toDisplayValue(pickValue(selected, ['unifiedTaxIdentificationNumber', 'UnifiedTaxIdentificationNumber'])) },
+      { key: 'Limite de crédit', value: toDisplayValue(pickValue(selected, ['creditLimit', 'CreditLimit', 'CreditLine', 'total', 'Total'])) }
     ];
   }
 
@@ -584,5 +589,3 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   }
 
 }
-
-

@@ -26,13 +26,13 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     <div class="page">
       <a [routerLink]="backRoute()" class="btn-sm">Retour</a>
 
-      <h1>{{ meta().icon }} {{ isEdit() ? 'Éditer' : 'Créer' }} {{ meta().singular }}</h1>
+      <h1>{{ pageTitle() }}</h1>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="card">
+      <form [formGroup]="form" (ngSubmit)="save()" class="card" [class.generation-draft]="isGenerationDraft()" [class.edit-mode]="isEdit()" [class.compact-form]="isCompactForm()">
         <div class="top-grid">
           <div class="field field-client">
             <label>Client *</label>
-            <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sélectionner client" />
+            <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sélectionner client" [readonly]="isGenerationDraft()" />
             <datalist id="customer-options">
               @for (c of customers(); track c.id) {
                 <option [value]="c.cardCode"></option>
@@ -61,10 +61,29 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
           </div>
         </div>
 
+        @if (isEdit()) {
+          <div class="draft-action-bar">
+            <div class="draft-totals" aria-label="Totaux du document">
+              <span>HT <strong>{{ totalHt() | number:'1.2-2' }}</strong></span>
+              <span>TVA <strong>{{ totalVat() | number:'1.2-2' }}</strong></span>
+              <span>TTC <strong>{{ totalTtc() | number:'1.2-2' }}</strong></span>
+            </div>
+            <button class="btn-primary" [disabled]="saving() || shouldBlockSubmitForLookups() || !canModify()" type="submit">
+              {{ submitButtonLabel() }}
+            </button>
+          </div>
+        }
+
         <div class="lines-head">
           <h3>Lignes</h3>
-          <button class="btn-outline" type="button" (click)="addLine()" [disabled]="!canModify()">+ Ajouter ligne</button>
+          <button class="btn-outline" type="button" (click)="addLine()" [disabled]="!canAddLines()">+ Ajouter ligne</button>
         </div>
+
+        @if (isGenerationDraft()) {
+          <p class="lines-hint">
+            Ajustez librement les quantités. Pour retirer une ligne, utilisez Suppr. Il faut au moins une ligne pour valider la création.
+          </p>
+        }
 
         
 
@@ -93,7 +112,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
                   placeholder="Ex: A00001"
                   aria-label="ItemCode"
                   (input)="onItemCodeInput(i, $event)"
-                  [readonly]="!canEditLine(i)" />
+                  (blur)="onItemCodeBlur(i)"
+                  [readonly]="!canEditItemFields(i)" />
 
                 <span class="mobile-label">Designation</span>
                 <input
@@ -101,26 +121,27 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
                   list="product-options"
                   placeholder="Rechercher et sélectionner article"
                   (input)="onProductLookupInput(i, $event)"
-                  [readonly]="!canEditLine(i)" />
+                  (blur)="onProductLookupBlur(i)"
+                  [readonly]="!canEditItemFields(i)" />
 
                 <span class="mobile-label">Quantite</span>
-                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
                 <span class="mobile-label">Warehouse code</span>
-                <input formControlName="warehouseCode" placeholder="Ex: 01" aria-label="WarehouseCode" [readonly]="!canEditLine(i)" />
+                <input formControlName="warehouseCode" placeholder="Ex: 01" aria-label="WarehouseCode" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Prix HT</span>
-                <input type="number" formControlName="unitPrice" min="0" step="0.01" placeholder="Prix HT" aria-label="Prix unitaire HT" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <input type="number" formControlName="unitPrice" min="0" step="0.01" placeholder="Prix HT" aria-label="Prix unitaire HT" (input)="recalculateLine(i)" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Code TVA</span>
-                <input type="number" formControlName="vatPct" min="0" step="0.01" placeholder="Code TVA" aria-label="Code TVA" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <input type="number" formControlName="vatPct" min="0" step="0.01" placeholder="Code TVA" aria-label="Code TVA" (input)="recalculateLine(i)" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Montant TVA</span>
                 <input type="number" formControlName="vatAmount" placeholder="Montant TVA" aria-label="Montant TVA" readonly />
                 <span class="mobile-label">Remise %</span>
-                <input type="number" formControlName="discountPct" min="0" max="100" step="0.01" placeholder="Remise %" aria-label="Remise" (input)="recalculateLine(i)" [readonly]="!canEditLine(i)" />
+                <input type="number" formControlName="discountPct" min="0" max="100" step="0.01" placeholder="Remise %" aria-label="Remise" (input)="recalculateLine(i)" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Total</span>
                 <input type="number" formControlName="totalTtc" placeholder="Total TTC" aria-label="Total TTC" readonly />
                 <span class="mobile-label">Statut</span>
                 <input formControlName="lineStatus" placeholder="Statut" aria-label="Statut ligne" readonly />
                 <span class="mobile-label">Action</span>
-                <button type="button" class="btn-outline danger" (click)="removeLine(i)" [disabled]="!canEditLine(i)">Suppr.</button>
+                <button type="button" class="btn-outline danger" (click)="removeLine(i)" [disabled]="!canRemoveLine(i)">Suppr.</button>
               </div>
             } @empty {
               <p class="empty">Aucune ligne.</p>
@@ -154,8 +175,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
         </div>
 
         <div class="actions">
-          <button class="btn-primary" [disabled]="saving() || loadingLookups() || !canModify()" type="submit">
-            {{ saving() ? (isEdit() ? 'Mise à jour...' : 'Création...') : (isEdit() ? 'Mettre à jour' : 'Créer') }}
+          <button class="btn-primary" [disabled]="saving() || shouldBlockSubmitForLookups() || !canModify()" type="submit">
+            {{ submitButtonLabel() }}
           </button>
           @if (error()) {
             <span class="action-feedback error">{{ error() }}</span>
@@ -173,7 +194,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     </div>
   `,
   styles: [`
-    .page { display: flex; flex-direction: column; gap: 1rem; }
+    .page { display: flex; flex-direction: column; gap: 0.65rem; }
+    .page h1 { margin: 0; font-size: 1.15rem; line-height: 1.2; }
     .card { background: #fff; border-radius: 8px; padding: 0.65rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.6rem; }
     .top-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem; }
     .field { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -193,6 +215,31 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     .total-box { border: 1px solid #d7d7d7; border-radius: 8px; padding: 0.65rem 0.8rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.2rem; }
     .total-label { font-size: 0.78rem; color: #666; letter-spacing: 0.02em; }
     .total-value { font-size: 1.05rem; color: #111827; }
+    .draft-action-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; border: 1px solid #d7d7d7; border-radius: 8px; background: #f8fafc; padding: 0.45rem 0.55rem; }
+    .draft-totals { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; color: #4b5563; font-size: 0.86rem; }
+    .draft-totals strong { color: #111827; margin-left: 0.2rem; }
+    .compact-form { gap: 0.45rem; }
+    .compact-form.card { padding: 0.5rem; }
+    .compact-form .top-grid { gap: 0.35rem; }
+    .compact-form .field input,
+    .compact-form .field textarea,
+    .compact-form .field select { padding: 0.34rem 0.48rem; }
+    .compact-form .field-comments textarea { min-height: 34px; }
+    .compact-form .lines-head h3 { margin: 0; font-size: 1rem; }
+    .compact-form .line-row { min-width: 1180px; grid-template-columns: 110px 185px 72px 86px 86px 72px 92px 76px 96px 82px 70px; gap: 0.3rem; margin-bottom: 0.25rem; }
+    .compact-form .line-row input,
+    .compact-form .line-row select { padding: 0.28rem 0.38rem; font-size: 0.84rem; }
+    .compact-form .totals-row { gap: 0.45rem; }
+    .compact-form .total-box { padding: 0.45rem 0.6rem; }
+    .generation-draft .lines-hint { display: none; }
+    .generation-draft .actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      padding: 0.45rem 0 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.88), #fff 35%);
+      border-top: 1px solid #e5e7eb;
+    }
     .btn-outline { border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; padding: 0.35rem 0.6rem; cursor: pointer; }
     .btn-outline.danger { border-color: #c62828; color: #c62828; }
     .actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
@@ -226,6 +273,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
         padding: 0.55rem;
       }
       .line-row .btn-outline.danger { grid-column: 1 / -1; }
+      .draft-action-bar { align-items: stretch; flex-direction: column; }
+      .draft-action-bar .btn-primary { width: 100%; }
       .actions { justify-content: stretch; }
       .actions .btn-primary { width: 100%; }
     }
@@ -250,6 +299,28 @@ export class DocumentFormComponent implements OnInit {
   readonly isEdit = computed(() => this.id() !== null);
   readonly showDeliveryDate = computed(() => this.resource() !== 'quotes' || this.isEdit());
   readonly meta = computed(() => COMMERCIAL_META[this.resource()]);
+  readonly sourceResource = signal<CommercialResource | null>(this.resolveSourceResource());
+  readonly sourceDocumentId = signal<number | null>(this.resolveSourceDocumentId());
+  readonly sourceLineNums = signal<number[]>(this.resolveSourceLineNums());
+  readonly isGenerationDraft = computed(() => !this.isEdit() && !!this.sourceResource() && !!this.sourceDocumentId());
+  readonly isCompactForm = computed(() => this.isEdit() || this.isGenerationDraft());
+  readonly pageTitle = computed(() => {
+    if (this.isGenerationDraft()) {
+      return `${this.meta().icon} Préparer ${this.meta().singular}`;
+    }
+    return `${this.meta().icon} ${this.isEdit() ? 'Éditer' : 'Créer'} ${this.meta().singular}`;
+  });
+  readonly submitButtonLabel = computed(() => {
+    if (this.saving()) {
+      if (this.isEdit()) return 'Mise à jour...';
+      if (this.isGenerationDraft()) return `Validation de la création du ${this.entityLabel()}...`;
+      return 'Création...';
+    }
+
+    if (this.isEdit()) return 'Mettre à jour';
+    if (this.isGenerationDraft()) return `Valider la création du ${this.entityLabel()}`;
+    return 'Créer';
+  });
   readonly saving = signal(false);
   readonly error = signal('');
   readonly success = signal('');
@@ -285,8 +356,16 @@ export class DocumentFormComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
+    if (this.isEdit()) {
+      this.loadingLookups.set(false);
+      this.load();
+      return;
+    }
+
     this.loadLookups();
-    if (this.isEdit()) this.load();
+    if (this.isGenerationDraft()) {
+      this.loadGenerationDraft();
+    }
     else {
       this.hydrateFromCatalogCartIfNeeded();
       if (this.lines.length === 0) this.addLine();
@@ -303,27 +382,42 @@ export class DocumentFormComponent implements OnInit {
     const lineStatus = this.isClosedLineStatus(statusToken)
       ? 'Cloturee'
       : 'En attente';
+    const quantity = Math.max(1, Number(line?.quantity ?? 1));
+    const maxQuantity = Math.max(1, Number((line as any)?.maxQuantity ?? quantity));
 
     const group = this.fb.group({
       lineNum: [line?.lineNum ?? line?.id ?? null],
-      productId: [line?.productId ?? null, [Validators.required]],
-      productLookup: [line?.itemCode ? String(line.itemCode) : ''],
+      productId: [line?.productId ?? null],
+      productLookup: [line?.itemName ? String(line.itemName) : (line?.itemCode ? String(line.itemCode) : '')],
       itemCode: [line?.itemCode || '', [Validators.required]],
       lineStatus: [lineStatus],
       unitPrice: [line?.unitPrice ?? 0, [Validators.required, Validators.min(0)]],
-      quantity: [line?.quantity ?? 1, [Validators.required, Validators.min(1)]],
+      quantity: [quantity, [Validators.required, Validators.min(1)]],
+      maxQuantity: [maxQuantity],
       subtotalHt: [line?.subtotalHt ?? 0],
       discountPct: [line?.discountPct ?? 0, [Validators.min(0), Validators.max(100)]],
       vatPct: [line?.vatPct ?? 20, [Validators.min(0)]],
       vatAmount: [line?.vatAmount ?? 0],
       totalTtc: [line?.totalTtc ?? 0],
       warehouseCode: [line?.warehouseCode || '', [Validators.required]],
+      baseType: [line?.baseType ?? null],
+      baseEntry: [line?.baseEntry ?? null],
+      baseLine: [line?.baseLine ?? null],
     });
 
     if (this.isEdit() && this.supportsLineStatusGuard() && this.isClosedLineStatus(statusToken)) {
       group.get('productLookup')?.disable({ emitEvent: false });
       group.get('unitPrice')?.disable({ emitEvent: false });
       group.get('quantity')?.disable({ emitEvent: false });
+      group.get('discountPct')?.disable({ emitEvent: false });
+      group.get('vatPct')?.disable({ emitEvent: false });
+      group.get('warehouseCode')?.disable({ emitEvent: false });
+    }
+
+    if (this.isGenerationDraft()) {
+      group.get('productLookup')?.disable({ emitEvent: false });
+      group.get('itemCode')?.disable({ emitEvent: false });
+      group.get('unitPrice')?.disable({ emitEvent: false });
       group.get('discountPct')?.disable({ emitEvent: false });
       group.get('vatPct')?.disable({ emitEvent: false });
       group.get('warehouseCode')?.disable({ emitEvent: false });
@@ -342,12 +436,7 @@ export class DocumentFormComponent implements OnInit {
     const value = String(input.value ?? '').trim();
     if (!value) return;
 
-    const normalized = value.toLowerCase();
-    const product = this.products().find((p) => {
-      const code = String(p.itemCode ?? '').trim().toLowerCase();
-      const name = String(p.itemName ?? '').trim().toLowerCase();
-      return normalized === code || normalized === name;
-    });
+    const product = this.findProductByCodeOrName(value);
 
     if (!product) return;
 
@@ -358,6 +447,29 @@ export class DocumentFormComponent implements OnInit {
     }, { emitEvent: false });
 
     this.onProductSelected(index);
+  }
+
+  onProductLookupBlur(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const value = String(group.get('productLookup')?.value ?? '').trim();
+    if (!value) {
+      this.restoreSelectedProductLabel(index);
+      return;
+    }
+
+    const product = this.findProductByCodeOrName(value);
+    if (!product) {
+      this.restoreSelectedProductLabel(index);
+      return;
+    }
+
+    group.patchValue({
+      productId: Number(product.id ?? 0),
+      itemCode: String(product.itemCode ?? '').trim(),
+      productLookup: this.productLookupLabel(product)
+    }, { emitEvent: false });
   }
 
   onItemCodeInput(index: number, event: Event): void {
@@ -379,6 +491,32 @@ export class DocumentFormComponent implements OnInit {
     }, { emitEvent: false });
 
     this.onProductSelected(index);
+  }
+
+  onItemCodeBlur(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const value = String(group.get('itemCode')?.value ?? '').trim();
+    if (!value) {
+      this.restoreSelectedProductCode(index);
+      return;
+    }
+
+    const product = this.products().find((p) =>
+      String(p.itemCode ?? '').trim().toLowerCase() === value.toLowerCase()
+    );
+
+    if (!product) {
+      this.restoreSelectedProductCode(index);
+      return;
+    }
+
+    group.patchValue({
+      productId: Number(product.id ?? 0),
+      itemCode: String(product.itemCode ?? '').trim(),
+      productLookup: this.productLookupLabel(product)
+    }, { emitEvent: false });
   }
 
   onProductSelected(index: number): void {
@@ -404,6 +542,39 @@ export class DocumentFormComponent implements OnInit {
     this.recalculateLine(index);
   }
 
+  private findProductByCodeOrName(value: string): Product | undefined {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (!normalized) return undefined;
+
+    return this.products().find((p) => {
+      const code = String(p.itemCode ?? '').trim().toLowerCase();
+      const name = String(p.itemName ?? '').trim().toLowerCase();
+      return normalized === code || normalized === name;
+    });
+  }
+
+  private restoreSelectedProductLabel(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const productId = Number(group.get('productId')?.value ?? 0);
+    const product = this.products().find((p) => Number(p.id ?? 0) === productId);
+    group.patchValue({
+      productLookup: product ? this.productLookupLabel(product) : ''
+    }, { emitEvent: false });
+  }
+
+  private restoreSelectedProductCode(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const productId = Number(group.get('productId')?.value ?? 0);
+    const product = this.products().find((p) => Number(p.id ?? 0) === productId);
+    group.patchValue({
+      itemCode: product ? String(product.itemCode ?? '').trim() : ''
+    }, { emitEvent: false });
+  }
+
   recalculateLine(index: number): void {
     const group = this.lines.at(index);
     if (!group) return;
@@ -426,12 +597,46 @@ export class DocumentFormComponent implements OnInit {
     }, { emitEvent: false });
   }
 
+  onQuantityInput(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    this.recalculateLine(index);
+  }
+
+  onQuantityBlur(index: number): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const rawValue = group.get('quantity')?.value;
+    const quantity = Number(rawValue ?? 0);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      group.patchValue({ quantity: 1 }, { emitEvent: false });
+      if (this.isGenerationDraft()) {
+        this.error.set('Une ligne ne peut pas avoir une quantité à 0. Supprimez la ligne si besoin.');
+      }
+    } else if (this.shouldCapGeneratedQuantity()) {
+      const maxQuantity = Number(group.get('maxQuantity')?.value ?? 0);
+      if (Number.isFinite(maxQuantity) && maxQuantity > 0 && quantity > maxQuantity) {
+        group.patchValue({ quantity: maxQuantity }, { emitEvent: false });
+        this.error.set('La quantité du document cible ne peut pas dépasser la quantité du document source.');
+      }
+    }
+
+    this.recalculateLine(index);
+  }
+
   removeLine(i: number): void {
-    if (!this.canEditLine(i)) {
+    if (!this.canRemoveLine(i)) {
       this.error.set('Ligne fermee: suppression impossible.');
       return;
     }
     this.lines.removeAt(i);
+  }
+
+  canAddLines(): boolean {
+    return this.canModify() && !this.isGenerationDraft();
   }
 
   canEditLine(index: number): boolean {
@@ -442,6 +647,27 @@ export class DocumentFormComponent implements OnInit {
     const group = this.lines.at(index);
     const statusToken = this.normalizeLineStatusToken(group?.get('lineStatus')?.value ?? 'En attente');
     return !this.isClosedLineStatus(statusToken);
+  }
+
+  canEditItemFields(index: number): boolean {
+    return this.canEditLine(index) && !this.isGenerationDraft();
+  }
+
+  canEditQuantity(index: number): boolean {
+    return this.canEditLine(index);
+  }
+
+  private shouldCapGeneratedQuantity(): boolean {
+    if (!this.isGenerationDraft()) return false;
+    return this.resource() === 'deliverynotes' || this.resource() === 'invoices';
+  }
+
+  canRemoveLine(index: number): boolean {
+    return this.canEditLine(index);
+  }
+
+  shouldBlockSubmitForLookups(): boolean {
+    return !this.isEdit() && this.loadingLookups();
   }
 
   totalHt(): number {
@@ -514,6 +740,8 @@ export class DocumentFormComponent implements OnInit {
       lines: this.lines.controls.map(c => {
         const value = c.getRawValue();
         const rawLineNum = Number(value.lineNum);
+        const rawBaseEntry = Number(value.baseEntry);
+        const rawBaseLine = Number(value.baseLine);
         return {
           lineNum: Number.isFinite(rawLineNum) && rawLineNum >= 0 ? rawLineNum : undefined,
           itemCode: String(value.itemCode || '').trim(),
@@ -525,7 +753,10 @@ export class DocumentFormComponent implements OnInit {
           vatPct: Number(value.vatPct ?? 0),
           subtotalHt: Number(value.subtotalHt ?? 0),
           vatAmount: Number(value.vatAmount ?? 0),
-          totalTtc: Number(value.totalTtc ?? 0)
+          totalTtc: Number(value.totalTtc ?? 0),
+          baseType: String(value.baseType ?? '').trim() || undefined,
+          baseEntry: Number.isFinite(rawBaseEntry) && rawBaseEntry > 0 ? rawBaseEntry : undefined,
+          baseLine: Number.isFinite(rawBaseLine) && rawBaseLine >= 0 ? rawBaseLine : undefined
         };
       })
     };
@@ -845,6 +1076,90 @@ export class DocumentFormComponent implements OnInit {
       });
   }
 
+  private loadGenerationDraft(): void {
+    const sourceResource = this.sourceResource();
+    const sourceDocumentId = this.sourceDocumentId();
+    if (!sourceResource || !sourceDocumentId) {
+      this.error.set('Document source introuvable pour préparer le brouillon.');
+      return;
+    }
+
+    this.api.getById(sourceResource, sourceDocumentId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          const source = res.data;
+          if (!source) {
+            this.error.set('Document source introuvable.');
+            return;
+          }
+
+          const cardCode = String(source.cardCode ?? '').trim();
+          if (!cardCode) {
+            this.error.set('Le document source ne contient pas de client valide.');
+            return;
+          }
+
+          const today = new Date().toISOString().slice(0, 10);
+          this.form.patchValue({
+            cardCode,
+            docDate: today,
+            dueDate: today,
+            comments: '',
+            paymentMethod: source.paymentMethod || 'Virement'
+          });
+
+          this.lines.clear();
+          const lines = this.buildDraftLinesFromSource(source);
+          for (const line of lines) {
+            this.addLine(line);
+          }
+          this.syncLineProductsByItemCode();
+
+          if (this.lines.length === 0) {
+            this.error.set('Aucune ligne ouverte disponible pour créer ce document.');
+          }
+        },
+        error: () => this.error.set('Erreur lors du chargement du document source.')
+      });
+  }
+
+  private buildDraftLinesFromSource(source: CommercialDocument): Partial<CommercialDocumentLine>[] {
+    const selected = new Set(this.sourceLineNums());
+    const hasSelection = selected.size > 0;
+    const baseType = this.docObjectCodeForResource(this.sourceResource());
+
+    return (source.lines ?? [])
+      .map((line, index) => ({ line, index }))
+      .filter(({ line, index }) => {
+        if (this.isClosedLineStatus(this.normalizeLineStatusToken(line.lineStatus ?? 'Open'))) {
+          return false;
+        }
+        const lineNum = Number(line.lineNum ?? index);
+        return !hasSelection || selected.has(lineNum);
+      })
+      .map(({ line, index }) => ({
+        lineNum: Number(line.lineNum ?? index),
+        productId: line.productId,
+        itemCode: String(line.itemCode ?? '').trim(),
+        itemName: line.itemName,
+        warehouseCode: String(line.warehouseCode ?? '01').trim() || '01',
+        quantity: Math.max(1, Number(line.quantity ?? 1)),
+        maxQuantity: Math.max(1, Number(line.quantity ?? 1)),
+        unitPrice: Number(line.unitPrice ?? 0),
+        discountPct: Number(line.discountPct ?? 0),
+        vatPct: Number(line.vatPct ?? 0),
+        subtotalHt: Number(line.subtotalHt ?? line.lineTotal ?? 0),
+        vatAmount: Number(line.vatAmount ?? 0),
+        totalTtc: Number(line.totalTtc ?? ((Number(line.subtotalHt ?? line.lineTotal ?? 0)) + Number(line.vatAmount ?? 0))),
+        lineStatus: 'Open',
+        baseType,
+        baseEntry: source.id,
+        baseLine: Number(line.lineNum ?? index)
+      }))
+      .filter((line) => line.itemCode !== '' && Number(line.quantity ?? 0) > 0);
+  }
+
   private syncLineProductsByItemCode(): void {
     const products = this.products();
     if (products.length === 0 || this.lines.length === 0) {
@@ -1001,6 +1316,7 @@ export class DocumentFormComponent implements OnInit {
   private refreshListAfterMutation(saved: CommercialDocument, isEditMode: boolean): void {
     if (isEditMode) {
       this.router.navigateByUrl(this.backRoute());
+      return;
     } else {
       this.router.navigate(['/', this.routeSegmentForResource(), saved.id]);
     }
@@ -1052,7 +1368,54 @@ export class DocumentFormComponent implements OnInit {
   backRoute(): string {
     const target = this.returnTo().trim();
     if (target.startsWith('/')) return target;
-    return `/${this.resource()}`;
+    return `/${this.routeSegmentForResource()}`;
+  }
+
+  private entityLabel(): string {
+    switch (this.resource()) {
+      case 'orders': return 'BC';
+      case 'deliverynotes': return 'BL';
+      case 'invoices': return 'facture';
+      case 'quotes': return 'devis';
+      case 'creditnotes': return 'avoir';
+      case 'returns': return 'retour';
+      default: return 'document';
+    }
+  }
+
+  private resolveSourceResource(): CommercialResource | null {
+    const raw = String(this.route.snapshot.queryParamMap.get('sourceResource') ?? '').trim().toLowerCase();
+    if (raw === 'quotes' || raw === 'orders' || raw === 'deliverynotes' || raw === 'invoices' || raw === 'creditnotes' || raw === 'returns') {
+      return raw;
+    }
+    return null;
+  }
+
+  private resolveSourceDocumentId(): number | null {
+    const raw = Number(this.route.snapshot.queryParamMap.get('sourceId'));
+    return Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : null;
+  }
+
+  private resolveSourceLineNums(): number[] {
+    const raw = String(this.route.snapshot.queryParamMap.get('lineNums') ?? '').trim();
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map((value) => Number(value.trim()))
+      .filter((value, index, array) => Number.isFinite(value) && value >= 0 && array.indexOf(value) === index)
+      .map((value) => Math.trunc(value));
+  }
+
+  private docObjectCodeForResource(resource: CommercialResource | null): string | undefined {
+    switch (resource) {
+      case 'quotes': return '23';
+      case 'orders': return '17';
+      case 'deliverynotes': return '15';
+      case 'invoices': return '13';
+      case 'creditnotes': return '14';
+      case 'returns': return '16';
+      default: return undefined;
+    }
   }
 
   private resolveResource(): CommercialResource {

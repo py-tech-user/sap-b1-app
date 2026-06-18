@@ -47,19 +47,22 @@ interface InvoiceSelection {
 
 
       <div class="card form-grid">
-        <label>
+        <label class="search-box">
           Partenaire
           <input
             [ngModel]="selectedClientInput()"
             (ngModelChange)="onClientPickerInput($event)"
-            list="encaissement-client-options"
+            (focus)="openClientSuggestions.set(true)"
+            (blur)="closeClientSuggestionsLater()"
+            (keydown.enter)="selectClientIfUnique($event)"
             placeholder="Rechercher et sélectionner client" />
-          <datalist id="encaissement-client-options">
-            @for (client of clients(); track client.cardCode) {
-              <option [value]="client.cardCode"></option>
-              <option [value]="client.cardName"></option>
-            }
-          </datalist>
+          @if (openClientSuggestions() && clientSuggestions().length) {
+            <div class="suggestions">
+              @for (client of clientSuggestions(); track client.cardCode) {
+                <button type="button" (mousedown)="selectClient(client)">{{ clientPickerValue(client) }}</button>
+              }
+            </div>
+          }
         </label>
 
 
@@ -176,9 +179,14 @@ interface InvoiceSelection {
   styles: [`
     .page { display: flex; flex-direction: column; gap: 1rem; }
     .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 0.75rem; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 0.75rem; overflow: visible; }
     label { display: flex; flex-direction: column; gap: 0.4rem; color: #374151; font-size: 0.9rem; }
     input, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.45rem 0.6rem; }
+    .search-box { position: relative; }
+    .search-box input { width: 100%; box-sizing: border-box; }
+    .suggestions { position: absolute; left: 0; right: 0; top: calc(100% + 0.25rem); background: #fff; border: 1px solid #c9d7e8; border-radius: 8px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12); max-height: 240px; overflow: auto; z-index: 20; padding: 0.25rem; }
+    .suggestions button { display: block; width: 100%; text-align: left; border: 0; background: #fff; padding: 0.45rem 0.55rem; border-radius: 6px; cursor: pointer; color: #111827; }
+    .suggestions button:hover { background: #eff6ff; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid #eef2ff; padding: 0.55rem; text-align: left; }
     .table-actions { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
@@ -220,11 +228,23 @@ export class EncaissementComponent {
 
   readonly selectedCardCode = signal('');
   readonly selectedClientInput = signal('');
+  readonly openClientSuggestions = signal(false);
   readonly paymentMethodCode = signal('Virement');
   readonly cashSum = signal(0);
   readonly selectedClient = computed(() =>
     this.clients().find(c => c.cardCode.toLowerCase() === this.selectedCardCode().toLowerCase()) ?? null
   );
+  readonly clientSuggestions = computed(() => {
+    const query = this.normalizeSearch(this.selectedClientInput());
+    return this.clients()
+      .filter((client) => {
+        if (!query) return true;
+        return this.normalizeSearch(client.cardName).includes(query)
+          || this.normalizeSearch(client.cardCode).includes(query)
+          || this.normalizeSearch(this.clientPickerValue(client)).includes(query);
+      })
+      .slice(0, 30);
+  });
   readonly totalSelectedAmount = computed(() =>
     this.selectedInvoicesOrdered().reduce((sum, invoice) => sum + invoice.openAmount, 0));
   readonly loadingInvoices = signal(false);
@@ -298,6 +318,7 @@ export class EncaissementComponent {
   onClientPickerInput(value: string): void {
     const typed = String(value ?? '').trim();
     this.selectedClientInput.set(typed);
+    this.openClientSuggestions.set(true);
     if (!typed) {
       this.selectedCardCode.set('');
       this.invoices.set([]);
@@ -314,6 +335,22 @@ export class EncaissementComponent {
     this.onClientChange(exact.cardCode, typed);
   }
 
+  selectClient(client: EncaissementClient): void {
+    this.openClientSuggestions.set(false);
+    this.onClientChange(client.cardCode, this.clientPickerValue(client));
+  }
+
+  selectClientIfUnique(event: Event): void {
+    const matches = this.clientSuggestions();
+    if (matches.length === 1) {
+      event.preventDefault();
+      this.selectClient(matches[0]);
+    }
+  }
+
+  closeClientSuggestionsLater(): void {
+    setTimeout(() => this.openClientSuggestions.set(false), 120);
+  }
   onCashSumChange(value: unknown): void {
     this.cashSum.set(Math.max(0, this.toNumber(value)));
   }
@@ -581,7 +618,8 @@ export class EncaissementComponent {
 
   clientPickerValue(client: EncaissementClient): string {
     const code = String(client.cardCode ?? '').trim();
-    return code;
+    const name = String(client.cardName ?? '').trim();
+    return name ? `${name} (${code})` : code;
   }
 
   private resolveCommittedClientFromInput(input: string): EncaissementClient | null {
@@ -591,7 +629,8 @@ export class EncaissementComponent {
     return this.clients().find((client) => {
       const code = client.cardCode.toLowerCase();
       const name = client.cardName.toLowerCase();
-      return typed === code || typed === name;
+      const label = this.clientPickerValue(client).toLowerCase();
+      return typed === code || typed === name || typed === label;
     }) ?? null;
   }
 
@@ -602,6 +641,7 @@ export class EncaissementComponent {
     const exact = this.clients().find(c =>
       c.cardCode.toLowerCase() === typed
       || c.cardName.toLowerCase() === typed
+      || this.clientPickerValue(c).toLowerCase() === typed
     );
     if (exact) return exact;
 
@@ -614,6 +654,13 @@ export class EncaissementComponent {
     return null;
   }
 
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
   private normalizeInvoice(row: any): EncaissementInvoice {
     const docEntry = this.toNumber(row?.docEntry ?? row?.DocEntry ?? row?.invoiceId ?? row?.InvoiceId ?? row?.id ?? row?.Id);
     const docNum = this.toNumber(row?.docNum ?? row?.DocNum ?? docEntry);

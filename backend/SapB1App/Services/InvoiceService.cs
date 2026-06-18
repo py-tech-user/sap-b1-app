@@ -115,7 +115,7 @@ public class InvoiceService(AppDbContext db) : IInvoiceService
             BaseType = DocumentBaseType.Delivery,
             BaseEntry = delivery.Id,
             BaseLine = null,
-            Comments = $"Générée depuis BL {delivery.DocNum}",
+            Comments = string.Empty,
             CreatedAt = DateTime.UtcNow
         };
 

@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommercialApiService } from '../../core/services/commercial-api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { COMMERCIAL_META, STATUS_ACTIONS } from './commercial-meta';
-import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } from '../../core/models/models';
+import { CommercialDocument, CommercialResource } from '../../core/models/models';
 
 @Component({
   selector: 'app-document-detail',
@@ -77,7 +77,7 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
           }
         </div>
 
-        <div class="card">
+        <div class="card lines-card">
           <h3>Lignes produits</h3>
           <table>
             <thead>
@@ -90,7 +90,9 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
                 <th>Statut ligne</th>
                 <th>Quantite</th>
                 <th>Prix</th>
-                <th>Total</th>
+                <th>Total HT</th>
+                <th>TVA</th>
+                <th>Total TTC</th>
               </tr>
             </thead>
             <tbody>
@@ -114,23 +116,25 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
                   </td>
                   <td>{{ line.quantity }}</td>
                   <td>{{ line.unitPrice | number:'1.2-2' }}</td>
-                  <td>{{ line.lineTotal ?? (line.quantity * line.unitPrice) | number:'1.2-2' }}</td>
+                  <td>{{ lineTotalHt(line) | number:'1.2-2' }}</td>
+                  <td>{{ lineVat(line) | number:'1.2-2' }}</td>
+                  <td>{{ lineTotalTtc(line) | number:'1.2-2' }}</td>
                 </tr>
               } @empty {
-                <tr><td [attr.colspan]="canSelectLinesForGeneration() ? 7 : 6" class="empty">Aucune ligne</td></tr>
+                <tr><td [attr.colspan]="canSelectLinesForGeneration() ? 9 : 8" class="empty">Aucune ligne</td></tr>
               }
             </tbody>
           </table>
         </div>
 
-        <div class="card total-card">
-          <label>Total</label>
-          <strong>{{ totalOf(doc()!) | number:'1.2-2' }}</strong>
+        <div class="card totals-row" aria-label="Totaux du document">
+          <div class="total-box total-left"><label>Total HT</label><strong>{{ totalHt() | number:'1.2-2' }}</strong></div>
+          <div class="total-box total-center"><label>TVA</label><strong>{{ totalVat() | number:'1.2-2' }}</strong></div>
+          <div class="total-box total-right"><label>Total TTC</label><strong>{{ totalTtc() | number:'1.2-2' }}</strong></div>
         </div>
 
         @if (resource() === 'quotes') {
           <div class="card action-card">
-            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateOrder()" [disabled]="!canGenerateOrderFromQuote()">Créer BC depuis Devis</button>
             @if (!canGenerateOrderFromQuote()) {
               <div class="action-hint">{{ generationHint('orders') }}</div>
@@ -140,7 +144,6 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
 
         @if (resource() === 'orders') {
           <div class="card action-card">
-            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateDelivery()" [disabled]="!canGenerateDeliveryFromOrder()">Créer BL depuis BC</button>
             @if (!canGenerateDeliveryFromOrder()) {
               <div class="action-hint">{{ generationHint('deliverynotes') }}</div>
@@ -150,7 +153,6 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
 
         @if (resource() === 'deliverynotes') {
           <div class="card action-card">
-            <h3>Generation</h3>
             <button class="btn-primary" type="button" (click)="generateInvoice()" [disabled]="!canGenerateInvoiceFromDelivery()">Créer Facture depuis BL</button>
             @if (!canGenerateInvoiceFromDelivery()) {
               <div class="action-hint">{{ generationHint('invoices') }}</div>
@@ -163,27 +165,34 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     </div>
   `,
   styles: [`
-    .page { display: flex; flex-direction: column; gap: 0.55rem; }
-    .header { display: grid; grid-template-columns: auto 1fr auto; gap: 0.55rem; align-items: start; }
-    .header h1 { margin: 0; font-size: 1.08rem; line-height: 1.2; }
-    .header-relations { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.28rem 0.42rem; background: #fcfcfd; min-height: 1.85rem; }
+    .page { display: flex; flex-direction: column; gap: 0.42rem; }
+    .header { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; gap: 0.45rem; align-items: start; }
+    .header h1 { margin: 0; font-size: 1rem; line-height: 1.18; }
+    .header-relations { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.2rem 0.36rem; background: #fcfcfd; min-height: 1.55rem; }
     .header-rel-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
     .chips-wrap { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-    .header-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
-    .card { background: #fff; border-radius: 8px; padding: 0.55rem; box-shadow: 0 1px 2px rgba(0,0,0,0.07); }
+    .header-actions { display: flex; gap: 0.32rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+    .header-actions .btn-primary { padding: 0.34rem 0.52rem; font-size: 0.8rem; }
+    .card { background: #fff; border-radius: 8px; padding: 0.42rem 0.48rem; box-shadow: 0 1px 2px rgba(0,0,0,0.07); }
     .action-hint { margin-top: 0.5rem; color: #6b7280; font-size: 0.85rem; }
-    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem; }
     .comments-card { grid-column: 1 / -1; }
-    .card label { display: block; color: #666; font-size: 0.74rem; margin-bottom: 0.2rem; }
-    .total-card { display: flex; justify-content: flex-end; align-items: baseline; gap: 0.6rem; }
-    .total-card label { margin-bottom: 0; font-size: 0.82rem; color: #374151; }
-    .total-card strong { font-size: 1rem; }
-    .status-badge { display: inline-block; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.82rem; }
+    .card label { display: block; color: #666; font-size: 0.7rem; margin-bottom: 0.12rem; }
+    .card strong { font-size: 0.88rem; }
+    .totals-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+    .total-box { min-height: 48px; display: flex; flex-direction: column; justify-content: center; }
+    .total-left { text-align: left; }
+    .total-center { text-align: center; }
+    .total-right { text-align: right; }
+    .total-box label { color: #666; font-size: 0.74rem; margin-bottom: 0.18rem; }
+    .total-box strong { font-size: 1rem; color: #111827; }
+    .action-card { display: flex; align-items: center; justify-content: flex-start; gap: 0.6rem; flex-wrap: wrap; }
+    .status-badge { display: inline-block; border-radius: 999px; padding: 0.15rem 0.46rem; font-size: 0.76rem; }
     .status-badge.open { background: #e8f5e9; color: #1b5e20; }
     .status-badge.closed { background: #f3f4f6; color: #374151; }
     .status-badge.cancelled { background: #fdecea; color: #c62828; }
     .rel-label { color: #666; margin-right: 0.45rem; }
-    .link-chip { display: inline-block; border: 1px solid #d0d7de; border-radius: 999px; padding: 0.1rem 0.45rem; text-decoration: none; font-size: 0.8rem; line-height: 1.2; }
+    .link-chip { display: inline-block; border: 1px solid #d0d7de; border-radius: 999px; padding: 0.08rem 0.38rem; text-decoration: none; font-size: 0.76rem; line-height: 1.2; }
     .link-chip:hover { background: #f6f8fa; text-decoration: none; }
     .disabled-link { pointer-events: none; opacity: 0.5; }
     .btn-danger { background: #c62828; border-color: #c62828; }
@@ -194,18 +203,22 @@ import { CommercialDocument, CommercialResource, SaveCommercialDocumentDto } fro
     .action-feedback.success { color: #1b5e20; }
     .error { color: #b00020; }
     .empty { color: #888; }
-    table { font-size: 0.86rem; }
-    th, td { padding: 0.38rem 0.42rem; }
+    .lines-card h3 { margin: 0 0 0.28rem; font-size: 0.95rem; }
+    table { font-size: 0.8rem; }
+    th, td { padding: 0.28rem 0.34rem; }
     @media (max-width: 1024px) {
       .header { grid-template-columns: 1fr; }
       .info-grid { grid-template-columns: 1fr 1fr; }
+      .header-actions { justify-content: flex-start; }
     }
     @media (max-width: 720px) {
-      .page { gap: 0.45rem; }
-      .card { padding: 0.5rem; }
-      .header h1 { font-size: 1rem; }
+      .page { gap: 0.38rem; }
+      .card { padding: 0.42rem; }
+      .header h1 { font-size: 0.95rem; }
       .header-actions .btn-primary, .header-actions .btn-danger { padding: 0.38rem 0.52rem; font-size: 0.78rem; }
       .info-grid { grid-template-columns: 1fr; }
+      .totals-row { grid-template-columns: 1fr; }
+      .total-left, .total-center, .total-right { text-align: left; }
       th, td { padding: 0.32rem 0.35rem; font-size: 0.8rem; }
     }
   `]
@@ -227,6 +240,12 @@ export class DocumentDetailComponent {
   readonly toast = signal('');
   readonly doc = signal<CommercialDocument | null>(null);
   readonly selectedGenerationLines = signal<number[]>([]);
+  readonly lineTotalHt = (line: CommercialDocument['lines'][number]) => line.subtotalHt ?? line.lineTotal ?? (line.quantity * line.unitPrice);
+  readonly lineVat = (line: CommercialDocument['lines'][number]) => line.vatAmount ?? 0;
+  readonly lineTotalTtc = (line: CommercialDocument['lines'][number]) => line.totalTtc ?? (this.lineTotalHt(line) + this.lineVat(line));
+  readonly totalHt = computed(() => this.doc()?.lines?.reduce((sum, line) => sum + this.lineTotalHt(line), 0) ?? 0);
+  readonly totalVat = computed(() => this.doc()?.lines?.reduce((sum, line) => sum + this.lineVat(line), 0) ?? 0);
+  readonly totalTtc = computed(() => this.doc()?.lines?.reduce((sum, line) => sum + this.lineTotalTtc(line), 0) ?? 0);
 
   constructor() {
     this.load();
@@ -611,36 +630,7 @@ export class DocumentDetailComponent {
       this.notifications.showError(this.error());
       return;
     }
-
-    this.api.generateOrderFromQuote(this.id(), selectedLineNums)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (res.success === false) {
-            this.error.set(res.message || 'Echec de generation BC.');
-            this.notifications.showError(this.error());
-            return;
-          }
-          const created = res.data;
-          this.notifications.showSuccess('BC cree depuis devis.');
-          this.toast.set('BC cree depuis devis.');
-          this.selectedGenerationLines.set([]);
-          this.clearToastLater();
-          if (created?.id) {
-            this.router.navigate(['/orders', created.id]);
-            return;
-          }
-          this.load();
-        },
-        error: (err) => {
-          if (err?.status === 404 || err?.status === 405) {
-            this.generateByCreateFallback('orders', 'BC cree depuis devis.', 'Erreur lors de la generation BC.');
-            return;
-          }
-          this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la generation BC.');
-          this.notifications.showError(this.error());
-        }
-      });
+    this.openGenerationDraft('orders', selectedLineNums);
   }
 
   generateDelivery(): void {
@@ -651,35 +641,7 @@ export class DocumentDetailComponent {
       return;
     }
 
-    this.api.generateDeliveryNoteFromOrder(this.id(), selectedLineNums)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (res.success === false) {
-            this.error.set(res.message || 'Echec de generation BL.');
-            this.notifications.showError(this.error());
-            return;
-          }
-          const created = res.data;
-          this.notifications.showSuccess('BL cree depuis BC.');
-          this.toast.set('BL cree depuis BC.');
-          this.selectedGenerationLines.set([]);
-          this.clearToastLater();
-          if (created?.id) {
-            this.router.navigate(['/deliverynotes', created.id]);
-            return;
-          }
-          this.load();
-        },
-        error: (err) => {
-          if (err?.status === 404 || err?.status === 405) {
-            this.generateByCreateFallback('deliverynotes', 'BL cree depuis BC.', 'Erreur lors de la generation BL.');
-            return;
-          }
-          this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la generation BL.');
-          this.notifications.showError(this.error());
-        }
-      });
+    this.openGenerationDraft('deliverynotes', selectedLineNums);
   }
 
   generateInvoice(): void {
@@ -690,101 +652,19 @@ export class DocumentDetailComponent {
       return;
     }
 
-    this.api.generateInvoiceFromDelivery(this.id(), selectedLineNums)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (res.success === false) {
-            this.error.set(res.message || 'Echec de generation facture.');
-            this.notifications.showError(this.error());
-            return;
-          }
-          const created = res.data;
-          this.notifications.showSuccess('Facture creee depuis BL.');
-          this.toast.set('Facture creee depuis BL.');
-          this.selectedGenerationLines.set([]);
-          this.clearToastLater();
-          if (created?.id) {
-            this.router.navigate(['/factures', created.id]);
-            return;
-          }
-          this.load();
-        },
-        error: (err) => {
-          if (err?.status === 404 || err?.status === 405) {
-            this.generateByCreateFallback('invoices', 'Facture creee depuis BL.', 'Erreur lors de la generation facture.');
-            return;
-          }
-          this.error.set(err?.error?.error || err?.error?.message || 'Erreur lors de la generation facture.');
-          this.notifications.showError(this.error());
-        }
-      });
+    this.openGenerationDraft('invoices', selectedLineNums);
   }
 
-  private generateByCreateFallback(target: CommercialResource, successMessage: string, defaultErrorMessage: string): void {
-    const payload = this.buildCreatePayloadFromCurrentDoc();
-    if (!payload) {
-      this.error.set('Impossible de generer: donnees source incompletes (client/lignes).');
-      this.notifications.showError(this.error());
-      return;
-    }
-
-    this.api.create(target, payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if (res.success === false || !res.data) {
-            this.error.set(res.message || defaultErrorMessage);
-            this.notifications.showError(this.error());
-            return;
-          }
-
-          this.notifications.showSuccess(successMessage);
-          this.toast.set(successMessage);
-          this.clearToastLater();
-          const created = res.data;
-          if (created?.id) {
-            this.router.navigate(['/', target, created.id]);
-            return;
-          }
-          this.load();
-        },
-        error: (err) => {
-          this.error.set(err?.error?.error || err?.error?.message || defaultErrorMessage);
-          this.notifications.showError(this.error());
-        }
-      });
-  }
-
-  private buildCreatePayloadFromCurrentDoc(): SaveCommercialDocumentDto | null {
-    const d = this.doc();
-    if (!d) return null;
-
-    const cardCode = String(d.cardCode ?? '').trim();
-    if (!cardCode) return null;
-
-    const sourceLines = Array.isArray(d.lines) ? d.lines : [];
-    const lines = sourceLines
-      .map((line) => ({
-        itemCode: String(line.itemCode ?? '').trim(),
-        quantity: Number(line.quantity ?? 0),
-        unitPrice: Number(line.unitPrice ?? 0),
-        warehouseCode: String(line.warehouseCode ?? '01').trim() || '01',
-        discountPct: Number(line.discountPct ?? 0),
-        vatPct: Number(line.vatPct ?? 0)
-      }))
-      .filter((line) => line.itemCode !== '' && line.quantity > 0);
-
-    if (lines.length === 0) return null;
-
-    const today = new Date().toISOString().slice(0, 10);
-    return {
-      cardCode,
-      docDate: (d.docDate || d.postingDate || today).slice(0, 10),
-      dueDate: (d.dueDate || today).slice(0, 10),
-      comments: d.comments,
-      lines
-    };
+  private openGenerationDraft(target: CommercialResource, selectedLineNums: number[]): void {
+    this.selectedGenerationLines.set([]);
+    this.router.navigate(['/', this.routePathForResource(target), 'new'], {
+      queryParams: {
+        returnTo: `/${this.routePathForResource(this.resource())}/${this.id()}`,
+        sourceResource: this.resource(),
+        sourceId: this.id(),
+        lineNums: selectedLineNums.join(',')
+      }
+    });
   }
 
   private load(): void {
@@ -824,6 +704,10 @@ export class DocumentDetailComponent {
   private getLineNum(line: any, index: number): number {
     const n = Number(line?.lineNum ?? line?.LineNum ?? line?.id ?? line?.Id ?? index);
     return Number.isFinite(n) ? n : index;
+  }
+
+  private routePathForResource(resource: CommercialResource): string {
+    return resource === 'invoices' ? 'factures' : resource;
   }
 
   private hasClosedLine(doc: CommercialDocument): boolean {

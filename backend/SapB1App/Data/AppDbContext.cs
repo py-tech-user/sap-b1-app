@@ -22,13 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Return>        Returns        { get; set; }
     public DbSet<ReturnLine>    ReturnLines    { get; set; }
     public DbSet<AppUser>       Users          { get; set; }
-    public DbSet<Visit>         Visits         { get; set; }
     public DbSet<Payment>       Payments       { get; set; }
-
-    // ── Tracking ────────────────────────────────────────────────────────────
-    public DbSet<LocationTrack>    LocationTracks    { get; set; }
-    public DbSet<VisitCheckPoint>  VisitCheckPoints  { get; set; }
-    public DbSet<DailyTrackSummary> DailyTrackSummaries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -303,35 +297,6 @@ public class AppDbContext : DbContext
             e.HasIndex(u => u.SapSalesPersonCode).IsUnique();
         });
 
-        // ── Visit ───────────────────────────────────────────────────────────
-        modelBuilder.Entity<Visit>(e =>
-        {
-            e.HasKey(v => v.Id);
-            e.Property(v => v.Status).HasConversion<string>();
-            e.Property(v => v.Latitude).HasColumnType("float");
-            e.Property(v => v.Longitude).HasColumnType("float");
-            e.Property(v => v.CheckInLatitude).HasColumnType("float");
-            e.Property(v => v.CheckInLongitude).HasColumnType("float");
-            e.Property(v => v.CheckOutLatitude).HasColumnType("float");
-            e.Property(v => v.CheckOutLongitude).HasColumnType("float");
-            e.Property(v => v.DistanceKm).HasColumnType("float");
-
-            e.HasOne(v => v.Customer)
-             .WithMany()
-             .HasForeignKey(v => v.CustomerId)
-             .OnDelete(DeleteBehavior.Restrict);
-
-            e.HasOne(v => v.User)
-             .WithMany()
-             .HasForeignKey(v => v.UserId)
-             .OnDelete(DeleteBehavior.SetNull);
-
-            e.HasMany(v => v.CheckPoints)
-             .WithOne(cp => cp.Visit)
-             .HasForeignKey(cp => cp.VisitId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
-
         // ── Payment ─────────────────────────────────────────────────────────
         modelBuilder.Entity<Payment>(e =>
         {
@@ -356,54 +321,5 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // ── LocationTrack ────────────────────────────────────────────────────
-        modelBuilder.Entity<LocationTrack>(e =>
-        {
-            e.HasKey(lt => lt.Id);
-            e.Property(lt => lt.Latitude).HasColumnType("float").IsRequired();
-            e.Property(lt => lt.Longitude).HasColumnType("float").IsRequired();
-            e.Property(lt => lt.Accuracy).HasColumnType("float");
-            e.Property(lt => lt.Speed).HasColumnType("float");
-            e.Property(lt => lt.Heading).HasColumnType("float");
-            e.Property(lt => lt.Altitude).HasColumnType("float");
-
-            e.HasIndex(lt => new { lt.UserId, lt.RecordedAt });
-
-            e.HasOne(lt => lt.User)
-             .WithMany()
-             .HasForeignKey(lt => lt.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // ── VisitCheckPoint ──────────────────────────────────────────────────
-        modelBuilder.Entity<VisitCheckPoint>(e =>
-        {
-            e.HasKey(vcp => vcp.Id);
-            e.Property(vcp => vcp.Type).HasConversion<string>();
-            e.Property(vcp => vcp.Latitude).HasColumnType("float").IsRequired();
-            e.Property(vcp => vcp.Longitude).HasColumnType("float").IsRequired();
-            e.Property(vcp => vcp.Accuracy).HasColumnType("float");
-            e.Property(vcp => vcp.Address).HasMaxLength(500);
-            e.Property(vcp => vcp.Notes).HasMaxLength(1000);
-
-            e.HasOne(vcp => vcp.User)
-             .WithMany()
-             .HasForeignKey(vcp => vcp.UserId)
-             .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // ── DailyTrackSummary ────────────────────────────────────────────────
-        modelBuilder.Entity<DailyTrackSummary>(e =>
-        {
-            e.HasKey(dts => dts.Id);
-            e.Property(dts => dts.TotalDistanceKm).HasColumnType("float");
-
-            e.HasIndex(dts => new { dts.UserId, dts.Date }).IsUnique();
-
-            e.HasOne(dts => dts.User)
-             .WithMany()
-             .HasForeignKey(dts => dts.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
     }
 }

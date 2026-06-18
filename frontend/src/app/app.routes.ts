@@ -71,13 +71,6 @@ export const routes: Routes = [
         data: { roles: ALL }
       },
       {
-        path: 'partners',
-        loadComponent: () =>
-          import('./features/partners/partner-list/partner-list.component')
-            .then(m => m.PartnerListComponent),
-        data: { roles: ALL }
-      },
-      {
         path: 'customers/new',
         loadComponent: () =>
           import('./features/customers/customer-form/customer-form.component')

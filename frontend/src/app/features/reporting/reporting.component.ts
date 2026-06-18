@@ -1,29 +1,35 @@
-﻿import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+﻿import { CommonModule } from '@angular/common';
+import { Component, HostListener, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
-import { AdvancedReportingPayload, ReportingApiService } from '../../core/services/reporting-api.service';
+import { PartnerApiService, PartnerRow } from '../../core/services/partner-api.service';
+import {
+  AdvancedReportingMonthlyRevenuePoint,
+  AdvancedReportingPayload,
+  AdvancedReportingTopPartner,
+  AdvancedReportingTopProduct,
+  PartnerCategoryShare,
+  ReportingApiService,
+  ReportingSalesPersonInfo
+} from '../../core/services/reporting-api.service';
 
 type ModePeriode = 'month' | 'quarter' | 'year' | 'custom';
-type MetriqueActive = 'chiffreAffaires' | 'devis' | 'commande' | 'facture' | 'impayes';
-type SortDirection = 'none' | 'asc' | 'desc';
-type UnpaidSortKey = 'cardName' | 'dueAmount' | 'itemName' | 'salesPersonName' | 'dueDate' | 'overdueDays';
-type TopProductSortKey = 'itemName' | 'salesCount' | 'revenue' | 'salesPeopleCount' | 'mainClientName';
-type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' | 'contractsCount' | 'mainSalesPersonName';
+type TableId = 'partnerProducts' | 'commercialProducts' | 'commercialPartners';
+type SortDirection = 'asc' | 'desc';
+
+type ChartPoint = {
+  x: number;
+  y: number;
+  label: string;
+  value: number;
+};
 
 @Component({
   selector: 'app-reporting',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="reporting-page">
-      <header class="header">
-        <div>
-          <h1>Rapport commercial détaillé</h1>
-          <p>{{ data()?.periodLabel || etiquettePeriode() }}</p>
-        </div>
-        </header>
-
       <section class="panel filters">
         <label>Période
           <select [(ngModel)]="modePeriode" (change)="charger()">
@@ -33,251 +39,333 @@ type TopClientSortKey = 'cardName' | 'revenue' | 'paidAmount' | 'pendingAmount' 
             <option value="custom">Personnalisée</option>
           </select>
         </label>
-
-        @if (modePeriode === 'month') {
-          <label>Mois <input type="month" [(ngModel)]="mois" (change)="charger()" /></label>
-        }
+        @if (modePeriode === 'month') { <label>Mois <input type="month" [(ngModel)]="mois" (change)="charger()" /></label> }
         @if (modePeriode === 'quarter') {
           <label>Trimestre
             <select [(ngModel)]="trimestre" (change)="charger()">
-              <option [ngValue]="1">Premier trimestre</option>
-              <option [ngValue]="2">Deuxième trimestre</option>
-              <option [ngValue]="3">Troisième trimestre</option>
-              <option [ngValue]="4">Quatrième trimestre</option>
+              <option [ngValue]="1">T1</option><option [ngValue]="2">T2</option><option [ngValue]="3">T3</option><option [ngValue]="4">T4</option>
             </select>
           </label>
           <label>Année <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
         }
-        @if (modePeriode === 'year') {
-          <label>Année <input type="number" [(ngModel)]="annee" (change)="charger()" /></label>
-        }
+        @if (modePeriode === 'year') { <label>Année <input type="number" [(ngModel)]="annee" (change)="charger()" /></label> }
         @if (modePeriode === 'custom') {
-          <label>Date de début <input type="date" [(ngModel)]="dateDebut" (change)="charger()" /></label>
-          <label>Date de fin <input type="date" [(ngModel)]="dateFin" (change)="charger()" /></label>
+          <label>Du <input type="date" [(ngModel)]="dateDebut" (change)="charger()" /></label>
+          <label>Au <input type="date" [(ngModel)]="dateFin" (change)="charger()" /></label>
         }
 
-        @if (estModeAdministrateur()) {
-          <label>Commercial
-            <input list="liste-commerciaux" [(ngModel)]="rechercheCommercial" (input)="surSaisieCommercial()" placeholder="Nom du commercial" />
-            <datalist id="liste-commerciaux">
-              @for (s of suggestionsCommerciaux(); track s) { <option [value]="s"></option> }
-            </datalist>
+        <label class="search-box">Partenaire
+          <input
+            type="text"
+            [(ngModel)]="recherchePartenaire"
+            (input)="surRecherchePartenaire()"
+            (focus)="ouvrirPartenaires = true"
+            (blur)="fermerSuggestionsPlusTard('partenaire')"
+            (keydown.enter)="selectionnerPartenaireSiUnique($event)"
+            placeholder="Écrire un nom ou code partenaire"
+          />
+          @if (ouvrirPartenaires && partenairesFiltres().length) {
+            <div class="suggestions">
+              @for (p of partenairesFiltres(); track codePartenaire(p)) {
+                <button type="button" (mousedown)="selectionnerPartenaire(p)">{{ nomPartenaire(p) }}</button>
+              }
+            </div>
+          }
+        </label>
+
+        @if (estAdmin()) {
+          <label class="search-box">Commercial
+            <input
+              type="text"
+              [(ngModel)]="rechercheCommercial"
+              (input)="surRechercheCommercial()"
+              (focus)="ouvrirCommerciaux = true"
+              (blur)="fermerSuggestionsPlusTard('commercial')"
+              (keydown.enter)="selectionnerCommercialSiUnique($event)"
+              placeholder="Écrire le nom du commercial"
+            />
+            @if (ouvrirCommerciaux && commerciauxFiltres().length) {
+              <div class="suggestions">
+                @for (c of commerciauxFiltres(); track c.salesPersonCode) {
+                  <button type="button" (mousedown)="selectionnerCommercial(c)">{{ c.salesPersonName }}</button>
+                }
+              </div>
+            }
           </label>
         }
 
+        <button type="button" (click)="charger()" [disabled]="chargement()">{{ chargement() ? 'Chargement...' : 'Actualiser' }}</button>
       </section>
 
-      @if (chargement()) { <p>Chargement...</p> }
+      @if (erreur()) { <p class="alert">{{ erreur() }}</p> }
+
+      @if (!partenaireSelectionne && !rapportCommercialActif()) {
+        <section class="panel empty-state">
+          <h2>Sélectionnez un partenaire ou un commercial</h2>
+        </section>
+      }
 
       @if (data(); as rapport) {
-        <section class="panel">
-          <h2>Indicateurs clés de performance</h2>
-          <div class="kpi-grid">
-            <article class="kpi">
-              <h3>Chiffre d'affaires net</h3><p>{{ monnaie(rapport.kpis.netRevenue) }}</p>
-            </article>
-            <article class="kpi">
-              <h3>Devis</h3><p>{{ rapport.kpis.quotesCount }}</p><span>{{ monnaie(rapport.kpis.quotesAmount) }}</span>
-            </article>
-            <article class="kpi">
-              <h3>Bon de commande</h3><p>{{ rapport.kpis.ordersCount }}</p><span>{{ monnaie(rapport.kpis.ordersAmount) }}</span>
-            </article>
-            <article class="kpi">
-              <h3>Facture</h3><p>{{ rapport.kpis.invoicesCount }}</p><span>{{ monnaie(rapport.kpis.invoicesAmount) }}</span>
-            </article>
-            <article class="kpi">
-              <h3>Impayés</h3><p>{{ rapport.kpis.unpaidInvoicesCount }}</p><span>{{ monnaie(rapport.kpis.unpaidInvoicesAmount) }}</span>
-            </article>
-          </div>
-        </section>
-
-        @if (estModeAdministrateur()) {
-          <section class="panel">
-            <h2>Répartition du chiffre d'affaires par commercial</h2>
-            <div class="camembert-zone">
-              <div class="pie" [style.background]="fondCamembertCommerciaux()"></div>
-              <div class="legend">
-                @for (l of legendeCommerciaux(); track l.code) {
-                  <button type="button" class="legend-item" (click)="selectionnerCommercialDepuisLegende(l.code)">
-                    <span class="dot" [style.background]="l.couleur"></span>
-                    <span>{{ l.nom }} - {{ l.pourcentage }}</span>
-                  </button>
-                }
+        @if (rapport.partnerReport; as partenaire) {
+          <section class="grid two">
+            <article class="panel">
+              <h3>Répartition des achats par catégorie</h3>
+              <div class="chart-row">
+                <div class="pie" [style.background]="pieBackground(partenaire.categoryShares)"></div>
+                <div class="legend">
+                  @for (row of partenaire.categoryShares; track row.categoryCode) {
+                    <span><i [style.background]="couleur($index)"></i>{{ row.categoryName }} · {{ monnaie(row.revenue) }}</span>
+                  } @empty { <p class="muted">Aucune donnée d'achat.</p> }
+                </div>
               </div>
+            </article>
+            <article class="panel">
+              <h3>Évolution du CA du partenaire sur la période</h3>
+              <ng-container *ngTemplateOutlet="lineChart; context: { points: partenaire.yearlyRevenue, color: '#2563eb' }"></ng-container>
+            </article>
+          </section>
+
+          <section class="panel">
+            <h3>Articles les plus achetés par ce partenaire</h3>
+            <div class="table-toolbar">
+              <input type="text" [(ngModel)]="rechercheArticlesPartenaire" (ngModelChange)="resetTable('partnerProducts')" placeholder="Rechercher un article" />
+            </div>
+            <div class="table-scroll" (scroll)="chargerPlusTable($event, 'partnerProducts', produitsPartenaireTries(partenaire.topPurchasedProducts).length)">
+              <table><thead><tr>
+                <th><button type="button" class="sort-btn" (click)="trierTable('partnerProducts', 'item')">Article {{ indicateurTri('partnerProducts', 'item') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="trierTable('partnerProducts', 'quantitySold')">Quantité {{ indicateurTri('partnerProducts', 'quantitySold') }}</button></th>
+                <th><button type="button" class="sort-btn" (click)="trierTable('partnerProducts', 'revenue')">Montant {{ indicateurTri('partnerProducts', 'revenue') }}</button></th>
+              </tr></thead><tbody>
+                @for (p of produitsPartenaireVisibles(partenaire.topPurchasedProducts); track p.itemCode) { <tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ nombre(p.quantitySold) }}</td><td>{{ monnaie(p.revenue) }}</td></tr> }
+                @empty { <tr><td colspan="3">Aucun article trouvé.</td></tr> }
+              </tbody></table>
             </div>
           </section>
         }
 
-        <section class="panel">
-          <h2>Classements globaux</h2>
-          <table>
-            <thead>
-              <tr>
-                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('itemName')">Article {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'itemName') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('salesCount')">Nombre de ventes {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'salesCount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('revenue')">Chiffre d'affaires {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'revenue') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('salesPeopleCount')">Nombre de commerciaux {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'salesPeopleCount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopProductsSort('mainClientName')">Client principal {{ sortIndicator(topProductsSortKey, topProductsSortDirection, 'mainClientName') }}</button></th>
-              </tr>
-            </thead>
-            <tbody>@for (p of sortedTopProducts(rapport); track p.itemCode) {<tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ p.salesCount }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.salesPeopleCount }}</td><td>{{ p.mainClientName || '-' }}</td></tr>}</tbody>
-          </table>
-          <table>
-            <thead>
-              <tr>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('cardName')">Client {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'cardName') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('revenue')">Chiffre d'affaires {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'revenue') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('paidAmount')">Montant paye {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'paidAmount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('pendingAmount')">Montant en attente {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'pendingAmount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('contractsCount')">Nombre de contrats {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'contractsCount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleTopClientsSort('mainSalesPersonName')">Commercial principal {{ sortIndicator(topClientsSortKey, topClientsSortDirection, 'mainSalesPersonName') }}</button></th>
-              </tr>
-            </thead>
-            <tbody>@for (c of sortedTopClients(rapport); track c.cardCode) {<tr><td>{{ c.cardName }}</td><td>{{ monnaie(c.revenue) }}</td><td>{{ monnaie(c.paidAmount) }}</td><td>{{ monnaie(c.pendingAmount) }}</td><td>{{ c.contractsCount }}</td><td>{{ c.mainSalesPersonName || '-' }}</td></tr>}</tbody>
-          </table>
-          @if (canExpandTable(rapport.topClients.length) || canCollapseTables()) {
-            <div class="table-actions">
-              @if (canCollapseTables()) { <button type="button" (click)="reduceTables()">Voir moins (-10)</button> }
-              @if (canExpandTable(rapport.topClients.length)) { <button type="button" (click)="expandTables()">Voir plus (+10)</button> }
+        @if (rapportCommercialActif()) {
+          <section class="panel title-panel">
+            <div>
+              <p class="eyebrow">Rapport commercial</p>
+              <h2>{{ nomCommercialActif(rapport) }}</h2>
+              <p>{{ rapport.periodLabel }}</p>
             </div>
-          }
-        </section>
+          </section>
 
-        <section class="panel" [class.highlight]="metriqueActive === 'impayes'">
-          <h2>Impayés</h2>
-          <div class="table-filters">
-            <label>
-              Rechercher client
-              <input
-                type="text"
-                list="suggestions-impayes-clients"
-                [(ngModel)]="rechercheImpayesClient"
-                placeholder="Code ou nom client"
-              />
-              <datalist id="suggestions-impayes-clients">
-                @for (s of suggestionsImpayesClients(); track s) { <option [value]="s"></option> }
-              </datalist>
-            </label>
-            @if (estModeAdministrateur()) {
-              <label>
-                Rechercher commercial
-                <input
-                  type="text"
-                  list="suggestions-impayes-commerciaux"
-                  [(ngModel)]="rechercheImpayesCommercial"
-                  placeholder="Nom ou code commercial"
-                />
-                <datalist id="suggestions-impayes-commerciaux">
-                  @for (s of suggestionsImpayesCommerciaux(); track s) { <option [value]="s"></option> }
-                </datalist>
-              </label>
-            }
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('cardName')">Client {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'cardName') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('dueAmount')">Montant du {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'dueAmount') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('itemName')">Article {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'itemName') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('salesPersonName')">Commercial {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'salesPersonName') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('dueDate')">Date limite {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'dueDate') }}</button></th>
-                <th><button type="button" class="sort-btn" (click)="toggleUnpaidSort('overdueDays')">Jours de retard {{ sortIndicator(unpaidSortKey, unpaidSortDirection, 'overdueDays') }}</button></th>
-              </tr>
-            </thead>
-            <tbody>@for (u of sortedUnpaidItems(rapport); track u.cardCode + '-' + u.itemCode) {<tr><td>{{ u.cardName }}</td><td>{{ monnaie(u.dueAmount) }}</td><td>{{ u.itemName || u.itemCode }}</td><td>{{ u.salesPersonName || ('#' + u.salesPersonCode) }}</td><td>{{ u.dueDate | date:'dd/MM/yyyy' }}</td><td>{{ u.overdueDays }}</td></tr>} @empty { <tr><td colspan="6">Aucun impayé pour cette recherche.</td></tr> }</tbody>
-          </table>
-          @if (canExpandTable(rapport.unpaidItems.length) || canCollapseTables()) {
-            <div class="table-actions">
-              @if (canCollapseTables()) { <button type="button" (click)="reduceTables()">Voir moins (-10)</button> }
-              @if (canExpandTable(rapport.unpaidItems.length)) { <button type="button" (click)="expandTables()">Voir plus (+10)</button> }
-            </div>
-          }
-        </section>
+          <section class="grid two">
+            <article class="panel">
+              <h3>CA réalisé vs objectif</h3>
+              <div class="gauge" [style.background]="gaugeBackground(rapport.kpis.targetAchievementRate)"><span>{{ pourcentage(rapport.kpis.targetAchievementRate) }}</span></div>
+              <p class="center">{{ monnaie(rapport.kpis.collectedRevenue) }} encaissé / objectif {{ monnaie(rapport.kpis.periodTarget) }}</p>
+            </article>
+            <article class="panel">
+              <h3>Documents émis</h3>
+              <div class="doc-counts">
+                <span>Devis <b>{{ rapport.kpis.quotesCount }}</b></span>
+                <span>BC <b>{{ rapport.kpis.ordersCount }}</b></span>
+                <span>BL <b>{{ rapport.kpis.deliveryNotesCount }}</b></span>
+                <span>Factures <b>{{ rapport.kpis.invoicesCount }}</b></span>
+              </div>
+            </article>
+          </section>
+
+          <section class="grid two">
+            <article class="panel">
+              <h3>Taux de transformation devis → BC → BL → facture</h3>
+              <div class="funnel">
+                @for (step of funnel(rapport); track step.label) {
+                  <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
+                }
+              </div>
+            </article>
+            <article class="panel">
+              <h3>Évolution du CA du commercial sur la période</h3>
+              <ng-container *ngTemplateOutlet="lineChart; context: { points: rapport.monthlyRevenue, color: '#16a34a' }"></ng-container>
+            </article>
+          </section>
+
+          <section class="grid two">
+            <article class="panel">
+              <h3>Articles vendus par ce commercial</h3>
+              <div class="table-toolbar search-box">
+                <input type="text" [(ngModel)]="rechercheArticlesCommercial" (ngModelChange)="surRechercheArticlesCommercial()" (focus)="ouvrirArticlesCommercial = true" placeholder="Rechercher un article" />
+                @if (ouvrirArticlesCommercial && suggestionsArticlesCommercial(rapport.topProducts).length) {
+                  <div class="suggestions table-suggestions">
+                    @for (p of suggestionsArticlesCommercial(rapport.topProducts); track p.itemCode) {
+                      <button type="button" (mousedown)="selectionnerArticleCommercial(p)">{{ p.itemName || p.itemCode }}</button>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="table-scroll" (scroll)="chargerPlusTable($event, 'commercialProducts', produitsCommercialTries(rapport.topProducts).length)">
+                <table><thead><tr>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialProducts', 'item')">Article {{ indicateurTri('commercialProducts', 'item') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialProducts', 'quantitySold')">Quantité {{ indicateurTri('commercialProducts', 'quantitySold') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialProducts', 'revenue')">CA {{ indicateurTri('commercialProducts', 'revenue') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialProducts', 'clientsCount')">Clients {{ indicateurTri('commercialProducts', 'clientsCount') }}</button></th>
+                </tr></thead><tbody>
+                  @for (p of produitsCommercialVisibles(rapport.topProducts); track p.itemCode) { <tr><td>{{ p.itemName || p.itemCode }}</td><td>{{ nombre(p.quantitySold) }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.clientsCount }}</td></tr> }
+                  @empty { <tr><td colspan="4">Aucun article vendu sur cette période.</td></tr> }
+                </tbody></table>
+              </div>
+            </article>
+            <article class="panel">
+              <h3>Partenaires qui achètent le plus chez ce commercial</h3>
+              <div class="table-toolbar search-box">
+                <input type="text" [(ngModel)]="recherchePartenairesCommercial" (ngModelChange)="surRecherchePartenairesCommercial()" (focus)="ouvrirPartenairesCommercialTable = true" placeholder="Rechercher un partenaire" />
+                @if (ouvrirPartenairesCommercialTable && suggestionsPartenairesCommercial(rapport.topPartners).length) {
+                  <div class="suggestions table-suggestions">
+                    @for (p of suggestionsPartenairesCommercial(rapport.topPartners); track p.partnerCode) {
+                      <button type="button" (mousedown)="selectionnerPartenaireCommercialTable(p)">{{ p.partnerName || p.partnerCode }}</button>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="table-scroll" (scroll)="chargerPlusTable($event, 'commercialPartners', partenairesCommercialTries(rapport.topPartners).length)">
+                <table><thead><tr>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialPartners', 'partner')">Partenaire {{ indicateurTri('commercialPartners', 'partner') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialPartners', 'revenue')">CA {{ indicateurTri('commercialPartners', 'revenue') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialPartners', 'quotesCount')">Devis {{ indicateurTri('commercialPartners', 'quotesCount') }}</button></th>
+                  <th><button type="button" class="sort-btn" (click)="trierTable('commercialPartners', 'productsCount')">Articles {{ indicateurTri('commercialPartners', 'productsCount') }}</button></th>
+                </tr></thead><tbody>
+                  @for (p of partenairesCommercialVisibles(rapport.topPartners); track p.partnerCode) { <tr><td>{{ p.partnerName || p.partnerCode }}</td><td>{{ monnaie(p.revenue) }}</td><td>{{ p.quotesCount }}</td><td>{{ p.productsCount }}</td></tr> }
+                  @empty { <tr><td colspan="4">Aucun partenaire sur cette période.</td></tr> }
+                </tbody></table>
+              </div>
+            </article>
+          </section>
+        }
       }
+
+      <ng-template #lineChart let-points="points" let-color="color">
+        <div class="line-wrap">
+          <svg class="line-chart" viewBox="0 0 720 260" preserveAspectRatio="none">
+            @for (tick of yTicks(points); track tick.label) {
+              <line x1="70" [attr.y1]="tick.y" x2="700" [attr.y2]="tick.y" stroke="#e2e8f0" stroke-width="1"></line>
+              <text x="8" [attr.y]="tick.y + 4" class="axis-label">{{ tick.label }}</text>
+            }
+            <polyline [attr.points]="pointsCourbe(points)" fill="none" [attr.stroke]="color" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            @for (pt of pointsAvecCoord(points); track pt.label) {
+              <g class="point">
+                <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="5" [attr.fill]="color"></circle>
+                <title>{{ pt.label }} : {{ monnaie(pt.value) }}</title>
+              </g>
+            }
+            @for (pt of pointsAvecCoord(points); track 'x-' + pt.label) {
+              <text [attr.x]="pt.x" y="246" class="x-label">{{ etiquetteMois(pt.label) }}</text>
+            }
+          </svg>
+        </div>
+      </ng-template>
     </div>
   `,
   styles: [`
-    .reporting-page { display: grid; gap: 1rem; }
-    .header { display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; }
-    .actions { display: flex; gap: .5rem; }
-    .panel { background: #fff; border: 1px solid #dbe4ee; border-radius: 12px; padding: .9rem; }
-    .filters { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: .7rem; }
-    label { display: grid; gap: .3rem; font-weight: 600; color: #2b3a4a; }
-    input, select, button { border: 1px solid #cad7e5; border-radius: 8px; padding: .45rem .6rem; background: #fff; }
-    .table-filters { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: .7rem; margin: .45rem 0 .7rem; max-width: 780px; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: .7rem; }
-    .kpi { border: 1px solid #e4ebf3; border-radius: 10px; padding: .7rem; background: linear-gradient(145deg, #fff, #f7fbff); }
-    .kpi.active { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
-    .kpi h3 { margin: 0; font-size: .88rem; color: #52657d; }
-    .kpi p { margin: .3rem 0; font-size: 1.2rem; font-weight: 700; }
-    .camembert-zone { display: grid; grid-template-columns: 180px 1fr; gap: .8rem; align-items: center; }
-    .pie { width: 160px; height: 160px; border-radius: 50%; border: 1px solid #e5e7eb; }
-    .legend { display: grid; gap: .35rem; }
-    .legend-item { display: flex; align-items: center; gap: .45rem; border: 1px solid #e5e7eb; background: #fff; text-align: left; }
-    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
-    table { width: 100%; border-collapse: collapse; margin-top: .7rem; }
-    th, td { border-bottom: 1px solid #ecf1f6; padding: .45rem; text-align: left; font-size: .9rem; }
-    th { background: #f8fbff; color: #51657e; }
-    .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 700; }
-    .table-actions { display: flex; justify-content: center; margin-top: .65rem; }
-    .table-actions button { border: 1px solid #cad7e5; border-radius: 8px; background: #fff; padding: .45rem .85rem; cursor: pointer; }
-    .muted { color: #6b7280; font-size: .9rem; }
-    .highlight { border-color: #f59e0b; }
-    @media (max-width: 1100px) { .filters, .kpi-grid { grid-template-columns: 1fr 1fr; } .camembert-zone { grid-template-columns: 1fr; } }
-    @media (max-width: 680px) { .filters, .kpi-grid, .table-filters { grid-template-columns: 1fr; } }
+    .reporting-page { display: grid; gap: 1rem; color: #172033; }
+    .panel { background: #fff; border: 1px solid #dbe4ee; border-radius: 18px; padding: 1rem; box-shadow: 0 8px 24px rgba(15,23,42,.05); }
+    h2, h3, p { margin-top: 0; } h3 { margin-bottom: .8rem; }
+    .eyebrow { color: #2563eb; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; font-weight: 800; margin-bottom: .25rem; }
+    button, select, input { border: 1px solid #c9d7e8; border-radius: 10px; padding: .55rem .7rem; background: #fff; }
+    .filters { display: grid; grid-template-columns: repeat(5, minmax(160px, 1fr)); gap: .75rem; align-items: start; }
+    label { display: grid; gap: .35rem; color: #334155; font-weight: 700; }
+    .search-box { position: relative; }
+    .suggestions { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); display: grid; max-height: 260px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .suggestions button { border: 0; border-radius: 8px; text-align: left; padding: .55rem .65rem; cursor: pointer; }
+    .suggestions button:hover { background: #eff6ff; }
+    .grid { display: grid; gap: 1rem; } .two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .title-panel { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    .money-strip, .doc-counts { display: flex; gap: .6rem; flex-wrap: wrap; } .money-strip span, .doc-counts span { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .6rem .8rem; } .money-strip b, .doc-counts b { display: block; }
+    .chart-row { display: grid; grid-template-columns: 190px 1fr; gap: 1rem; align-items: center; }
+    .pie { width: 175px; height: 175px; border-radius: 999px; border: 1px solid #e2e8f0; box-shadow: inset 0 0 0 18px #fff; }
+    .legend { display: grid; gap: .45rem; } .legend span { display: flex; align-items: center; gap: .45rem; } .legend i { width: 11px; height: 11px; border-radius: 999px; display: inline-block; }
+    .line-chart { width: 100%; height: 260px; border-radius: 14px; background: #fbfdff; overflow: visible; }
+    .axis-label { font-size: 11px; fill: #64748b; } .x-label { font-size: 10px; fill: #64748b; text-anchor: middle; }
+    .point circle { cursor: help; filter: drop-shadow(0 2px 4px rgba(15,23,42,.22)); }
+    .hint { color: #64748b; font-size: .82rem; margin: .35rem 0 0; }
+    .gauge { width: 190px; height: 190px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto; } .gauge span { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; background: #fff; font-weight: 900; font-size: 1.4rem; }
+    .center { text-align: center; color: #475569; }
+    .funnel { display: grid; gap: .55rem; justify-items: center; } .funnel-step { min-width: 42%; max-width: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); color: #fff; border-radius: 12px; padding: .65rem .85rem; display: flex; justify-content: space-between; gap: .8rem; }
+    .table-toolbar { margin-bottom: .65rem; display: flex; justify-content: flex-start; position: relative; width: min(100%, 320px); }
+    .table-toolbar input { width: min(100%, 320px); }
+    .table-suggestions { top: calc(100% + 4px); width: 100%; }
+    .table-scroll { height: 360px; overflow: auto; border: 1px solid #edf2f7; border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; } th, td { border-bottom: 1px solid #edf2f7; padding: .5rem; text-align: left; font-size: .9rem; } th { background: #f8fafc; color: #475569; }
+    .table-scroll thead th { position: sticky; top: 0; z-index: 1; }
+    .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 800; text-align: left; }
+    .sort-btn:hover { color: #2563eb; }
+    .alert { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; padding: .75rem; border-radius: 12px; } .muted, .empty-state p { color: #64748b; }
+    @media (max-width: 1200px) { .filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .two { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .title-panel { display: grid; } .filters, .chart-row { grid-template-columns: 1fr; } }
   `]
 })
-export class ReportingComponent {
+export class ReportingComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly api = inject(ReportingApiService);
+  private readonly partnerApi = inject(PartnerApiService);
 
   readonly chargement = signal(false);
+  readonly erreur = signal('');
   readonly data = signal<AdvancedReportingPayload | null>(null);
+  readonly partenaires = signal<PartnerRow[]>([]);
 
   modePeriode: ModePeriode = 'month';
   mois = this.moisParDefaut();
-  trimestre = 1;
+  trimestre = Math.floor(new Date().getMonth() / 3) + 1;
   annee = new Date().getFullYear();
   dateDebut = this.premierJourMois();
   dateFin = this.dateDuJour();
 
+  partenaireSelectionne = '';
+  commercialSelectionne?: number;
+  recherchePartenaire = '';
   rechercheCommercial = '';
-  rechercheImpayesClient = '';
-  rechercheImpayesCommercial = '';
-  metriqueActive: MetriqueActive = 'chiffreAffaires';
-  detailsLimit = 10;
+  rechercheArticlesPartenaire = '';
+  rechercheArticlesCommercial = '';
+  recherchePartenairesCommercial = '';
+  ouvrirPartenaires = false;
+  ouvrirCommerciaux = false;
+  ouvrirArticlesCommercial = false;
+  ouvrirPartenairesCommercialTable = false;
+  private readonly tablePageSize = 20;
+  private tableVisible: Record<TableId, number> = {
+    partnerProducts: this.tablePageSize,
+    commercialProducts: this.tablePageSize,
+    commercialPartners: this.tablePageSize
+  };
+  private tableSort: Record<TableId, { key: string; direction: SortDirection }> = {
+    partnerProducts: { key: 'item', direction: 'asc' },
+    commercialProducts: { key: 'revenue', direction: 'desc' },
+    commercialPartners: { key: 'revenue', direction: 'desc' }
+  };
 
-  private delaiRecherche: ReturnType<typeof setTimeout> | null = null;
-  private pendingScrollRestoreY: number | null = null;
-  unpaidSortKey: UnpaidSortKey | null = null;
-  unpaidSortDirection: SortDirection = 'none';
-  topProductsSortKey: TopProductSortKey | null = null;
-  topProductsSortDirection: SortDirection = 'none';
-  topClientsSortKey: TopClientSortKey | null = null;
-  topClientsSortDirection: SortDirection = 'none';
+  readonly estAdmin = computed(() => this.auth.hasRole(['Admin', 'Manager']));
+  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(c => c.salesPersonCode > 0));
 
-  readonly estModeAdministrateur = computed(() => this.auth.hasRole(['Admin', 'Manager']));
-  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(sp => String(sp.salesPersonName).trim().toLowerCase() !== 'administrateur'));
-  readonly suggestionsCommerciaux = computed(() => this.commerciaux().map(s => s.salesPersonName));
-  readonly suggestionsImpayesClients = computed(() =>
-    [...new Set((this.data()?.unpaidItems ?? [])
-      .flatMap((u) => [String(u.cardCode ?? ''), String(u.cardName ?? '')])
-      .map((value) => value.trim())
-      .filter(Boolean))]
-      .slice(0, 150)
-  );
-  readonly suggestionsImpayesCommerciaux = computed(() =>
-    this.estModeAdministrateur()
-      ? [...new Set((this.data()?.unpaidItems ?? [])
-      .flatMap((u) => [String(u.salesPersonName || '').trim(), String(u.salesPersonCode ?? '').trim()])
-      .filter(Boolean))]
-      .slice(0, 150)
-      : []
-  );
-  constructor() { this.charger(); }
+  @HostListener('document:click', ['$event'])
+  fermerSuggestionsSiClicDehors(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest('.search-box')) {
+      this.ouvrirPartenaires = false;
+      this.ouvrirCommerciaux = false;
+      this.ouvrirArticlesCommercial = false;
+      this.ouvrirPartenairesCommercialTable = false;
+    }
+  }
+
+  ngOnInit(): void {
+    this.chargerPartenaires();
+    this.charger();
+  }
+
+  chargerPartenaires(): void {
+    this.partnerApi.getAll(1, 10000).subscribe({
+      next: (res) => this.partenaires.set(res.items ?? []),
+      error: () => this.erreur.set('Impossible de charger les partenaires.')
+    });
+  }
 
   charger(): void {
     this.chargement.set(true);
+    this.erreur.set('');
     this.api.getAdvancedReporting({
       periodType: this.modePeriode,
       month: this.modePeriode === 'month' ? this.mois : undefined,
@@ -285,257 +373,329 @@ export class ReportingComponent {
       year: this.modePeriode === 'quarter' || this.modePeriode === 'year' ? this.annee : undefined,
       startDate: this.modePeriode === 'custom' ? this.dateDebut : undefined,
       endDate: this.modePeriode === 'custom' ? this.dateFin : undefined,
-      salesPersonCode: this.codeCommercialSelectionne()
-      ,
-      detailsLimit: this.detailsLimit
+      salesPersonCode: this.estAdmin() ? this.commercialSelectionne : undefined,
+      cardCode: this.partenaireSelectionne || undefined,
+      detailsLimit: 200
     }).subscribe({
       next: (res) => {
         this.data.set(res.data);
+        this.resetAllTables();
+        if (!this.estAdmin() && !this.rechercheCommercial) {
+          this.rechercheCommercial = res.data.selectedSalesPersonName || '';
+        }
         this.chargement.set(false);
-        this.restoreScrollIfNeeded();
       },
-      error: () => this.chargement.set(false)
+      error: () => { this.erreur.set('Impossible de charger le reporting.'); this.chargement.set(false); }
     });
   }
 
-  chargerAvecDelai(): void {
-    if (this.delaiRecherche) clearTimeout(this.delaiRecherche);
-    this.delaiRecherche = setTimeout(() => this.charger(), 300);
+  partenairesFiltres(): PartnerRow[] {
+    const query = this.normalize(this.recherchePartenaire);
+    return this.partenaires()
+      .filter(p => !query || this.normalize(this.nomPartenaire(p)).includes(query) || this.normalize(this.codePartenaire(p)).includes(query))
+      .sort((a, b) => this.nomPartenaire(a).localeCompare(this.nomPartenaire(b), 'fr'));
   }
 
-  surSaisieCommercial(): void {
-    this.detailsLimit = 10;
-    this.chargerAvecDelai();
+  commerciauxFiltres(): ReportingSalesPersonInfo[] {
+    const query = this.normalize(this.rechercheCommercial);
+    return this.commerciaux()
+      .filter(c => !query || this.normalize(c.salesPersonName).includes(query) || String(c.salesPersonCode).includes(query))
+      .sort((a, b) => a.salesPersonName.localeCompare(b.salesPersonName, 'fr'));
   }
 
-  expandTables(): void {
-    this.reloadWithPreservedScroll(this.detailsLimit + 10);
-  }
+  surRecherchePartenaire(): void {
+    this.partenaireSelectionne = '';
+    if (this.recherchePartenaire.trim()) {
+      this.commercialSelectionne = undefined;
+      this.rechercheCommercial = '';
+      this.ouvrirCommerciaux = false;
+      this.ouvrirPartenaires = true;
+      return;
+    }
 
-  canExpandTable(currentLength: number): boolean {
-    return currentLength >= this.detailsLimit;
-  }
-
-  canCollapseTables(): boolean {
-    return this.detailsLimit > 10;
-  }
-
-  reduceTables(): void {
-    this.reloadWithPreservedScroll(Math.max(10, this.detailsLimit - 10));
-  }
-
-  private reloadWithPreservedScroll(nextLimit: number): void {
-    const currentScrollY = window.scrollY;
-    this.pendingScrollRestoreY = currentScrollY;
-    this.detailsLimit = nextLimit;
+    this.ouvrirPartenaires = true;
     this.charger();
   }
 
-  private restoreScrollIfNeeded(): void {
-    if (this.pendingScrollRestoreY === null) return;
-    const targetY = this.pendingScrollRestoreY;
-    this.pendingScrollRestoreY = null;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: targetY, behavior: 'auto' });
-      });
+  surRechercheCommercial(): void {
+    this.commercialSelectionne = undefined;
+    if (this.rechercheCommercial.trim()) {
+      this.partenaireSelectionne = '';
+      this.recherchePartenaire = '';
+      this.ouvrirPartenaires = false;
+      this.ouvrirCommerciaux = true;
+      return;
+    }
+
+    this.ouvrirCommerciaux = true;
+    this.charger();
+  }
+
+  selectionnerPartenaire(row: PartnerRow): void {
+    this.commercialSelectionne = undefined;
+    this.rechercheCommercial = '';
+    this.ouvrirCommerciaux = false;
+    this.partenaireSelectionne = this.codePartenaire(row);
+    this.recherchePartenaire = this.nomPartenaire(row);
+    this.ouvrirPartenaires = false;
+    this.charger();
+  }
+
+  selectionnerCommercial(row: ReportingSalesPersonInfo): void {
+    this.partenaireSelectionne = '';
+    this.recherchePartenaire = '';
+    this.ouvrirPartenaires = false;
+    this.commercialSelectionne = row.salesPersonCode;
+    this.rechercheCommercial = row.salesPersonName;
+    this.ouvrirCommerciaux = false;
+    this.charger();
+  }
+
+  surRechercheArticlesCommercial(): void {
+    this.ouvrirArticlesCommercial = true;
+    this.ouvrirPartenairesCommercialTable = false;
+    this.resetTable('commercialProducts');
+  }
+
+  surRecherchePartenairesCommercial(): void {
+    this.ouvrirPartenairesCommercialTable = true;
+    this.ouvrirArticlesCommercial = false;
+    this.resetTable('commercialPartners');
+  }
+
+  selectionnerArticleCommercial(row: AdvancedReportingTopProduct): void {
+    this.rechercheArticlesCommercial = row.itemName || row.itemCode;
+    this.ouvrirArticlesCommercial = false;
+    this.resetTable('commercialProducts');
+  }
+
+  selectionnerPartenaireCommercialTable(row: AdvancedReportingTopPartner): void {
+    this.recherchePartenairesCommercial = row.partnerName || row.partnerCode;
+    this.ouvrirPartenairesCommercialTable = false;
+    this.resetTable('commercialPartners');
+  }
+
+  suggestionsArticlesCommercial(rows: AdvancedReportingTopProduct[]): AdvancedReportingTopProduct[] {
+    return this.produitsCommercialTries(rows);
+  }
+
+  suggestionsPartenairesCommercial(rows: AdvancedReportingTopPartner[]): AdvancedReportingTopPartner[] {
+    return this.partenairesCommercialTries(rows);
+  }
+
+  selectionnerPartenaireSiUnique(event: Event): void {
+    const rows = this.partenairesFiltres();
+    if (rows.length === 1) {
+      event.preventDefault();
+      this.selectionnerPartenaire(rows[0]);
+    }
+  }
+
+  selectionnerCommercialSiUnique(event: Event): void {
+    const rows = this.commerciauxFiltres();
+    if (rows.length === 1) {
+      event.preventDefault();
+      this.selectionnerCommercial(rows[0]);
+    }
+  }
+
+  fermerSuggestionsPlusTard(type: 'partenaire' | 'commercial'): void {
+    setTimeout(() => {
+      if (type === 'partenaire') {
+        this.ouvrirPartenaires = false;
+      } else {
+        this.ouvrirCommerciaux = false;
+      }
+    }, 120);
+  }
+
+  rapportCommercialActif(): boolean {
+    return !this.estAdmin() || !!this.commercialSelectionne;
+  }
+
+  nomCommercialActif(rapport: AdvancedReportingPayload): string {
+    return rapport.selectedSalesPersonName || this.rechercheCommercial || 'Commercial sélectionné';
+  }
+
+  trierTable(table: TableId, key: string): void {
+    const current = this.tableSort[table];
+    this.tableSort[table] = {
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+    };
+    this.resetTable(table);
+  }
+
+  indicateurTri(table: TableId, key: string): string {
+    const current = this.tableSort[table];
+    if (current.key !== key) return '';
+    return current.direction === 'asc' ? '↑' : '↓';
+  }
+
+  resetTable(table: TableId): void {
+    this.tableVisible[table] = this.tablePageSize;
+  }
+
+  chargerPlusTable(event: Event, table: TableId, total: number): void {
+    const el = event.target as HTMLElement | null;
+    if (!el || this.tableVisible[table] >= total) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom <= 80) {
+      this.tableVisible[table] = Math.min(total, this.tableVisible[table] + this.tablePageSize);
+    }
+  }
+
+  produitsPartenaireTries(rows: AdvancedReportingTopProduct[]): AdvancedReportingTopProduct[] {
+    return this.sortProducts(this.filterProducts(rows, this.rechercheArticlesPartenaire), 'partnerProducts');
+  }
+
+  produitsPartenaireVisibles(rows: AdvancedReportingTopProduct[]): AdvancedReportingTopProduct[] {
+    return this.produitsPartenaireTries(rows).slice(0, this.tableVisible.partnerProducts);
+  }
+
+  produitsCommercialTries(rows: AdvancedReportingTopProduct[]): AdvancedReportingTopProduct[] {
+    return this.sortProducts(this.filterProducts(rows, this.rechercheArticlesCommercial), 'commercialProducts');
+  }
+
+  produitsCommercialVisibles(rows: AdvancedReportingTopProduct[]): AdvancedReportingTopProduct[] {
+    return this.produitsCommercialTries(rows).slice(0, this.tableVisible.commercialProducts);
+  }
+
+  partenairesCommercialTries(rows: AdvancedReportingTopPartner[]): AdvancedReportingTopPartner[] {
+    const query = this.normalize(this.recherchePartenairesCommercial);
+    const filtered = rows.filter(row =>
+      !query ||
+      this.normalize(row.partnerName).includes(query) ||
+      this.normalize(row.partnerCode).includes(query)
+    );
+    return this.sortPartners(filtered, 'commercialPartners');
+  }
+
+  partenairesCommercialVisibles(rows: AdvancedReportingTopPartner[]): AdvancedReportingTopPartner[] {
+    return this.partenairesCommercialTries(rows).slice(0, this.tableVisible.commercialPartners);
+  }
+
+  codePartenaire(row: PartnerRow): string { return String(row.CardCode ?? (row as any).cardCode ?? '').trim(); }
+  nomPartenaire(row: PartnerRow): string { const code = this.codePartenaire(row); return `${String(row.CardName ?? (row as any).cardName ?? code).trim()} (${code})`; }
+  monnaie(value: number | null | undefined): string { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(Number(value ?? 0)); }
+  nombre(value: number | null | undefined): string { return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(Number(value ?? 0)); }
+  pourcentage(value: number | null | undefined): string { return `${this.nombre(value)} %`; }
+
+  pieBackground(rows: PartnerCategoryShare[]): string {
+    const total = rows.reduce((sum, row) => sum + Number(row.revenue || 0), 0);
+    if (total <= 0) return '#e2e8f0';
+    let cursor = 0;
+    const parts = rows.map((row, index) => {
+      const start = cursor;
+      cursor += (Number(row.revenue || 0) / total) * 100;
+      return `${this.couleur(index)} ${start}% ${cursor}%`;
     });
+    return `conic-gradient(${parts.join(', ')})`;
   }
 
-  activerMetrique(metrique: MetriqueActive): void {
-    this.metriqueActive = metrique;
+  couleur(index: number): string {
+    return ['#2563eb', '#16a34a', '#f97316', '#9333ea', '#dc2626', '#0891b2', '#ca8a04', '#475569'][index % 8];
   }
 
-  toggleUnpaidSort(key: UnpaidSortKey): void {
-    if (this.unpaidSortKey !== key) {
-      this.unpaidSortKey = key;
-      this.unpaidSortDirection = 'asc';
-      return;
-    }
-    if (this.unpaidSortDirection === 'asc') {
-      this.unpaidSortDirection = 'desc';
-      return;
-    }
-    if (this.unpaidSortDirection === 'desc') {
-      this.unpaidSortDirection = 'none';
-      this.unpaidSortKey = null;
-      return;
-    }
-    this.unpaidSortDirection = 'asc';
+  pointsCourbe(points: AdvancedReportingMonthlyRevenuePoint[]): string {
+    return this.pointsAvecCoord(points).map(p => `${p.x},${p.y}`).join(' ');
   }
 
-  toggleTopProductsSort(key: TopProductSortKey): void {
-    if (this.topProductsSortKey !== key) { this.topProductsSortKey = key; this.topProductsSortDirection = 'asc'; return; }
-    if (this.topProductsSortDirection === 'asc') { this.topProductsSortDirection = 'desc'; return; }
-    if (this.topProductsSortDirection === 'desc') { this.topProductsSortDirection = 'none'; this.topProductsSortKey = null; return; }
-    this.topProductsSortDirection = 'asc';
-  }
-
-  toggleTopClientsSort(key: TopClientSortKey): void {
-    if (this.topClientsSortKey !== key) { this.topClientsSortKey = key; this.topClientsSortDirection = 'asc'; return; }
-    if (this.topClientsSortDirection === 'asc') { this.topClientsSortDirection = 'desc'; return; }
-    if (this.topClientsSortDirection === 'desc') { this.topClientsSortDirection = 'none'; this.topClientsSortKey = null; return; }
-    this.topClientsSortDirection = 'asc';
-  }
-
-  sortedTopProducts(rapport: AdvancedReportingPayload): AdvancedReportingPayload['topProducts'] {
-    const rows = [...(rapport.topProducts ?? [])];
-    if (!this.topProductsSortKey || this.topProductsSortDirection === 'none') return rows;
-    const direction = this.topProductsSortDirection === 'asc' ? 1 : -1;
-    rows.sort((a, b) => this.compareTopProduct(a, b, this.topProductsSortKey!) * direction);
-    return rows;
-  }
-
-  sortedTopClients(rapport: AdvancedReportingPayload): AdvancedReportingPayload['topClients'] {
-    const rows = [...(rapport.topClients ?? [])];
-    if (!this.topClientsSortKey || this.topClientsSortDirection === 'none') return rows;
-    const direction = this.topClientsSortDirection === 'asc' ? 1 : -1;
-    rows.sort((a, b) => this.compareTopClient(a, b, this.topClientsSortKey!) * direction);
-    return rows;
-  }
-
-  sortedUnpaidItems(rapport: AdvancedReportingPayload): AdvancedReportingPayload['unpaidItems'] {
-    const clientQuery = this.normalizeSearch(this.rechercheImpayesClient);
-    const commercialQuery = this.estModeAdministrateur()
-      ? this.normalizeSearch(this.rechercheImpayesCommercial)
-      : '';
-    const rows = (rapport.unpaidItems ?? []).filter((row) => {
-      const matchesClient = !clientQuery ||
-        this.normalizeSearch(row.cardCode).includes(clientQuery) ||
-        this.normalizeSearch(row.cardName).includes(clientQuery);
-      const matchesCommercial = !commercialQuery ||
-        this.normalizeSearch(row.salesPersonName).includes(commercialQuery) ||
-        this.normalizeSearch(row.salesPersonCode).includes(commercialQuery);
-      return matchesClient && matchesCommercial;
-    });
-    if (!this.unpaidSortKey || this.unpaidSortDirection === 'none') return rows;
-    const direction = this.unpaidSortDirection === 'asc' ? 1 : -1;
-    return [...rows].sort((a, b) => this.compareUnpaid(a, b, this.unpaidSortKey!) * direction);
-  }
-
-  sortIndicator(activeKey: string | null, activeDirection: SortDirection, key: string): string {
-    if (activeKey !== key || activeDirection === 'none') return '';
-    return activeDirection === 'asc' ? '↑' : '↓';
-  }
-
-  legendeCommerciaux(): Array<{ code: number; nom: string; pourcentage: string; couleur: string }> {
-    const palette = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-    const liste = (this.data()?.topCommercials ?? []).slice(0, 8);
-    const total = Math.max(1, liste.reduce((sum, row) => sum + Number(row.netRevenue || 0), 0));
-    return liste.map((row, index) => ({
-      code: row.salesPersonCode,
-      nom: row.salesPersonName || `Commercial ${row.salesPersonCode}`,
-      pourcentage: this.pourcentage((Number(row.netRevenue || 0) * 100) / total),
-      couleur: palette[index % palette.length]
+  pointsAvecCoord(points: AdvancedReportingMonthlyRevenuePoint[]): ChartPoint[] {
+    const rows = points?.length ? points : [];
+    const max = Math.max(...rows.map(p => Number(p.revenue || 0)), 1);
+    const width = 630;
+    const height = 180;
+    return rows.map((p, index) => ({
+      label: p.monthKey,
+      value: Number(p.revenue || 0),
+      x: 70 + (rows.length <= 1 ? width / 2 : index * (width / (rows.length - 1))),
+      y: 25 + height - ((Number(p.revenue || 0) / max) * height)
     }));
   }
 
-  fondCamembertCommerciaux(): string {
-    const palette = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-    const liste = (this.data()?.topCommercials ?? []).slice(0, 8);
-    if (liste.length === 0) return 'conic-gradient(#e5e7eb 0 100%)';
-    const total = Math.max(1, liste.reduce((sum, row) => sum + Number(row.netRevenue || 0), 0));
-    let depart = 0;
-    const segments = liste.map((row, index) => {
-      const valeur = (Number(row.netRevenue || 0) * 100) / total;
-      const fin = depart + valeur;
-      const segment = `${palette[index % palette.length]} ${depart.toFixed(2)}% ${fin.toFixed(2)}%`;
-      depart = fin;
-      return segment;
+  yTicks(points: AdvancedReportingMonthlyRevenuePoint[]): Array<{ y: number; label: string }> {
+    const max = Math.max(...(points ?? []).map(p => Number(p.revenue || 0)), 1);
+    return [1, 0.75, 0.5, 0.25, 0].map(ratio => ({
+      y: 25 + (1 - ratio) * 180,
+      label: this.compactMoney(max * ratio)
+    }));
+  }
+
+  compactMoney(value: number): string {
+    return new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(value) + ' MAD';
+  }
+
+  etiquetteMois(value: string): string {
+    const parts = value.split('-');
+    if (parts.length === 3) {
+      const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return date.toLocaleDateString('fr-FR', { day: '2-digit' });
+    }
+    if (parts.length !== 2) return value;
+    const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+    return date.toLocaleDateString('fr-FR', { month: 'short' });
+  }
+
+  gaugeBackground(rate: number): string {
+    const safe = Math.max(0, Math.min(100, Number(rate || 0)));
+    return `conic-gradient(#16a34a 0 ${safe}%, #e2e8f0 ${safe}% 100%)`;
+  }
+
+  funnel(rapport: AdvancedReportingPayload): Array<{ label: string; count: number; rate: number; width: number }> {
+    const q = Math.max(rapport.kpis.quotesCount, 1);
+    return [
+      { label: 'Devis', count: rapport.kpis.quotesCount, rate: 100, width: 100 },
+      { label: 'BC', count: rapport.kpis.ordersCount, rate: rapport.kpis.quoteToOrderRate, width: Math.max(45, rapport.kpis.ordersCount * 100 / q) },
+      { label: 'BL', count: rapport.kpis.deliveryNotesCount, rate: rapport.kpis.orderToDeliveryRate, width: Math.max(38, rapport.kpis.deliveryNotesCount * 100 / q) },
+      { label: 'Factures', count: rapport.kpis.invoicesCount, rate: rapport.kpis.deliveryToInvoiceRate, width: Math.max(32, rapport.kpis.invoicesCount * 100 / q) }
+    ];
+  }
+
+  private normalize(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private resetAllTables(): void {
+    (Object.keys(this.tableVisible) as TableId[]).forEach(table => this.resetTable(table));
+  }
+
+  private filterProducts(rows: AdvancedReportingTopProduct[], search: string): AdvancedReportingTopProduct[] {
+    const query = this.normalize(search);
+    return rows.filter(row =>
+      !query ||
+      this.normalize(row.itemName).includes(query) ||
+      this.normalize(row.itemCode).includes(query)
+    );
+  }
+
+  private sortProducts(rows: AdvancedReportingTopProduct[], table: TableId): AdvancedReportingTopProduct[] {
+    const sort = this.tableSort[table];
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      if (sort.key === 'item') {
+        return this.compareText(a.itemName || a.itemCode, b.itemName || b.itemCode) * direction;
+      }
+      return (Number((a as any)[sort.key] ?? 0) - Number((b as any)[sort.key] ?? 0)) * direction;
     });
-    return `conic-gradient(${segments.join(', ')})`;
   }
 
-  selectionnerCommercialDepuisLegende(code: number): void {
-    if (!this.estModeAdministrateur()) return;
-    const commercial = this.commerciaux().find((x) => x.salesPersonCode === code);
-    if (!commercial) return;
-    this.rechercheCommercial = commercial.salesPersonName;
-    this.charger();
+  private sortPartners(rows: AdvancedReportingTopPartner[], table: TableId): AdvancedReportingTopPartner[] {
+    const sort = this.tableSort[table];
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      if (sort.key === 'partner') {
+        return this.compareText(a.partnerName || a.partnerCode, b.partnerName || b.partnerCode) * direction;
+      }
+      return (Number((a as any)[sort.key] ?? 0) - Number((b as any)[sort.key] ?? 0)) * direction;
+    });
   }
 
-  etiquettePeriode(): string {
-    if (this.modePeriode === 'month') return `Période: ${this.mois}`;
-    if (this.modePeriode === 'quarter') return `Période: trimestre ${this.trimestre} ${this.annee}`;
-    if (this.modePeriode === 'year') return `Période: ${this.annee}`;
-    return `Période: ${this.dateDebut} au ${this.dateFin}`;
+  private compareText(a: unknown, b: unknown): number {
+    return String(a ?? '').localeCompare(String(b ?? ''), 'fr', { sensitivity: 'base' });
   }
 
-  variation(courant: number, precedent: number): string {
-    const valeurCourante = Number(courant || 0);
-    const base = Number(precedent || 0);
-    if (base <= 0 && valeurCourante <= 0) return '0.00%';
-    if (base <= 0 && valeurCourante > 0) return '+100.00%';
-    return this.pourcentage(((valeurCourante - base) * 100) / base);
-  }
-
-  monnaie(valeur: number): string {
-    return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(valeur || 0))} MAD`;
-  }
-
-  pourcentage(valeur: number): string {
-    return `${Number(valeur || 0).toFixed(2)}%`;
-  }
-
-  private compareUnpaid(a: AdvancedReportingPayload['unpaidItems'][number], b: AdvancedReportingPayload['unpaidItems'][number], key: UnpaidSortKey): number {
-    if (key === 'dueAmount' || key === 'overdueDays') {
-      return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
-    }
-    if (key === 'dueDate') {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    }
-    if (key === 'itemName') {
-      const av = String(a.itemName || a.itemCode || '').toLowerCase();
-      const bv = String(b.itemName || b.itemCode || '').toLowerCase();
-      return av.localeCompare(bv);
-    }
-    if (key === 'salesPersonName') {
-      const av = String(a.salesPersonName || `#${a.salesPersonCode || 0}`).toLowerCase();
-      const bv = String(b.salesPersonName || `#${b.salesPersonCode || 0}`).toLowerCase();
-      return av.localeCompare(bv);
-    }
-    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
-  }
-
-  private compareTopProduct(a: AdvancedReportingPayload['topProducts'][number], b: AdvancedReportingPayload['topProducts'][number], key: TopProductSortKey): number {
-    if (key === 'salesCount' || key === 'revenue' || key === 'salesPeopleCount') return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
-    if (key === 'itemName') {
-      const av = String(a.itemName || a.itemCode || '').toLowerCase();
-      const bv = String(b.itemName || b.itemCode || '').toLowerCase();
-      return av.localeCompare(bv);
-    }
-    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
-  }
-
-  private compareTopClient(a: AdvancedReportingPayload['topClients'][number], b: AdvancedReportingPayload['topClients'][number], key: TopClientSortKey): number {
-    if (key === 'revenue' || key === 'paidAmount' || key === 'pendingAmount' || key === 'contractsCount') return Number((a as any)[key] || 0) - Number((b as any)[key] || 0);
-    return String((a as any)[key] || '').toLowerCase().localeCompare(String((b as any)[key] || '').toLowerCase());
-  }
-
-  private codeCommercialSelectionne(): number | undefined {
-    if (!this.estModeAdministrateur()) return undefined;
-    const saisie = this.rechercheCommercial.trim().toLowerCase();
-    if (!saisie) return undefined;
-    const commercial = this.commerciaux().find((x) => x.salesPersonName.trim().toLowerCase().includes(saisie));
-    return commercial?.salesPersonCode;
-  }
-
-  private normalizeSearch(value: unknown): string {
-    return String(value ?? '').trim().toLowerCase();
-  }
-
-  private moisParDefaut(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  private premierJourMois(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  }
-
-  private dateDuJour(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
+  private moisParDefaut(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+  private premierJourMois(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; }
+  private dateDuJour(): string { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 }

@@ -177,7 +177,7 @@ public class OrderService(AppDbContext db, ISapB1Service sapService) : IOrderSer
             BaseEntry = quote.Id,
             BaseLine = null,
             Currency = quote.Currency,
-            Comments = $"Généré depuis devis {quote.DocNum}",
+            Comments = string.Empty,
             CreatedAt = DateTime.UtcNow
         };
 

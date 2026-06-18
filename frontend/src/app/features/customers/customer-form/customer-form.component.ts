@@ -1,4 +1,4 @@
-ï»¿import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
@@ -16,6 +16,7 @@ interface CustomerOptions {
   groups: OptionDto[];
   currencies: OptionDto[];
 }
+
 
 const SAP_REFRESH_EVENT = 'sapCustomers:updated';
 
@@ -37,7 +38,7 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
       <form (ngSubmit)="onSubmit()" class="form-grid">
         <div class="form-group">
           <label>Code <span class="required">*</span></label>
-          <input [(ngModel)]="customer.cardCode" name="cardCode" required [disabled]="isEdit" placeholder="Ex: C001" />
+          <input [(ngModel)]="customer.cardCode" name="cardCode" [disabled]="true" readonly [placeholder]="isEdit ? '' : 'Automatique'" />
         </div>
 
         <div class="form-group">
@@ -282,6 +283,7 @@ export class CustomerFormComponent implements OnInit {
         },
         error: () => { this.errorMsg = 'Impossible de charger le partenaire.'; this.cdr.markForCheck(); }
       });
+      return;
     }
   }
 
@@ -326,8 +328,8 @@ export class CustomerFormComponent implements OnInit {
       return;
     }
 
-    if (!this.customer.cardCode?.trim() || !this.customer.cardName?.trim()) {
-      this.errorMsg = 'Le code client et le nom client sont obligatoires.';
+    if (!this.customer.cardName?.trim()) {
+      this.errorMsg = 'Le nom client est obligatoire.';
       this.notifications.showError(this.errorMsg);
       this.loading = false;
       this.cdr.markForCheck();
@@ -336,7 +338,6 @@ export class CustomerFormComponent implements OnInit {
 
     const payload = {
       // Backend contract (new SAP clients API)
-      code: this.customer.cardCode.trim(),
       name: this.customer.cardName.trim(),
       phone1: (this.customer.phone1 || '').trim(),
       cellular: (this.customer.mobilePhone || '').trim(),
@@ -353,7 +354,6 @@ export class CustomerFormComponent implements OnInit {
         : Number(this.customer.creditLimit),
 
       // Compatibility aliases for older adapters
-      cardCode: this.customer.cardCode.trim(),
       cardName: this.customer.cardName.trim(),
       Phone1: (this.customer.phone1 || '').trim(),
       Cellular: (this.customer.mobilePhone || '').trim(),
@@ -372,7 +372,8 @@ export class CustomerFormComponent implements OnInit {
         ? null
         : Number(this.customer.creditLimit),
       mobilePhone: (this.customer.mobilePhone || '').trim(),
-      email: (this.customer.email || '').trim()
+      email: (this.customer.email || '').trim(),
+      automatic: true
     };
 
     console.log('[customer-form] create payload', payload);
@@ -398,15 +399,48 @@ export class CustomerFormComponent implements OnInit {
 
   private extractSapError(err: any): string {
     const explicit = String(err?.error?.error ?? '').trim();
-    if (explicit) return explicit;
+    if (explicit) return this.normalizeCustomerCreationError(explicit);
 
     const sapValue = String(err?.error?.sapResponse?.error?.message?.value ?? '').trim();
-    if (sapValue) return sapValue;
+    if (sapValue) return this.normalizeCustomerCreationError(sapValue);
 
     const message = String(err?.error?.message ?? '').trim();
-    if (message && message.toLowerCase() !== 'erreur sap') return message;
+    if (message && message.toLowerCase() !== 'erreur sap') return this.normalizeCustomerCreationError(message);
 
     return 'Creation du client impossible.';
+  }
+
+  private normalizeCustomerCreationError(message: string): string {
+    const raw = String(message ?? '').trim();
+    if (!raw) return 'Creation du client impossible.';
+
+    if (/CardCode\s+et\s+CardName\s+sont\s+obligatoires/i.test(raw)) {
+      return 'Le code partenaire est généré automatiquement par SAP B1. La Raison sociale est obligatoire.';
+    }
+
+    if (/CardName\s+est\s+obligatoire/i.test(raw)) {
+      return 'La Raison sociale est obligatoire.';
+    }
+
+    if (/Property\s+'HandWritten'\s+of\s+'BusinessPartner'\s+is\s+invalid/i.test(raw)) {
+      return 'Le champ automatique précédent envoyé au partenaire n’est pas accepté par SAP B1.';
+    }
+
+    if (/Property\s+'CardCode'\s+of\s+'BusinessPartner'\s+is\s+invalid/i.test(raw)) {
+      return 'Le mode code AUTO n’est pas accepté par SAP B1 avec ce backend.';
+    }
+
+    if (/Series/i.test(raw) && /obligatoire/i.test(raw)) {
+      return 'La série SAP du partenaire est obligatoire.';
+    }
+
+    if (/Code undefined/i.test(raw) && /OCRD/i.test(raw)) {
+      return 'SAP B1 n’a pas pu générer le code partenaire automatiquement avec la série utilisée.';
+    }
+
+    return raw
+      .replace(/CardName/gi, 'Raison sociale')
+      .replace(/CardCode/gi, 'Code partenaire');
   }
 
   private saveLegacyCustomer(): void {
@@ -469,5 +503,7 @@ export class CustomerFormComponent implements OnInit {
     return [];
   }
 }
+
+
 
 

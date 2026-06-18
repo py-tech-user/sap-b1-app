@@ -66,7 +66,6 @@ builder.Services.AddScoped<IDeliveryNoteService, DeliveryNoteService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<ICreditNoteService, CreditNoteService>();
 builder.Services.AddScoped<IReturnService, ReturnService>();
-builder.Services.AddScoped<ITrackingService, TrackingService>();
 
 // ─── SAP B1 DI API Service (Scoped pour gestion de connexion par requête) ───
 builder.Services.AddScoped<ISapB1Service, SapB1Service>();

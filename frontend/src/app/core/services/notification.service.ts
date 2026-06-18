@@ -46,7 +46,7 @@ export class NotificationService {
   }
 
   private show(message: string, kind: NotificationKind): void {
-    this.state.set({ message, kind });
+    this.state.set({ message: this.normalizeMessage(message), kind });
 
     if (this.clearTimer !== null) {
       clearTimeout(this.clearTimer);
@@ -56,6 +56,23 @@ export class NotificationService {
       this.state.set(null);
       this.clearTimer = null;
     }, 4000);
+  }
+
+  private normalizeMessage(message: string): string {
+    return String(message ?? '')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã¨/g, 'è')
+      .replace(/Ãª/g, 'ê')
+      .replace(/Ã«/g, 'ë')
+      .replace(/Ã /g, 'à')
+      .replace(/Ã¢/g, 'â')
+      .replace(/Ã¹/g, 'ù')
+      .replace(/Ã»/g, 'û')
+      .replace(/Ã§/g, 'ç')
+      .replace(/Ã´/g, 'ô')
+      .replace(/Ã®/g, 'î')
+      .replace(/Ã¯/g, 'ï')
+      .replace(/Ã‰/g, 'É');
   }
 }
 

@@ -33,9 +33,7 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
             }
           </nav>
 
-          <div class="sidenav-footer">
-            <span>v1.0.0 SAP B1</span>
-          </div>
+          
         </aside>
       }
 

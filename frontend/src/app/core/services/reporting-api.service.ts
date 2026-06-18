@@ -25,6 +25,19 @@ export interface ReportingKpis {
   pendingRevenue: number;
   activePartnersCount: number;
   inactivePartnersCount: number;
+  collectedRevenue: number;
+  monthlyTarget: number;
+  periodTarget: number;
+  targetAchievementRate: number;
+  averageQuoteAmount: number;
+  quoteValidationDays: number;
+  overdueInvoicesCount: number;
+  overdueInvoicesAmount: number;
+  dso: number;
+  paymentRate: number;
+  newActivePartnersCount: number;
+  openPipelineAmount: number;
+  salesCycleDays: number;
 }
 
 export interface ReportingSalesPerson {
@@ -87,6 +100,7 @@ export interface PartnerDebtItem {
   salesPersonName: string;
   partnerOwesCompanyAmount: number;
   companyOwesPartnerAmount: number;
+  balance: number;
 }
 
 export interface ReportingSalesPersonInfo {
@@ -101,6 +115,7 @@ export interface CommercialReportingPayload {
   selectedSalesPersonName?: string;
   kpis: ReportingKpis;
   teamPerformances: ReportingSalesPerson[];
+  topClients: AdvancedReportingTopClient[];
   recentDocuments: ReportingRecentDocument[];
   teamMembers: ReportingSalesPersonInfo[];
   inactiveSalesPersons: ReportingSalesPersonInfo[];
@@ -195,9 +210,43 @@ export interface AdvancedReportingPartnerDetail {
   roiPercent: number;
 }
 
+export interface PartnerFinancialSummary {
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+export interface PartnerDocumentReportItem {
+  type: string;
+  docEntry: number;
+  docNum: number;
+  docDate?: string;
+  total: number;
+  status: string;
+}
+
+export interface PartnerCategoryShare {
+  categoryCode: string;
+  categoryName: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface PartnerFocusedReport {
+  cardCode: string;
+  cardName: string;
+  salesPersonCode: number;
+  salesPersonName: string;
+  financialSummary: PartnerFinancialSummary;
+  documents: PartnerDocumentReportItem[];
+  topPurchasedProducts: AdvancedReportingTopProduct[];
+  categoryShares: PartnerCategoryShare[];
+  yearlyRevenue: AdvancedReportingMonthlyRevenuePoint[];
+}
+
 export interface AdvancedReportingPayload {
   mode: 'Commercial' | 'Admin';
-  periodType: 'month' | 'quarter' | 'year' | 'custom';
+  periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
   periodLabel: string;
   periodStart: string;
   periodEnd: string;
@@ -216,6 +265,76 @@ export interface AdvancedReportingPayload {
   productDetails: AdvancedReportingProductDetail[];
   clientDetails: AdvancedReportingClientDetail[];
   partnerDetails: AdvancedReportingPartnerDetail[];
+  partnerReport?: PartnerFocusedReport | null;
+}
+
+export interface AdminCommercialSummary {
+  salesPersonCode: number;
+  salesPersonName: string;
+  revenue: number;
+  quotesCount: number;
+  quoteToOrderRate: number;
+  collectedRevenue: number;
+  overdueInvoicesCount: number;
+  overdueInvoicesAmount: number;
+}
+
+export interface AdminTopPartner {
+  cardCode: string;
+  cardName: string;
+  revenue: number;
+  salesPersonName: string;
+}
+
+export interface AdminTopProduct {
+  itemCode: string;
+  itemName: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface AdminMonthlyRevenue {
+  monthKey: string;
+  revenue: number;
+  pendingRevenue: number;
+  salesPersonName: string;
+}
+
+export interface QuoteToRelaunchItem {
+  docEntry: number;
+  docNum: number;
+  cardCode: string;
+  cardName: string;
+  total: number;
+  docDate: string;
+  daysSinceQuote: number;
+  salesPersonCode: number;
+  salesPersonName: string;
+}
+
+export interface ReportingEvolutionPoint {
+  monthKey: string;
+  revenue: number;
+  pendingRevenue: number;
+}
+
+export interface ReportingEvolution {
+  points: ReportingEvolutionPoint[];
+}
+
+export interface MonthlyTargetPayload {
+  monthlyTarget: number;
+  salesPersonCode?: number;
+}
+
+export interface AdminDashboardPayload {
+  commercialSummaries: AdminCommercialSummary[];
+  topPartners: AdminTopPartner[];
+  topProducts: AdminTopProduct[];
+  monthlyRevenue: AdminMonthlyRevenue[];
+  totalPipelineAmount: number;
+  globalOverdueInvoicesCount: number;
+  globalOverdueInvoicesAmount: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -227,23 +346,29 @@ export class ReportingApiService {
     salesPersonCode?: number
   ): Observable<ApiResponse<CommercialReportingPayload>>;
   getCommercialReporting(params: {
-    periodType: 'month' | 'quarter' | 'year' | 'custom';
+    periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     month?: string;
     quarter?: number;
     year?: number;
     startDate?: string;
     endDate?: string;
     salesPersonCode?: number;
+    cardCode?: string;
+    includeRecentDocuments?: boolean;
+    includeTeamPerformance?: boolean;
   }): Observable<ApiResponse<CommercialReportingPayload>>;
   getCommercialReporting(
     monthOrParams: string | {
-      periodType: 'month' | 'quarter' | 'year' | 'custom';
+      periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
       month?: string;
       quarter?: number;
       year?: number;
       startDate?: string;
       endDate?: string;
       salesPersonCode?: number;
+      cardCode?: string;
+      includeRecentDocuments?: boolean;
+      includeTeamPerformance?: boolean;
     },
     salesPersonCode?: number
   ): Observable<ApiResponse<CommercialReportingPayload>> {
@@ -262,6 +387,9 @@ export class ReportingApiService {
       if (monthOrParams.salesPersonCode && monthOrParams.salesPersonCode > 0) {
         query.set('salesPersonCode', String(monthOrParams.salesPersonCode));
       }
+      if (monthOrParams.cardCode && monthOrParams.cardCode.trim()) query.set('cardCode', monthOrParams.cardCode.trim());
+      if (monthOrParams.includeRecentDocuments === false) query.set('includeRecentDocuments', 'false');
+      if (monthOrParams.includeTeamPerformance === false) query.set('includeTeamPerformance', 'false');
     }
     return this.api.get<ApiResponse<CommercialReportingPayload>>(`reporting/commercial?${query.toString()}`);
   }
@@ -288,7 +416,7 @@ export class ReportingApiService {
   }
 
   getAdvancedReporting(params: {
-    periodType: 'month' | 'quarter' | 'year' | 'custom';
+      periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
     month?: string;
     quarter?: number;
     year?: number;
@@ -313,11 +441,83 @@ export class ReportingApiService {
     return this.api.get<ApiResponse<AdvancedReportingPayload>>(`reporting/advanced?${query.toString()}`);
   }
 
-  getPartnerDebts(salesPersonCode?: number, page = 1, pageSize = 10): Observable<ApiResponse<PartnerDebtItem[]>> {
+  getAdminDashboard(month?: string): Observable<ApiResponse<AdminDashboardPayload>> {
+    const query = new URLSearchParams();
+    if (month) query.set('month', month);
+    return this.api.get<ApiResponse<AdminDashboardPayload>>(`reporting/admin-dashboard?${query.toString()}`);
+  }
+
+  getPartnerDebts(
+    salesPersonCode?: number,
+    page = 1,
+    pageSize = 10,
+    search?: string,
+    commercialSearch?: string,
+    cardCode?: string
+  ): Observable<ApiResponse<PartnerDebtItem[]>> {
     const query = new URLSearchParams();
     if (salesPersonCode && salesPersonCode > 0) query.set('salesPersonCode', String(salesPersonCode));
     query.set('page', String(Math.max(1, page)));
     query.set('pageSize', String(Math.max(1, pageSize)));
+    if (search && search.trim()) query.set('search', search.trim());
+    if (commercialSearch && commercialSearch.trim()) query.set('commercialSearch', commercialSearch.trim());
+    if (cardCode && cardCode.trim()) query.set('cardCode', cardCode.trim());
     return this.api.get<ApiResponse<PartnerDebtItem[]>>(`reporting/partner-debts?${query.toString()}`);
+  }
+
+  getQuotesToRelaunch(minDays = 7, salesPersonCode?: number): Observable<ApiResponse<QuoteToRelaunchItem[]>> {
+    const query = new URLSearchParams();
+    query.set('minDays', String(minDays));
+    if (salesPersonCode && salesPersonCode > 0) query.set('salesPersonCode', String(salesPersonCode));
+    return this.api.get<ApiResponse<QuoteToRelaunchItem[]>>(`reporting/quotes-to-relaunch?${query.toString()}`);
+  }
+
+  getReportingEvolution(
+    params: {
+      periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+      month?: string;
+      quarter?: number;
+      year?: number;
+      startDate?: string;
+      endDate?: string;
+      salesPersonCode?: number;
+      cardCode?: string;
+    }
+  ): Observable<ApiResponse<ReportingEvolution>>;
+  getReportingEvolution(months?: number, salesPersonCode?: number): Observable<ApiResponse<ReportingEvolution>>;
+  getReportingEvolution(
+    monthsOrParams: number | {
+      periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+      month?: string;
+      quarter?: number;
+      year?: number;
+      startDate?: string;
+      endDate?: string;
+      salesPersonCode?: number;
+      cardCode?: string;
+    } = 6,
+    salesPersonCode?: number
+  ): Observable<ApiResponse<ReportingEvolution>> {
+    const query = new URLSearchParams();
+    if (typeof monthsOrParams === 'number') {
+      query.set('months', String(monthsOrParams));
+      if (salesPersonCode && salesPersonCode > 0) query.set('salesPersonCode', String(salesPersonCode));
+    } else {
+      query.set('periodType', monthsOrParams.periodType);
+      if (monthsOrParams.month) query.set('month', monthsOrParams.month);
+      if (monthsOrParams.quarter) query.set('quarter', String(monthsOrParams.quarter));
+      if (monthsOrParams.year) query.set('year', String(monthsOrParams.year));
+      if (monthsOrParams.startDate) query.set('startDate', monthsOrParams.startDate);
+      if (monthsOrParams.endDate) query.set('endDate', monthsOrParams.endDate);
+      if (monthsOrParams.salesPersonCode && monthsOrParams.salesPersonCode > 0) {
+        query.set('salesPersonCode', String(monthsOrParams.salesPersonCode));
+      }
+      if (monthsOrParams.cardCode && monthsOrParams.cardCode.trim()) query.set('cardCode', monthsOrParams.cardCode.trim());
+    }
+    return this.api.get<ApiResponse<ReportingEvolution>>(`reporting/evolution?${query.toString()}`);
+  }
+
+  updateMonthlyTarget(payload: MonthlyTargetPayload): Observable<ApiResponse<{ monthlyTarget: number; salesPersonCode?: number }>> {
+    return this.api.put<ApiResponse<{ monthlyTarget: number; salesPersonCode?: number }>>('reporting/monthly-target', payload);
   }
 }

@@ -431,6 +431,7 @@ public class SapB1Service : ISapB1Service
         if (payload is not null)
         {
             var jsonPayload = BuildRequestJsonPayload(method, relativeUrl, payload);
+            LogServiceLayerRequest(method, relativeUrl, jsonPayload);
             request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
         }
 
@@ -589,6 +590,7 @@ public class SapB1Service : ISapB1Service
         if (payload is not null)
         {
             var jsonPayload = BuildRequestJsonPayload(method, relativeUrl, payload);
+            LogServiceLayerRequest(method, relativeUrl, jsonPayload);
             request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
         }
 
@@ -693,6 +695,47 @@ public class SapB1Service : ISapB1Service
 
         objectNode["SalesPersonCode"] = salesPersonCode;
         return objectNode.ToJsonString();
+    }
+
+    private void LogServiceLayerRequest(HttpMethod method, string relativeUrl, string jsonPayload)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPayload))
+        {
+            _logger.LogInformation("Service Layer request: {Method} {Url} body=<empty>", method, relativeUrl);
+            return;
+        }
+
+        if (relativeUrl.StartsWith("BusinessPartners", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(jsonPayload);
+                var root = doc.RootElement;
+                var hasCardCode = root.TryGetProperty("CardCode", out _);
+                int? series = null;
+                if (root.TryGetProperty("Series", out var seriesNode) &&
+                    seriesNode.ValueKind == JsonValueKind.Number &&
+                    seriesNode.TryGetInt32(out var parsedSeries))
+                {
+                    series = parsedSeries;
+                }
+
+                _logger.LogInformation(
+                    "Service Layer request: {Method} {Url} body={Body} | BusinessPartnerAutoCode: HasCardCode={HasCardCode}, Series={Series}",
+                    method,
+                    relativeUrl,
+                    jsonPayload,
+                    hasCardCode,
+                    series);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Impossible d'analyser le body Service Layer BusinessPartners avant envoi.");
+            }
+        }
+
+        _logger.LogInformation("Service Layer request: {Method} {Url} body={Body}", method, relativeUrl, jsonPayload);
     }
 
     private static bool ShouldInjectSalesPersonCode(HttpMethod method, string relativeUrl)

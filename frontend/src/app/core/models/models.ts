@@ -1,4 +1,4 @@
-// a”€a”€ Generic wrappers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+﻿// aâ€â‚¬aâ€â‚¬ Generic wrappers aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -15,7 +15,7 @@ export interface PagedResult<T> {
   totalPages: number;
 }
 
-// a”€a”€ Customer a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Customer aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Customer {
   id: number;
@@ -41,7 +41,7 @@ export interface CreateCustomer {
 
 export interface UpdateCustomer extends Partial<CreateCustomer> {}
 
-// a”€a”€ Product a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Product aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Product {
   id: number;
@@ -64,7 +64,7 @@ export interface CreateProduct {
   isActive: boolean;
 }
 
-// a”€a”€ Order a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Order aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Order {
   id: number;
@@ -107,7 +107,7 @@ export interface CreateOrderLine {
   vatPct?: number;
 }
 
-// a”€a”€ Visit a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Visit aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Visit {
   id: number;
@@ -134,7 +134,7 @@ export interface CreateVisit {
 
 export interface UpdateVisit extends Partial<CreateVisit> {}
 
-// a”€a”€ Payment (Encaissement) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Payment (Encaissement) aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Payment {
   id: number;
@@ -165,70 +165,7 @@ export interface CreatePayment {
 
 export interface UpdatePayment extends Partial<CreatePayment> {}
 
-// a”€a”€ Tracking (GPS) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
-
-export interface LocationTrack {
-  id: number;
-  userId: number;
-  userName?: string;
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-  timestamp: string;
-  visitId?: number;
-  eventType: string; // 'auto' | 'check-in' | 'check-out'
-}
-
-export interface CreateLocationTrack {
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-  visitId?: number;
-  eventType: string;
-}
-
-export interface UserLivePosition {
-  userId: number;
-  userName: string;
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-  lastUpdate: string;
-  currentVisitId?: number;
-  currentCustomerName?: string;
-}
-
-export interface CheckInRequest {
-  visitId: number;
-  latitude: number;
-  longitude: number;
-}
-
-export interface CheckOutRequest {
-  visitId: number;
-  latitude: number;
-  longitude: number;
-  notes?: string;
-}
-
-export interface UserTrackingStats {
-  userId: number;
-  userName: string;
-  totalVisits: number;
-  completedVisits: number;
-  totalDistanceKm: number;
-  avgVisitDurationMin: number;
-  lastActivity?: string;
-}
-
-export interface TrackPoint {
-  latitude: number;
-  longitude: number;
-  timestamp: string;
-  eventType: string;
-}
-
-// a”€a”€ Commercial (Devis / BC / BL / Facture / Avoir / Retour) a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Commercial (Devis / BC / BL / Facture / Avoir / Retour) aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type CommercialResource = 'quotes' | 'orders' | 'deliverynotes' | 'invoices' | 'creditnotes' | 'returns';
 
@@ -341,7 +278,7 @@ export interface CommercialDashboard {
   };
 }
 
-// a”€a”€ Retours a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Retours aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type ReturnStatus = 'Pending' | 'Approved' | 'Rejected' | 'Received' | 'Processed' | 'Closed';
 export type ReturnReason = 'Defective' | 'WrongProduct' | 'Damaged' | 'NotAsDescribed' | 'CustomerChanged' | 'Other';
@@ -383,7 +320,7 @@ export interface CreateReturn {
   lines: { productId: number; quantity: number; unitPrice?: number; condition?: string; comments?: string }[];
 }
 
-// a”€a”€ Reclamations a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Reclamations aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type ClaimStatus = 'Open' | 'InProgress' | 'Resolved' | 'Closed' | 'Cancelled';
 export type ClaimType = 'Quality' | 'Delivery' | 'Billing' | 'Service' | 'Other';
@@ -425,7 +362,7 @@ export interface CreateClaim {
   description: string;
 }
 
-// a”€a”€ Tickets SAV a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Tickets SAV aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type ServiceTicketStatus = 'Open' | 'Scheduled' | 'InProgress' | 'OnHold' | 'Completed' | 'Closed';
 
@@ -472,7 +409,7 @@ export interface CreateServiceTicket {
   underWarranty?: boolean;
 }
 
-// a”€a”€ Bons de livraison a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Bons de livraison aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type DeliveryStatus = 'Draft' | 'Confirmed' | 'InTransit' | 'Delivered' | 'Cancelled';
 
@@ -512,7 +449,7 @@ export interface CreateDeliveryNote {
   lines: { productId: number; orderLineId?: number; orderedQty: number; deliveredQty: number; batchNumber?: string; serialNumber?: string }[];
 }
 
-// a”€a”€ Fournisseurs a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Fournisseurs aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface Supplier {
   id: number;
@@ -542,7 +479,7 @@ export interface CreateSupplier {
   currency?: string;
 }
 
-// a”€a”€ Bons de commande fournisseur a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Bons de commande fournisseur aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type PurchaseOrderStatus = 'Draft' | 'Sent' | 'Confirmed' | 'PartiallyReceived' | 'Received' | 'Cancelled';
 
@@ -579,7 +516,7 @@ export interface CreatePurchaseOrder {
   lines: { productId: number; quantity: number; unitPrice?: number; vatPct?: number }[];
 }
 
-// a”€a”€ Avoirs a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Avoirs aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export type CreditNoteStatus = 'Draft' | 'Confirmed' | 'Applied' | 'Refunded' | 'Cancelled';
 
@@ -619,7 +556,7 @@ export interface CreateCreditNote {
   lines: { productId: number; quantity: number; unitPrice?: number; vatPct?: number }[];
 }
 
-// a”€a”€ Receptions de marchandise a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
+// aâ€â‚¬aâ€â‚¬ Receptions de marchandise aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
 
 export interface GoodsReceiptLine {
   id: number;
