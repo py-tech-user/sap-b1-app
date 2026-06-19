@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SapB1App.Data;
@@ -1460,6 +1462,8 @@ ORDER BY CardName, CardCode;";
         [FromQuery] bool includeTeamPerformance = true,
         CancellationToken cancellationToken = default)
     {
+        var totalSw = Stopwatch.StartNew();
+        var requestId = HttpContext.TraceIdentifier;
         var (periodStart, periodEnd, periodLabel) = ResolveReportingPeriod(periodType, month, quarter, year, startDate, endDate);
         var isAdmin = _currentUserService.IsAdmin();
         var currentSalesPerson = _currentUserService.GetSapSalesPersonCode();
@@ -1468,10 +1472,21 @@ ORDER BY CardName, CardCode;";
         if (!isAdmin && scopedSalesPersonCode <= 0)
             return Forbid();
 
+        _logger.LogInformation("[REPORTING][Commercial] Start RequestId={RequestId} PeriodType={PeriodType} PeriodStart={PeriodStart:yyyy-MM-dd} PeriodEnd={PeriodEnd:yyyy-MM-dd} IsAdmin={IsAdmin} SalesPersonCode={SalesPersonCode} CardCode={CardCode} IncludeRecentDocuments={IncludeRecentDocuments} IncludeTeamPerformance={IncludeTeamPerformance}",
+            requestId, periodType, periodStart, periodEnd, isAdmin, scopedSalesPersonCode, cardCode, includeRecentDocuments, includeTeamPerformance);
+
         var cacheKey = $"reporting:commercial:v2:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{isAdmin}:card:{(cardCode ?? string.Empty).Trim().ToLowerInvariant()}:docs:{includeRecentDocuments}:team:{includeTeamPerformance}";
         if (_cache.TryGetValue(cacheKey, out CommercialReportingResponseDto? cached) && cached is not null)
+        {
+            totalSw.Stop();
+            _logger.LogInformation("[REPORTING][Commercial] CacheHit RequestId={RequestId} ElapsedMs={ElapsedMs}", requestId, totalSw.ElapsedMilliseconds);
             return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, cached));
+        }
+
+        var openSqlSw = Stopwatch.StartNew();
         var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+        openSqlSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial] Step=OpenSql RequestId={RequestId} ElapsedMs={ElapsedMs} Success={Success}", requestId, openSqlSw.ElapsedMilliseconds, conn is not null);
         if (conn is null)
             return StatusCode(500, SapError("Connexion SQL impossible."));
 
@@ -1485,22 +1500,43 @@ ORDER BY CardName, CardCode;";
         List<CommercialSalesPersonPerformanceDto> allTeamPerformances = new();
         await using (conn)
         {
-            response.Kpis = await LoadReportingKpisAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, cancellationToken, !includeTeamPerformance && !includeRecentDocuments);
+            var kpisSw = Stopwatch.StartNew();
+            var lightweight = !includeTeamPerformance && !includeRecentDocuments;
+            response.Kpis = await LoadReportingKpisAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, cancellationToken, lightweight);
+            kpisSw.Stop();
+            _logger.LogInformation("[REPORTING][Commercial] Step=Kpis RequestId={RequestId} ElapsedMs={ElapsedMs} Lightweight={Lightweight}", requestId, kpisSw.ElapsedMilliseconds, lightweight);
+
             if (includeTeamPerformance)
             {
+                var teamPerformanceSw = Stopwatch.StartNew();
                 response.TeamPerformances = await LoadReportingTeamPerformanceAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, cancellationToken);
+                teamPerformanceSw.Stop();
+                _logger.LogInformation("[REPORTING][Commercial] Step=TeamPerformance RequestId={RequestId} ElapsedMs={ElapsedMs} Count={Count}", requestId, teamPerformanceSw.ElapsedMilliseconds, response.TeamPerformances.Count);
+
+                var topClientsSw = Stopwatch.StartNew();
                 response.TopClients = await LoadTopClientsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, 5, cancellationToken);
+                topClientsSw.Stop();
+                _logger.LogInformation("[REPORTING][Commercial] Step=TopClients RequestId={RequestId} ElapsedMs={ElapsedMs} Count={Count}", requestId, topClientsSw.ElapsedMilliseconds, response.TopClients.Count);
             }
             if (includeRecentDocuments)
+            {
+                var recentDocumentsSw = Stopwatch.StartNew();
                 response.RecentDocuments = await LoadReportingRecentDocumentsAsync(conn, periodStart, periodEnd, scopedSalesPersonCode, cardCode, cancellationToken);
+                recentDocumentsSw.Stop();
+                _logger.LogInformation("[REPORTING][Commercial] Step=RecentDocuments RequestId={RequestId} ElapsedMs={ElapsedMs} Count={Count}", requestId, recentDocumentsSw.ElapsedMilliseconds, response.RecentDocuments.Count);
+            }
             if (isAdmin && includeTeamPerformance)
             {
+                var allTeamPerformanceSw = Stopwatch.StartNew();
                 allTeamPerformances = scopedSalesPersonCode.HasValue && scopedSalesPersonCode.Value > 0
                     ? await LoadReportingTeamPerformanceAsync(conn, periodStart, periodEnd, null, cardCode, cancellationToken)
                     : response.TeamPerformances;
+                allTeamPerformanceSw.Stop();
+                _logger.LogInformation("[REPORTING][Commercial] Step=AllTeamPerformance RequestId={RequestId} ElapsedMs={ElapsedMs} Count={Count}", requestId, allTeamPerformanceSw.ElapsedMilliseconds, allTeamPerformances.Count);
             }
         }
 
+        var teamMembersSw = Stopwatch.StartNew();
         response.TeamMembers = await _db.Users
             .AsNoTracking()
             .Where(u => u.IsActive && u.Role == Roles.Commercial)
@@ -1512,7 +1548,10 @@ ORDER BY CardName, CardCode;";
             })
             .OrderBy(u => u.SalesPersonName)
             .ToListAsync(cancellationToken);
+        teamMembersSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial] Step=TeamMembers RequestId={RequestId} ElapsedMs={ElapsedMs} Count={Count}", requestId, teamMembersSw.ElapsedMilliseconds, response.TeamMembers.Count);
 
+        var postProcessSw = Stopwatch.StartNew();
         var commercialSalesPersonCodes = response.TeamMembers
             .Select(m => m.SalesPersonCode)
             .ToHashSet();
@@ -1558,8 +1597,13 @@ ORDER BY CardName, CardCode;";
         response.InactiveSalesPersons = response.TeamMembers
             .Where(member => !response.TeamPerformances.Any(t => t.SalesPersonCode == member.SalesPersonCode && (t.QuotesCount + t.OrdersCount + t.InvoicesCount) > 0))
             .ToList();
+        postProcessSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial] Step=PostProcess RequestId={RequestId} ElapsedMs={ElapsedMs}", requestId, postProcessSw.ElapsedMilliseconds);
 
         _cache.Set(cacheKey, response, TimeSpan.FromSeconds(45));
+        totalSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial] Complete RequestId={RequestId} ElapsedMs={ElapsedMs} Quotes={QuotesCount} Invoices={InvoicesCount} TeamRows={TeamRows} TopClients={TopClients}",
+            requestId, totalSw.ElapsedMilliseconds, response.Kpis.QuotesCount, response.Kpis.InvoicesCount, response.TeamPerformances.Count, response.TopClients.Count);
         return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, response));
     }
 
@@ -2320,6 +2364,8 @@ ORDER BY InvoicesAmount DESC;";
 
             if (!hasSelectedCommercial && hasSelectedPartner)
             {
+                response.Kpis = await LoadReportingKpisAsync(conn, periodStart, periodEnd, null, cardCode, cancellationToken);
+                response.PreviousKpis = await LoadReportingKpisAsync(conn, previousStart, previousEnd, null, cardCode, cancellationToken);
                 response.PartnerReport = await LoadPartnerFocusedReportAsync(conn, periodType, periodStart, periodEnd, null, cardCode, detailsLimit, cancellationToken);
                 _cache.Set(cacheKey, response, TimeSpan.FromSeconds(60));
                 return Ok(new ApiResponse<AdvancedReportingResponseDto>(true, null, response));
@@ -3154,9 +3200,13 @@ ORDER BY C.Revenue DESC;";
     private async Task<CommercialReportingKpiDto> LoadReportingKpisAsync(SqlConnection conn, DateTime start, DateTime end, int? salesPersonCode, string? cardCode, CancellationToken cancellationToken, bool lightweight = false)
     {
         var result = new CommercialReportingKpiDto();
+        if (lightweight)
+            return await LoadReportingKpisLightweightAsync(conn, start, end, salesPersonCode, cardCode, cancellationToken);
+
 
         async Task<T> ExecAsync<T>(string label, string sql, Func<SqlDataReader, T> map)
         {
+            var querySw = Stopwatch.StartNew();
             try
             {
                 await using var cmd2 = new SqlCommand(ApplyReportingCardCodeFilter(sql), conn);
@@ -3169,6 +3219,12 @@ ORDER BY C.Revenue DESC;";
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Reporting KPI sub-query failed: {Label}", label);
+            }
+            finally
+            {
+                querySw.Stop();
+                _logger.LogInformation("[REPORTING][Commercial][KPI] Label={Label} ElapsedMs={ElapsedMs} Lightweight={Lightweight} SalesPersonCode={SalesPersonCode} CardCode={CardCode}",
+                    label, querySw.ElapsedMilliseconds, lightweight, salesPersonCode, cardCode);
             }
             return default!;
         }
@@ -3324,6 +3380,88 @@ ORDER BY C.Revenue DESC;";
         result.PeriodTarget = periodTarget;
         result.TargetAchievementRate = periodTarget > 0 ? Math.Round(collectedRevenue / periodTarget * 100, 2) : 0;
 
+        return result;
+    }
+
+    private async Task<CommercialReportingKpiDto> LoadReportingKpisLightweightAsync(SqlConnection conn, DateTime start, DateTime end, int? salesPersonCode, string? cardCode, CancellationToken cancellationToken)
+    {
+        var totalSw = Stopwatch.StartNew();
+        var result = new CommercialReportingKpiDto();
+
+        const string sql = @"
+SELECT
+  (SELECT COUNT(1) FROM OQUT WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS QuotesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM OQUT WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS QuotesAmount,
+  (SELECT COUNT(1) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS OrdersCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS OrdersAmount,
+  (SELECT COUNT(1) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS DeliveryNotesAmount,
+  (SELECT COUNT(1) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM OINV WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS InvoicesAmount,
+  (SELECT COUNT(1) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesAmount,
+  (SELECT COUNT(1) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsCount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsAmount,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS PendingRevenueOrders,
+  (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS PendingRevenueDeliveries,
+  (SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyCard = 0 OR I.CardCode = @cardCode) AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)) AS CollectedRevenue,
+  (SELECT COUNT(DISTINCT Q.DocEntry) FROM OQUT Q WHERE Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo AND (@applyCard = 0 OR Q.CardCode = @cardCode) AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM RDR1 WHERE RDR1.BaseType = 23 AND RDR1.BaseEntry = Q.DocEntry)) AS ConvertedQuotesCount,
+  (SELECT COUNT(DISTINCT O.DocEntry) FROM ORDR O WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND (@applyCard = 0 OR O.CardCode = @cardCode) AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM DLN1 WHERE DLN1.BaseType = 17 AND DLN1.BaseEntry = O.DocEntry)) AS ConvertedOrdersCount,
+  (SELECT COUNT(DISTINCT D.DocEntry) FROM ODLN D WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND (@applyCard = 0 OR D.CardCode = @cardCode) AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM INV1 WHERE INV1.BaseType = 15 AND INV1.BaseEntry = D.DocEntry)) AS ConvertedDeliveryCount;";
+
+        var querySw = Stopwatch.StartNew();
+        await using (var cmd = new SqlCommand(sql, conn))
+        {
+            AddReportingPeriodParameters(cmd, start, end);
+            AddReportingScopeParameters(cmd, salesPersonCode);
+            AddReportingPartnerParameters(cmd, cardCode);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                result.QuotesCount = Convert.ToInt32(reader["QuotesCount"]);
+                result.QuotesAmount = Convert.ToDecimal(reader["QuotesAmount"]);
+                result.OrdersCount = Convert.ToInt32(reader["OrdersCount"]);
+                result.OrdersAmount = Convert.ToDecimal(reader["OrdersAmount"]);
+                result.DeliveryNotesCount = Convert.ToInt32(reader["DeliveryNotesCount"]);
+                result.DeliveryNotesAmount = Convert.ToDecimal(reader["DeliveryNotesAmount"]);
+                result.InvoicesCount = Convert.ToInt32(reader["InvoicesCount"]);
+                result.InvoicesAmount = Convert.ToDecimal(reader["InvoicesAmount"]);
+                result.CreditNotesCount = Convert.ToInt32(reader["CreditNotesCount"]);
+                result.CreditNotesAmount = Convert.ToDecimal(reader["CreditNotesAmount"]);
+                result.ReturnsCount = Convert.ToInt32(reader["ReturnsCount"]);
+                result.ReturnsAmount = Convert.ToDecimal(reader["ReturnsAmount"]);
+                result.PendingRevenue = Convert.ToDecimal(reader["PendingRevenueOrders"]) + Convert.ToDecimal(reader["PendingRevenueDeliveries"]);
+                result.CollectedRevenue = Convert.ToDecimal(reader["CollectedRevenue"]);
+
+                var convertedQuotes = Convert.ToInt32(reader["ConvertedQuotesCount"]);
+                var convertedOrders = Convert.ToInt32(reader["ConvertedOrdersCount"]);
+                var convertedDeliveries = Convert.ToInt32(reader["ConvertedDeliveryCount"]);
+                result.QuoteToOrderRate = result.QuotesCount <= 0 ? 0 : Math.Round((decimal)convertedQuotes * 100m / result.QuotesCount, 2);
+                result.OrderToDeliveryRate = result.OrdersCount <= 0 ? 0 : Math.Round((decimal)convertedOrders * 100m / result.OrdersCount, 2);
+                result.DeliveryToInvoiceRate = result.DeliveryNotesCount <= 0 ? 0 : Math.Round((decimal)convertedDeliveries * 100m / result.DeliveryNotesCount, 2);
+            }
+        }
+        querySw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial][KPI] Label=LightweightCombined ElapsedMs={ElapsedMs} SalesPersonCode={SalesPersonCode} CardCode={CardCode}", querySw.ElapsedMilliseconds, salesPersonCode, cardCode);
+
+        result.ConversionRate = result.QuoteToOrderRate;
+        result.NetRevenue = result.InvoicesAmount - result.CreditNotesAmount;
+        result.AverageQuoteAmount = result.QuotesCount <= 0 ? 0 : Math.Round(result.QuotesAmount / result.QuotesCount, 2);
+        result.SalesCycleDays = 0;
+
+        var targetSw = Stopwatch.StartNew();
+        var monthlyTarget = await GetMonthlyTargetAsync(salesPersonCode, cancellationToken);
+        var targetCommercialCount = await ResolveTargetCommercialCountAsync(salesPersonCode, cancellationToken);
+        var periodTarget = Math.Round(monthlyTarget * targetCommercialCount * ResolveTargetMultiplier(start, end), 2);
+        targetSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial][KPI] Label=LightweightTarget ElapsedMs={ElapsedMs} SalesPersonCode={SalesPersonCode}", targetSw.ElapsedMilliseconds, salesPersonCode);
+
+        result.MonthlyTarget = monthlyTarget;
+        result.PeriodTarget = periodTarget;
+        result.TargetAchievementRate = periodTarget > 0 ? Math.Round(result.CollectedRevenue / periodTarget * 100, 2) : 0;
+
+        totalSw.Stop();
+        _logger.LogInformation("[REPORTING][Commercial][KPI] Label=LightweightTotal ElapsedMs={ElapsedMs} SalesPersonCode={SalesPersonCode} CardCode={CardCode}", totalSw.ElapsedMilliseconds, salesPersonCode, cardCode);
         return result;
     }
 
@@ -5301,10 +5439,16 @@ GROUP BY L.BaseLine;";
             rateSource);
 
         var payload = BuildDocumentPayload(sapEntity, request, docCurrency, resolvedDocRate, defaultDocStatus);
-        return await CreateRawAsync(sapEntity, payload, cancellationToken);
+        var shouldClearAutoBaseComment = HasBaseDocumentLines(request);
+        return await CreateRawAsync(sapEntity, payload, cancellationToken, shouldClearAutoBaseComment, request.Comments);
     }
 
-    private async Task<ActionResult<ApiResponse<object>>> CreateRawAsync(string sapEntity, object payload, CancellationToken cancellationToken)
+    private async Task<ActionResult<ApiResponse<object>>> CreateRawAsync(
+        string sapEntity,
+        object payload,
+        CancellationToken cancellationToken,
+        bool clearAutoBaseComment = false,
+        string? commentsToRestore = null)
     {
         var isInvoice = string.Equals(sapEntity, "Invoices", StringComparison.OrdinalIgnoreCase);
 
@@ -5320,6 +5464,9 @@ GROUP BY L.BaseLine;";
         var docEntry = result.Response.HasValue ? GetInt(result.Response.Value, "DocEntry") : 0;
         if (docEntry > 0)
         {
+            if (clearAutoBaseComment)
+                await ClearAutoBaseCommentAsync(sapEntity, docEntry, commentsToRestore, cancellationToken);
+
             var createdDoc = await _sapService.ServiceLayerGetAsync($"{sapEntity}({docEntry})", cancellationToken);
             if (createdDoc.Success && createdDoc.Response.HasValue)
             {
@@ -5339,6 +5486,29 @@ GROUP BY L.BaseLine;";
             _logger.LogWarning("[HYBRID-MODE][WRITE-SUCCESS-PARTIAL] Facture créée mais récupération post-création échouée. DocEntry={DocEntry}", docEntry);
 
         return StatusCode(result.StatusCode, new ApiResponse<object>(true, "Creation reussie.", fallbackData));
+    }
+
+    private static bool HasBaseDocumentLines(CreateSapDocumentRequest request)
+        => request.DocumentLines.Any(line =>
+            !string.IsNullOrWhiteSpace(line.BaseType)
+            || line.BaseEntry.HasValue
+            || line.BaseLine.HasValue);
+
+    private async Task ClearAutoBaseCommentAsync(string sapEntity, int docEntry, string? comments, CancellationToken cancellationToken)
+    {
+        var patch = await _sapService.ServiceLayerPatchAsync(
+            $"{sapEntity}({docEntry})",
+            new Dictionary<string, object?> { ["Comments"] = comments ?? string.Empty },
+            cancellationToken);
+
+        if (!patch.Success)
+        {
+            _logger.LogWarning(
+                "[HYBRID-MODE][WRITE] Document created but automatic base comment could not be cleared. Entity={Entity}, DocEntry={DocEntry}, Error={Error}",
+                sapEntity,
+                docEntry,
+                patch.ErrorMessage);
+        }
     }
 
     private async Task<(bool Success, CreateSapDocumentRequest? Request, string? ErrorMessage)> BuildFromSourceDocumentAsync(
@@ -6340,6 +6510,8 @@ WHERE DocEntry = @docEntry;";
         data["DocumentStatus"] = rawStatus;
         var isCancelled = IsCancelled(source);
         data["IsCancelled"] = isCancelled;
+        data["Comments"] = SanitizeSapBaseComment(GetStringAny(source, "Comments"));
+        data["comments"] = data["Comments"];
 
         if (source.TryGetProperty("DocumentLines", out var linesProp) && linesProp.ValueKind == JsonValueKind.Array)
         {
@@ -6371,6 +6543,20 @@ WHERE DocEntry = @docEntry;";
         }
 
         return data;
+    }
+
+    private static string SanitizeSapBaseComment(string? comments)
+    {
+        if (string.IsNullOrWhiteSpace(comments))
+            return string.Empty;
+
+        var cleaned = Regex.Replace(
+            comments,
+            @"\s*Based\s+On\s+[A-Za-z ]+\s+\d+\.",
+            string.Empty,
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        return cleaned.Trim();
     }
 
     private static string GetString(JsonElement node, string name)

@@ -55,7 +55,7 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
             <label>Commentaires</label>
             <textarea rows="2" formControlName="comments"></textarea>
           </div>
-          <div class="field">
+          <div class="field field-payment">
             <label>Mode de paiement *</label>
             <input formControlName="paymentMethod" placeholder="Ex: Virement" />
           </div>
@@ -200,7 +200,8 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     .top-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem; }
     .field { display: flex; flex-direction: column; gap: 0.25rem; }
     .field-client { grid-column: span 3; }
-    .field-comments { grid-column: span 2; }
+    .field-comments { grid-column: 1 / span 2; }
+    .field-payment { grid-column: 3 / span 1; }
     .field-wide { grid-column: 1 / -1; }
     .field input, .field textarea, .field select { border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.45rem 0.6rem; }
     .lines-head { display: flex; justify-content: space-between; align-items: center; }

@@ -9,6 +9,8 @@ import {
   AdvancedReportingTopPartner,
   AdvancedReportingTopProduct,
   PartnerCategoryShare,
+  PartnerDocumentReportItem,
+  PartnerFocusedReport,
   ReportingApiService,
   ReportingSalesPersonInfo
 } from '../../core/services/reporting-api.service';
@@ -59,7 +61,8 @@ type ChartPoint = {
             type="text"
             [(ngModel)]="recherchePartenaire"
             (input)="surRecherchePartenaire()"
-            (focus)="ouvrirPartenaires = true"
+            (focus)="ouvrirRecherchePartenaire()"
+            (keydown)="replaceReportingSearchOnTyping($event, 'partenaire')"
             (blur)="fermerSuggestionsPlusTard('partenaire')"
             (keydown.enter)="selectionnerPartenaireSiUnique($event)"
             placeholder="Écrire un nom ou code partenaire"
@@ -79,7 +82,8 @@ type ChartPoint = {
               type="text"
               [(ngModel)]="rechercheCommercial"
               (input)="surRechercheCommercial()"
-              (focus)="ouvrirCommerciaux = true"
+              (focus)="ouvrirRechercheCommercial()"
+              (keydown)="replaceReportingSearchOnTyping($event, 'commercial')"
               (blur)="fermerSuggestionsPlusTard('commercial')"
               (keydown.enter)="selectionnerCommercialSiUnique($event)"
               placeholder="Écrire le nom du commercial"
@@ -95,9 +99,33 @@ type ChartPoint = {
         }
 
         <button type="button" (click)="charger()" [disabled]="chargement()">{{ chargement() ? 'Chargement...' : 'Actualiser' }}</button>
+        @if (!estAdmin()) {
+          <button type="button" (click)="monRapport()" [disabled]="chargement()">Mon Rapport</button>
+        }
       </section>
 
       @if (erreur()) { <p class="alert">{{ erreur() }}</p> }
+
+      @if (data(); as rapportTitre) {
+        @if (partenaireSelectionne && rapportTitre.partnerReport; as partenaireTitre) {
+          <section class="panel title-panel">
+            <div>
+              <p class="eyebrow">Rapport partenaire</p>
+              <h2>{{ partenaireTitre.cardName || partenaireTitre.cardCode }}</h2>
+              <p>Commercial affecté : <strong>{{ partenaireTitre.salesPersonName || 'Aucun commercial affecté' }}</strong></p>
+              <p>{{ rapportTitre.periodLabel }}</p>
+            </div>
+          </section>
+        } @else if (rapportCommercialVisible()) {
+          <section class="panel title-panel">
+            <div>
+              <p class="eyebrow">Rapport commercial</p>
+              <h2>{{ nomCommercialActif(rapportTitre) }}</h2>
+              <p>{{ rapportTitre.periodLabel }}</p>
+            </div>
+          </section>
+        }
+      }
 
       @if (!partenaireSelectionne && !rapportCommercialActif()) {
         <section class="panel empty-state">
@@ -107,6 +135,31 @@ type ChartPoint = {
 
       @if (data(); as rapport) {
         @if (rapport.partnerReport; as partenaire) {
+          <section class="partner-overview">
+            <article class="panel partner-revenue-panel">
+              <h3>CA total sur la période</h3>
+              <strong>{{ monnaie(caPartenairePeriode(partenaire)) }}</strong>
+              <span>CA en attente : {{ monnaie(caPartenaireEnAttente(partenaire)) }}</span>
+            </article>
+            <article class="panel docs-panel">
+              <h3>Documents du partenaire</h3>
+              <div class="doc-counts">
+                <span>Devis <b>{{ nombreDocumentsPartenaire(partenaire, 'devis') }}</b></span>
+                <span>BC <b>{{ nombreDocumentsPartenaire(partenaire, 'commande') }}</b></span>
+                <span>BL <b>{{ nombreDocumentsPartenaire(partenaire, 'bon de livraison') }}</b></span>
+                <span>Factures <b>{{ nombreDocumentsPartenaire(partenaire, 'facture') }}</b></span>
+              </div>
+            </article>
+            <article class="panel">
+              <h3>Taux de transformation</h3>
+              <div class="funnel">
+                @for (step of funnelPartenaire(partenaire); track step.label) {
+                  <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
+                }
+              </div>
+            </article>
+          </section>
+
           <section class="grid two">
             <article class="panel">
               <h3>Répartition des achats par catégorie</h3>
@@ -144,15 +197,7 @@ type ChartPoint = {
           </section>
         }
 
-        @if (rapportCommercialActif()) {
-          <section class="panel title-panel">
-            <div>
-              <p class="eyebrow">Rapport commercial</p>
-              <h2>{{ nomCommercialActif(rapport) }}</h2>
-              <p>{{ rapport.periodLabel }}</p>
-            </div>
-          </section>
-
+        @if (rapportCommercialVisible()) {
           <section class="commercial-overview">
             <article class="panel target-panel">
               <h3>CA réalisé vs objectif</h3>
@@ -275,6 +320,10 @@ type ChartPoint = {
     .grid { display: grid; gap: 1rem; } .two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .title-panel { display: flex; justify-content: center; gap: 1rem; align-items: center; text-align: center; }
     .title-panel > div { width: 100%; }
+    .partner-overview { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(260px, 1fr) minmax(320px, 1.2fr); gap: 1rem; align-items: stretch; }
+    .partner-revenue-panel { display: grid; align-content: center; gap: .35rem; }
+    .partner-revenue-panel strong { font-size: 1.85rem; color: #111827; }
+    .partner-revenue-panel span { color: #64748b; font-weight: 700; }
     .commercial-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .9fr); gap: 1rem; align-items: start; }
     .side-stack { display: grid; gap: 1rem; }
     .target-panel { min-height: 100%; display: grid; align-content: center; }
@@ -311,7 +360,7 @@ type ChartPoint = {
     .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 800; text-align: left; }
     .sort-btn:hover { color: #2563eb; }
     .alert { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; padding: .75rem; border-radius: 12px; } .muted, .empty-state p { color: #64748b; }
-    @media (max-width: 1200px) { .filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .two, .commercial-overview { grid-template-columns: 1fr; } }
+    @media (max-width: 1200px) { .filters { grid-template-columns: repeat(2, minmax(0,1fr)); } .two, .commercial-overview, .partner-overview { grid-template-columns: 1fr; } }
     @media (max-width: 700px) { .title-panel { display: grid; } .filters, .chart-row { grid-template-columns: 1fr; } }
   `]
 })
@@ -343,6 +392,8 @@ export class ReportingComponent implements OnInit {
   ouvrirCommerciaux = false;
   ouvrirArticlesCommercial = false;
   ouvrirPartenairesCommercialTable = false;
+  private remplacerPartenaireAuClavier = false;
+  private remplacerCommercialAuClavier = false;
   private readonly tablePageSize = 20;
   private tableVisible: Record<TableId, number> = {
     partnerProducts: this.tablePageSize,
@@ -423,7 +474,47 @@ export class ReportingComponent implements OnInit {
       .sort((a, b) => a.salesPersonName.localeCompare(b.salesPersonName, 'fr'));
   }
 
+  ouvrirRecherchePartenaire(): void {
+    this.remplacerPartenaireAuClavier = !!this.partenaireSelectionne;
+    this.ouvrirPartenaires = true;
+  }
+
+  ouvrirRechercheCommercial(): void {
+    this.remplacerCommercialAuClavier = !!this.commercialSelectionne;
+    this.ouvrirCommerciaux = true;
+  }
+
+  replaceReportingSearchOnTyping(event: KeyboardEvent, field: 'partenaire' | 'commercial'): void {
+    const shouldReplace = field === 'partenaire'
+      ? this.remplacerPartenaireAuClavier
+      : this.remplacerCommercialAuClavier;
+    if (!shouldReplace || event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      if (field === 'partenaire') {
+        this.recherchePartenaire = '';
+        this.surRecherchePartenaire();
+      } else {
+        this.rechercheCommercial = '';
+        this.surRechercheCommercial();
+      }
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    if (field === 'partenaire') {
+      this.recherchePartenaire = event.key;
+      this.surRecherchePartenaire();
+    } else {
+      this.rechercheCommercial = event.key;
+      this.surRechercheCommercial();
+    }
+  }
+
   surRecherchePartenaire(): void {
+    this.remplacerPartenaireAuClavier = false;
     this.partenaireSelectionne = '';
     if (this.recherchePartenaire.trim()) {
       this.commercialSelectionne = undefined;
@@ -438,6 +529,7 @@ export class ReportingComponent implements OnInit {
   }
 
   surRechercheCommercial(): void {
+    this.remplacerCommercialAuClavier = false;
     this.commercialSelectionne = undefined;
     if (this.rechercheCommercial.trim()) {
       this.partenaireSelectionne = '';
@@ -468,6 +560,15 @@ export class ReportingComponent implements OnInit {
     this.commercialSelectionne = row.salesPersonCode;
     this.rechercheCommercial = row.salesPersonName;
     this.ouvrirCommerciaux = false;
+    this.charger();
+  }
+
+  monRapport(): void {
+    this.partenaireSelectionne = '';
+    this.recherchePartenaire = '';
+    this.ouvrirPartenaires = false;
+    this.commercialSelectionne = undefined;
+    this.rechercheCommercial = this.auth.currentUser()?.fullName || this.data()?.selectedSalesPersonName || '';
     this.charger();
   }
 
@@ -531,6 +632,10 @@ export class ReportingComponent implements OnInit {
 
   rapportCommercialActif(): boolean {
     return !this.estAdmin() || !!this.commercialSelectionne;
+  }
+
+  rapportCommercialVisible(): boolean {
+    return !this.partenaireSelectionne && this.rapportCommercialActif();
   }
 
   nomCommercialActif(rapport: AdvancedReportingPayload): string {
@@ -600,6 +705,42 @@ export class ReportingComponent implements OnInit {
   monnaie(value: number | null | undefined): string { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(Number(value ?? 0)); }
   nombre(value: number | null | undefined): string { return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(Number(value ?? 0)); }
   pourcentage(value: number | null | undefined): string { return `${this.nombre(value)} %`; }
+
+  caPartenairePeriode(partenaire: PartnerFocusedReport): number {
+    return this.documentsPartenaire(partenaire, 'facture')
+      .reduce((sum, doc) => sum + Number(doc.total || 0), 0);
+  }
+
+  caPartenaireEnAttente(partenaire: PartnerFocusedReport): number {
+    return partenaire.documents
+      .filter(doc => {
+        const type = this.normalize(doc.type);
+        const status = this.normalize(doc.status);
+        return (type === 'commande' || type === 'bon de livraison') && status === 'ouvert';
+      })
+      .reduce((sum, doc) => sum + Number(doc.total || 0), 0);
+  }
+
+  nombreDocumentsPartenaire(partenaire: PartnerFocusedReport, type: string): number {
+    return this.documentsPartenaire(partenaire, type).length;
+  }
+
+  funnelPartenaire(partenaire: PartnerFocusedReport): Array<{ label: string; count: string; rate: number; width: number }> {
+    const quotes = this.nombreDocumentsPartenaire(partenaire, 'devis');
+    const orders = this.nombreDocumentsPartenaire(partenaire, 'commande');
+    const deliveries = this.nombreDocumentsPartenaire(partenaire, 'bon de livraison');
+    const invoices = this.nombreDocumentsPartenaire(partenaire, 'facture');
+    const rate = (next: number, prev: number) => prev <= 0 ? 0 : Math.round((next * 10000) / prev) / 100;
+    const widthFromRate = (value: number) => Math.max(42, Math.min(100, Number(value || 0)));
+    const quoteToOrder = rate(orders, quotes);
+    const orderToDelivery = rate(deliveries, orders);
+    const deliveryToInvoice = rate(invoices, deliveries);
+    return [
+      { label: 'Devis -> BC', count: `${orders} / ${quotes}`, rate: quoteToOrder, width: widthFromRate(quoteToOrder) },
+      { label: 'BC -> BL', count: `${deliveries} / ${orders}`, rate: orderToDelivery, width: widthFromRate(orderToDelivery) },
+      { label: 'BL -> Factures', count: `${invoices} / ${deliveries}`, rate: deliveryToInvoice, width: widthFromRate(deliveryToInvoice) }
+    ];
+  }
 
   pieBackground(rows: PartnerCategoryShare[]): string {
     const total = rows.reduce((sum, row) => sum + Number(row.revenue || 0), 0);
@@ -696,6 +837,11 @@ export class ReportingComponent implements OnInit {
 
   private normalize(value: unknown): string {
     return String(value ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private documentsPartenaire(partenaire: PartnerFocusedReport, type: string): PartnerDocumentReportItem[] {
+    const normalizedType = this.normalize(type);
+    return partenaire.documents.filter(doc => this.normalize(doc.type) === normalizedType);
   }
 
   private resetAllTables(): void {

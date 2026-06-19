@@ -139,16 +139,19 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           <h2>Indicateurs financiers</h2>
           <div class="kpi-grid">
             <div class="kpi-card">
+              <h2 class="kpi-label">CA net</h2>
               <span class="kpi-value">{{ formatMoney(r.kpis.netRevenue) }}</span>
-              <span class="kpi-label">CA net</span>
+              
             </div>
             <div class="kpi-card">
+              <h2 class="kpi-label">CA en attente</h2>
               <span class="kpi-value">{{ formatMoney(r.kpis.pendingRevenue) }}</span>
-              <span class="kpi-label">CA en attente</span>
+              
             </div>
             <div class="kpi-card">
+              <h2 class="kpi-label">Panier moyen</h2>
               <span class="kpi-value">{{ formatMoney(r.kpis.averageQuoteAmount) }}</span>
-              <span class="kpi-label">Panier moyen</span>
+              
             </div>
             <div class="kpi-card">
               <span class="kpi-value">{{ formatPct(r.kpis.targetAchievementRate) }}</span>
@@ -159,9 +162,6 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                   <input type="number" min="0" step="100" [ngModel]="monthlyTargetInput()" (ngModelChange)="monthlyTargetInput.set($event)" (change)="saveMonthlyTarget()" />
                 </label>
                 <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
-                @if (isAdminMode() && selectedSalesPersonCode <= 0) {
-                  <span class="kpi-sub">Total calculé uniquement sur les commerciaux</span>
-                }
               } @else {
                 <span class="kpi-sub">Objectif mensuel: {{ formatMoney(r.kpis.monthlyTarget) }}</span>
                 <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
@@ -286,7 +286,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
       }
 
       <section class="section">
-        <h2>Top 5 clients par solde</h2>
+        <h2>Top 5 partenaires par solde</h2>
         @if (topPartnerBalances().length) {
           <div class="balance-list">
             @for (row of topPartnerBalances(); track row.cardCode) {
@@ -508,6 +508,9 @@ export class DashboardComponent implements OnInit {
   readonly visiblePartnerDebtsCount = signal(10);
   readonly partnerDebtSortKey = signal<PartnerDebtSortKey | null>('balance');
   readonly partnerDebtSortDirection = signal<SortDirection>('desc');
+  private readonly partnersPageSize = 10;
+  private partnersLoadVersion = 0;
+  private partnersBackgroundLoading = false;
   private partnerDebtsPage = 1;
   private readonly partnerDebtsPageSize = 50;
   private partnerDebtSearchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -525,8 +528,7 @@ export class DashboardComponent implements OnInit {
   readonly visibleTeamMembers = computed(() =>
     (this.report()?.teamMembers ?? []).filter(sp => {
       const name = String(sp.salesPersonName ?? '').trim().toLowerCase();
-      const role = String(sp.role ?? '').trim().toLowerCase();
-      return sp.salesPersonCode > 0 && role === 'commercial' && name !== 'administrateur';
+      return name !== 'administrateur';
     })
   );
 
@@ -578,18 +580,15 @@ export class DashboardComponent implements OnInit {
   readonly revenueBreakdownRows = computed<RevenueBreakdownRow[]>(() => {
     const report = this.report();
     if (!report) return [];
-    const commercialCodes = new Set(this.visibleTeamMembers().map(sp => sp.salesPersonCode));
     const rows = this.shouldBreakdownByCommercial()
       ? (report.teamPerformances ?? [])
-          .filter(row => commercialCodes.has(row.salesPersonCode))
           .map(row => ({ label: row.salesPersonName || `Commercial #${row.salesPersonCode}`, revenue: Number(row.netRevenue || 0) }))
       : (report.topClients ?? [])
           .map(row => ({ label: row.cardName || row.cardCode, revenue: Number(row.revenue || 0) }));
-    const limit = this.shouldBreakdownByCommercial() ? 3 : 5;
     const positiveRows = rows
       .filter(row => row.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, limit);
+      .slice(0, 5);
     const total = positiveRows.reduce((sum, row) => sum + row.revenue, 0);
     return positiveRows.map(row => ({
       ...row,
@@ -668,10 +667,49 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadPartners(): void {
-    this.partnerApi.getAll(1, 10000).subscribe({
-      next: (res) => this.partners.set(res.items ?? []),
+    const loadVersion = ++this.partnersLoadVersion;
+    this.partnersBackgroundLoading = false;
+    this.partnerApi.getAll(1, this.partnersPageSize).subscribe({
+      next: (res) => {
+        if (loadVersion !== this.partnersLoadVersion) return;
+        const firstPage = res.items ?? [];
+        this.partners.set(firstPage);
+        const totalCount = Number(res.totalCount ?? firstPage.length);
+        if (totalCount > firstPage.length) {
+          setTimeout(() => this.loadRemainingPartners(loadVersion, 2, totalCount));
+        }
+      },
       error: () => this.partners.set([])
     });
+  }
+
+  private loadRemainingPartners(loadVersion: number, page: number, totalCount: number): void {
+    if (loadVersion !== this.partnersLoadVersion || this.partnersBackgroundLoading) return;
+    if (this.partners().length >= totalCount) return;
+
+    this.partnersBackgroundLoading = true;
+    this.partnerApi.getAll(page, this.partnersPageSize).subscribe({
+      next: (res) => {
+        this.partnersBackgroundLoading = false;
+        if (loadVersion !== this.partnersLoadVersion) return;
+        this.partners.set(this.mergePartners(this.partners(), res.items ?? []));
+        if (this.partners().length < totalCount && (res.items ?? []).length > 0) {
+          setTimeout(() => this.loadRemainingPartners(loadVersion, page + 1, totalCount));
+        }
+      },
+      error: () => {
+        this.partnersBackgroundLoading = false;
+      }
+    });
+  }
+
+  private mergePartners(current: PartnerRow[], incoming: PartnerRow[]): PartnerRow[] {
+    const map = new Map<string, PartnerRow>();
+    [...current, ...incoming].forEach(partner => {
+      const code = this.partnerCode(partner);
+      if (code) map.set(code, partner);
+    });
+    return [...map.values()];
   }
 
   @HostListener('window:scroll')
@@ -1200,4 +1238,3 @@ export class DashboardComponent implements OnInit {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
-
