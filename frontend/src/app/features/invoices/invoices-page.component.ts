@@ -20,8 +20,18 @@ type SortDirection = 'none' | 'asc' | 'desc';
       </div>
 
       <form [formGroup]="filtersForm" class="filters" (ngSubmit)="applyFilters()">
-        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" />
-        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" />
+        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" list="invoice-search-suggestions" />
+        <datalist id="invoice-search-suggestions">
+          @for (suggestion of searchSuggestions(); track suggestion) {
+            <option [value]="suggestion"></option>
+          }
+        </datalist>
+        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" list="invoice-customer-suggestions" />
+        <datalist id="invoice-customer-suggestions">
+          @for (suggestion of customerSuggestions(); track suggestion) {
+            <option [value]="suggestion"></option>
+          }
+        </datalist>
         <select formControlName="phase" (change)="onFiltersChanged()">
           <option value="all">Tous les statuts</option>
           <option value="open">En attente</option>
@@ -112,11 +122,6 @@ export class InvoicesPageComponent implements OnInit {
   readonly sortKey = signal<InvoiceSortKey | null>(null);
   readonly sortDirection = signal<SortDirection>('none');
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
-  readonly visibleItems = computed(() => this.sortedItems(this.items()));
-
-  private readonly pageCache = new Map<string, InvoiceListItem[]>();
-  private readonly totalCountCache = new Map<string, number>();
-  private filterDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly filtersForm = this.fb.group({
     search: [''],
@@ -125,6 +130,31 @@ export class InvoicesPageComponent implements OnInit {
     dateFrom: [''],
     dateTo: ['']
   });
+
+  readonly customerSuggestions = computed(() =>
+    [...new Set(this.items().map(doc => this.partnerNameOf(doc)).filter(v => v && v !== '-'))].slice(0, 30)
+  );
+  readonly searchSuggestions = computed(() => {
+    const numbers = this.items().map(doc => String(doc.docNum || `#${doc.id}`).trim()).filter(Boolean);
+    const clients = this.items().map(doc => this.partnerNameOf(doc)).filter(v => v && v !== '-');
+    return [...new Set([...numbers, ...clients])].slice(0, 40);
+  });
+  readonly visibleItems = computed(() => {
+    const customerRaw = String(this.filtersForm.getRawValue().customer ?? '').trim().toLowerCase();
+    const filtered = !customerRaw
+      ? this.items()
+      : this.items().filter((doc) => {
+        const cardCode = String(doc.cardCode ?? '').trim().toLowerCase();
+        const partner = this.partnerNameOf(doc).toLowerCase();
+        return partner.includes(customerRaw) || cardCode.includes(customerRaw);
+      });
+
+    return this.sortedItems(filtered);
+  });
+
+  private readonly pageCache = new Map<string, InvoiceListItem[]>();
+  private readonly totalCountCache = new Map<string, number>();
+  private filterDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.load();
@@ -360,6 +390,10 @@ export class InvoicesPageComponent implements OnInit {
   statusLabel(status: string): 'En attente' | 'Cloturee' | 'Annulee' {
     if (this.isCancelledStatus(status)) return 'Annulee';
     return this.isOpenStatus(status) ? 'En attente' : 'Cloturee';
+  }
+
+  private partnerNameOf(doc: InvoiceListItem): string {
+    return String(doc.cardName || doc.cardCode || '-').trim();
   }
 
   private sortedItems(rows: InvoiceListItem[]): InvoiceListItem[] {
