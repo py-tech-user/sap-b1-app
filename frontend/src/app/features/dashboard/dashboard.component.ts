@@ -109,26 +109,6 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
             }
           </label>
         }
-        <label class="filter-field dashboard-search-box">
-          Partenaire
-          <input type="text"
-            [ngModel]="dashboardPartnerSearch()"
-            (ngModelChange)="onDashboardPartnerInput($event)"
-            (focus)="openDashboardPartnerPanel()"
-            (keydown)="replaceDashboardSearchOnTyping($event, 'partner')"
-            (keydown.enter)="selectDashboardPartnerIfUnique($event)"
-            placeholder="Rechercher partenaire" />
-          @if (openDashboardPartnerSuggestions) {
-            <div class="suggestions-panel">
-              <button type="button" (mousedown)="selectDashboardPartner(null)">Tous les partenaires</button>
-              @for (partner of dashboardPartnerSuggestions(); track partnerCode(partner)) {
-                <button type="button" (mousedown)="selectDashboardPartner(partner)">
-                  {{ partnerName(partner) }}
-                </button>
-              }
-            </div>
-          }
-        </label>
       </section>
 
       @if (loading()) {
@@ -163,10 +143,10 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                   Objectif CA mensuel par commercial
                   <input type="number" min="0" step="100" [ngModel]="monthlyTargetInput()" (ngModelChange)="monthlyTargetInput.set($event)" (change)="saveMonthlyTarget()" />
                 </label>
-                <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
+                <span class="kpi-sub">Objectif selon la sélection: {{ formatMoney(r.kpis.periodTarget) }}</span>
               } @else {
                 <span class="kpi-sub">Objectif mensuel: {{ formatMoney(r.kpis.monthlyTarget) }}</span>
-                <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
+                <span class="kpi-sub">Objectif selon la sélection: {{ formatMoney(r.kpis.periodTarget) }}</span>
               }
               @if (targetSaving()) { <span class="kpi-sub">Enregistrement...</span> }
               @if (targetMessage()) { <span class="kpi-sub">{{ targetMessage() }}</span> }
@@ -690,7 +670,6 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.isAdminMode.set(this.auth.hasRole(['Admin', 'Manager']));
     this.load();
-    setTimeout(() => this.loadPartners());
   }
 
   private loadPartners(): void {
@@ -762,7 +741,7 @@ export class DashboardComponent implements OnInit {
         this.loadPartnerDebtsIfScopeChanged();
         const evolutionSalesPersonCode = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
         const evolutionPeriodKey = this.evolutionPeriodKey();
-        if (!this.evolutionPoints().length || this.lastEvolutionSalesPersonCode !== evolutionSalesPersonCode || this.lastEvolutionPartnerCode !== this.selectedPartnerCode || this.lastEvolutionPeriodKey !== evolutionPeriodKey) {
+        if (!this.evolutionPoints().length || this.lastEvolutionSalesPersonCode !== evolutionSalesPersonCode || this.lastEvolutionPartnerCode !== '' || this.lastEvolutionPeriodKey !== evolutionPeriodKey) {
           this.loadEvolution();
         }
         setTimeout(() => this.loadDashboardInBackground(requestVersion));
@@ -803,12 +782,12 @@ export class DashboardComponent implements OnInit {
   loadEvolution(): void {
     this.loadingEvolution.set(true);
     this.lastEvolutionSalesPersonCode = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
-    this.lastEvolutionPartnerCode = this.selectedPartnerCode;
+    this.lastEvolutionPartnerCode = '';
     this.lastEvolutionPeriodKey = this.evolutionPeriodKey();
     this.reportingApi.getReportingEvolution({
       ...this.buildEvolutionParams(),
       salesPersonCode: this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
-      cardCode: this.selectedPartnerCode || undefined
+      cardCode: undefined
     }).subscribe({
       next: (res) => { this.evolutionPoints.set(res.data?.points ?? []); this.loadingEvolution.set(false); },
       error: () => { this.evolutionPoints.set([]); this.loadingEvolution.set(false); }
@@ -817,7 +796,7 @@ export class DashboardComponent implements OnInit {
 
   private loadPartnerDebts(): void {
     this.lastPartnerDebtsSalesPersonCode = this.currentDebtSalesPersonCode();
-    this.lastPartnerDebtsPartnerCode = this.selectedPartnerCode;
+    this.lastPartnerDebtsPartnerCode = '';
     const requestVersion = ++this.partnerDebtRequestVersion;
     this.partnerDebtsPage = 1;
     this.loadingMorePartnerDebts.set(false);
@@ -835,7 +814,7 @@ export class DashboardComponent implements OnInit {
     if (
       this.partnerDebts().length === 0 ||
       this.lastPartnerDebtsSalesPersonCode !== salesPersonCode ||
-      this.lastPartnerDebtsPartnerCode !== this.selectedPartnerCode
+      this.lastPartnerDebtsPartnerCode !== ''
     ) {
       this.loadPartnerDebts();
     }
@@ -904,7 +883,7 @@ export class DashboardComponent implements OnInit {
       page, this.partnerDebtsPageSize,
       this.partnerDebtSearch(),
       this.isAdminMode() ? this.partnerDebtCommercialSearch() : undefined,
-      this.selectedPartnerCode || undefined
+      undefined
     ).subscribe({
       next: (res) => {
         if (requestVersion !== this.partnerDebtRequestVersion) {
@@ -1225,7 +1204,7 @@ export class DashboardComponent implements OnInit {
     includeTeamPerformance?: boolean;
   } {
     const sp = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined;
-    const cardCode = this.selectedPartnerCode || undefined;
+    const cardCode = undefined;
     const common = { salesPersonCode: sp, cardCode, includeRecentDocuments: false, includeTeamPerformance: options.includeTeamPerformance !== false };
     switch (this.periode) {
       case 'week': {

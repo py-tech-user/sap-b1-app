@@ -1,4 +1,4 @@
-﻿import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -146,20 +146,27 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
       @if (loading()) {
         <p class="status">Chargement des partenaires...</p>
       } @else {
-        <form class="filters" (ngSubmit)="applyFilters()">
-          <input
-            type="text"
-            name="searchInput"
-            placeholder="Recherche (code, nom, email, telephone...)"
-            [(ngModel)]="searchInput"
-            (ngModelChange)="onFilterInputChange()"
-            list="partner-search-suggestions"
-          />
-          <datalist id="partner-search-suggestions">
-            @for (suggestion of partnerSuggestions(); track suggestion) {
-              <option [value]="suggestion"></option>
+        <form class="filters" (ngSubmit)="applyFilters()" autocomplete="off">
+          <label class="filter-search">
+            <input
+              type="text"
+              name="searchInput"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="Recherche (code, nom, email, telephone...)"
+              [(ngModel)]="searchInput"
+              (ngModelChange)="onPartnerSearchInputChange()"
+              (focus)="openPartnerSearchSuggestions = true"
+            />
+            @if (openPartnerSearchSuggestions && filteredPartnerSuggestions().length) {
+              <div class="filter-suggestions">
+                @for (suggestion of filteredPartnerSuggestions(); track suggestion) {
+                  <button type="button" (mousedown)="selectPartnerSuggestion(suggestion)">{{ suggestion }}</button>
+                }
+              </div>
             }
-          </datalist>
+          </label>
           <select name="typeInput" [(ngModel)]="typeInput" (ngModelChange)="onFilterInputChange()">
             <option value="">Tous les types</option>
             <option value="client">Client</option>
@@ -279,6 +286,10 @@ const SAP_REFRESH_EVENT = 'sapCustomers:updated';
     .btn-filter { border: 1px solid #1976d2; background: #1976d2; color: #fff; border-radius: 6px; padding: 0.45rem 0.8rem; cursor: pointer; }
     .filters { display: grid; grid-template-columns: 1fr 220px auto; gap: 0.6rem; margin-bottom: 0.75rem; }
     .filters input, .filters select { width: 100%; border: 1px solid #d0d7de; border-radius: 6px; padding: 0.45rem 0.6rem; }
+    .filter-search { position: relative; display: block; }
+    .filter-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; width: min(560px, 100%); display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .filter-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: #111827; white-space: normal; line-height: 1.25; }
+    .filter-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
     .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; }
     .table-wrapper { width: 100%; overflow-x: hidden; }
     .desktop-table { width: 100%; background: white; border-radius: 10px; border-collapse: collapse; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); overflow: hidden; }
@@ -338,6 +349,7 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   pageSize = signal(15);
   totalCount = signal(0);
   searchInput = '';
+  openPartnerSearchSuggestions = false;
   typeInput = '';
   private readonly pageCache = new Map<number, CustomerTableRow[]>();
   appliedSearch = signal('');
@@ -395,6 +407,13 @@ export class CustomerListComponent implements OnInit, OnDestroy {
 
   constructor(private http: HttpClient) {}
 
+  @HostListener('document:click', ['$event'])
+  closePartnerSearchSuggestions(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.filter-search')) return;
+    this.openPartnerSearchSuggestions = false;
+  }
+
   applyFilters(): void {
     this.appliedSearch.set(this.searchInput);
     this.appliedType.set(this.typeInput);
@@ -403,6 +422,24 @@ export class CustomerListComponent implements OnInit, OnDestroy {
 
   onFilterInputChange(): void {
     this.applyFilters();
+  }
+
+  onPartnerSearchInputChange(): void {
+    this.openPartnerSearchSuggestions = true;
+    this.applyFilters();
+  }
+
+  selectPartnerSuggestion(value: string): void {
+    this.searchInput = value;
+    this.openPartnerSearchSuggestions = false;
+    this.applyFilters();
+  }
+
+  filteredPartnerSuggestions(): string[] {
+    const query = this.searchInput.trim().toLowerCase();
+    return this.partnerSuggestions()
+      .filter(value => !query || value.toLowerCase().includes(query))
+      .slice(0, 80);
   }
 
   ngOnInit(): void {

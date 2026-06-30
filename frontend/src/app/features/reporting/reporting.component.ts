@@ -154,7 +154,7 @@ type ChartPoint = {
               <h3>Taux de transformation</h3>
               <div class="funnel">
                 @for (step of funnelPartenaire(partenaire); track step.label) {
-                  <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
+                  <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ pourcentage(step.rate) }}</span></div>
                 }
               </div>
             </article>
@@ -180,7 +180,6 @@ type ChartPoint = {
 
           <section class="panel">
             <h3>Articles favoris</h3>
-            <p class="assigned-salesperson">Commercial affecté : <strong>{{ partenaire.salesPersonName || 'Aucun commercial' }}</strong></p>
             <div class="table-toolbar">
               <input type="text" [(ngModel)]="rechercheArticlesPartenaire" (ngModelChange)="resetTable('partnerProducts')" placeholder="Rechercher un article" />
             </div>
@@ -218,7 +217,7 @@ type ChartPoint = {
                 <h3>Taux de transformation devis → BC → BL → facture</h3>
                 <div class="funnel">
                   @for (step of funnel(rapport); track step.label) {
-                    <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ step.count }} · {{ pourcentage(step.rate) }}</span></div>
+                    <div class="funnel-step" [style.width.%]="step.width"><b>{{ step.label }}</b><span>{{ pourcentage(step.rate) }}</span></div>
                   }
                 </div>
               </article>
@@ -324,6 +323,7 @@ type ChartPoint = {
     .partner-revenue-panel { display: grid; align-content: center; gap: .35rem; }
     .partner-revenue-panel strong { font-size: 1.85rem; color: #111827; }
     .partner-revenue-panel span { color: #64748b; font-weight: 700; }
+    .partner-overview .docs-panel { align-self: stretch; display: grid; align-content: center; }
     .commercial-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .9fr); gap: 1rem; align-items: start; }
     .side-stack { display: grid; gap: 1rem; }
     .target-panel { min-height: 100%; display: grid; align-content: center; }
@@ -344,8 +344,6 @@ type ChartPoint = {
     .axis-label { font-size: 11px; fill: #64748b; } .x-label { font-size: 10px; fill: #64748b; text-anchor: middle; }
     .point circle { cursor: help; filter: drop-shadow(0 2px 4px rgba(15,23,42,.22)); }
     .hint { color: #64748b; font-size: .82rem; margin: .35rem 0 0; }
-    .assigned-salesperson { color: #475569; font-size: .9rem; margin: -.35rem 0 .75rem; }
-    .assigned-salesperson strong { color: #111827; }
     .gauge { width: 190px; height: 190px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto; } .gauge span { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; background: #fff; font-weight: 900; font-size: 1.4rem; }
     .center { text-align: center; color: #475569; }
     .funnel { display: grid; gap: .55rem; justify-items: center; }

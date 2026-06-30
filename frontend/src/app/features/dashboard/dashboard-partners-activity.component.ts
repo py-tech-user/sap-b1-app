@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -47,13 +47,15 @@ type PartnerDocFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoice
             </select>
           </label>
         }
-        <label>Recherche
-          <input list="partner-suggestions" [(ngModel)]="search" (input)="onSearchInput()" placeholder="Code ou nom client" />
-          <datalist id="partner-suggestions">
-            @for (s of suggestions(); track s) {
-              <option [value]="s"></option>
-            }
-          </datalist>
+        <label class="search-box">Recherche
+          <input [(ngModel)]="search" (input)="onSearchInput()" (focus)="openPartnerSearchSuggestions = true" placeholder="Code ou nom client" />
+          @if (openPartnerSearchSuggestions && filteredSuggestions().length) {
+            <div class="filter-suggestions">
+              @for (s of filteredSuggestions(); track s) {
+                <button type="button" (mousedown)="selectSuggestion(s)">{{ s }}</button>
+              }
+            </div>
+          }
         </label>
       </div>
 
@@ -103,6 +105,10 @@ type PartnerDocFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoice
     .back { text-decoration: none; color: #1d4ed8; }
     .filters { display: grid; grid-template-columns: repeat(4, minmax(190px, 1fr)); gap: .7rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .8rem; }
     label { display: grid; gap: .3rem; font-weight: 600; }
+    .search-box { position: relative; }
+    .filter-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .filter-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: #111827; white-space: normal; line-height: 1.25; }
+    .filter-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
     input, select { border: 1px solid #d1d5db; border-radius: 8px; padding: .4rem .55rem; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; font-size: .92rem; }
     th, td { padding: .5rem; border-bottom: 1px solid #edf0f4; text-align: left; }
@@ -133,12 +139,20 @@ export class DashboardPartnersActivityComponent implements OnInit {
   activity: 'all' | 'active' | 'inactive' = 'all';
   salesPersonCode = 0;
   search = '';
+  openPartnerSearchSuggestions = false;
   docFilter: PartnerDocFilter = 'all';
 
   readonly suggestions = computed(() =>
     this.rows().flatMap(r => [`${r.cardCode}`, `${r.cardName}`]).slice(0, 120)
   );
   readonly isAdminMode = signal(false);
+
+  @HostListener('document:click', ['$event'])
+  closePartnerSearchSuggestions(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.search-box')) return;
+    this.openPartnerSearchSuggestions = false;
+  }
 
   ngOnInit(): void {
     this.isAdminMode.set(['Admin', 'Manager'].includes(this.auth.role()));
@@ -165,6 +179,20 @@ export class DashboardPartnersActivityComponent implements OnInit {
   }
 
   onSearchInput(): void {
+    this.openPartnerSearchSuggestions = true;
+    this.load();
+  }
+
+  filteredSuggestions(): string[] {
+    const query = this.search.trim().toLowerCase();
+    return [...new Set(this.suggestions())]
+      .filter(value => !query || value.toLowerCase().includes(query))
+      .slice(0, 120);
+  }
+
+  selectSuggestion(value: string): void {
+    this.search = value;
+    this.openPartnerSearchSuggestions = false;
     this.load();
   }
 

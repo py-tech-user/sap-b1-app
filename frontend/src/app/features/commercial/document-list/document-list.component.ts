@@ -1,5 +1,5 @@
 ﻿import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -31,24 +31,35 @@ type SortDirection = 'none' | 'asc' | 'desc';
       </div>
 
       <form [formGroup]="filtersForm" class="filters" (ngSubmit)="applyFilters()">
-        <input formControlName="search" placeholder="Recherche" (input)="onFiltersChanged()" list="doc-search-suggestions" />
-        <datalist id="doc-search-suggestions">
-          @for (suggestion of searchSuggestions(); track suggestion) {
-            <option [value]="suggestion"></option>
+        <label class="filter-search">Recherche
+          <input formControlName="search" placeholder="Recherche" (input)="onFilterInput('search')" (focus)="openFilterSuggestions('search')" />
+          @if (openSearchSuggestions && filteredSearchSuggestions().length) {
+            <div class="filter-suggestions">
+              @for (suggestion of filteredSearchSuggestions(); track suggestion) {
+                <button type="button" (mousedown)="selectFilterSuggestion('search', suggestion)">{{ suggestion }}</button>
+              }
+            </div>
           }
-        </datalist>
-        <input formControlName="customer" placeholder="Client" (input)="onFiltersChanged()" list="doc-customer-suggestions" />
-        <datalist id="doc-customer-suggestions">
-          @for (suggestion of customerSuggestions(); track suggestion) {
-            <option [value]="suggestion"></option>
+        </label>
+        <label class="filter-search">Client
+          <input formControlName="customer" placeholder="Client" (input)="onFilterInput('customer')" (focus)="openFilterSuggestions('customer')" />
+          @if (openCustomerSuggestions && filteredCustomerSuggestions().length) {
+            <div class="filter-suggestions">
+              @for (suggestion of filteredCustomerSuggestions(); track suggestion) {
+                <button type="button" (mousedown)="selectFilterSuggestion('customer', suggestion)">{{ suggestion }}</button>
+              }
+            </div>
           }
-        </datalist>
-        <select formControlName="phase" (change)="onFiltersChanged()">
-          <option value="all">Tous les statuts</option>
-          <option value="open">En attente</option>
-          <option value="closed">Clotures</option>
-          <option value="cancelled">Annules</option>
-        </select>
+        </label>
+        <label class="date-field">
+          <span>Statut</span>
+          <select formControlName="phase" (change)="onFiltersChanged()">
+            <option value="all">Tous les statuts</option>
+            <option value="open">En attente</option>
+            <option value="closed">Clotures</option>
+            <option value="cancelled">Annules</option>
+          </select>
+        </label>
         <label class="date-field">
           <span>Du</span>
           <input type="date" formControlName="dateFrom" (change)="onFiltersChanged()" />
@@ -121,6 +132,10 @@ type SortDirection = 'none' | 'asc' | 'desc';
     .header-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .filters { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 0.5rem; align-items: center; }
     .filters input, .filters select { padding: 0.45rem 0.6rem; border: 1px solid #d7d7d7; border-radius: 6px; }
+    .filter-search { position: relative; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: #374151; }
+    .filter-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .filter-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: #111827; white-space: normal; line-height: 1.25; }
+    .filter-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
     .date-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: #374151; }
     .loading, .error, .empty { text-align: center; padding: 1rem; }
     .error { color: #b00020; }
@@ -173,6 +188,8 @@ export class DocumentListComponent implements OnInit, OnDestroy {
   });
   private readonly pageCache = new Map<string, CommercialDocument[]>();
   private readonly totalCountCache = new Map<string, number>();
+  openSearchSuggestions = false;
+  openCustomerSuggestions = false;
 
   readonly filtersForm = this.fb.group({
     search: [''],
@@ -207,6 +224,14 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     this.pageSize.set(15);
   };
 
+  @HostListener('document:click', ['$event'])
+  closeFilterSuggestions(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.filter-search')) return;
+    this.openSearchSuggestions = false;
+    this.openCustomerSuggestions = false;
+  }
+
   ngOnInit(): void {
     this.load();
     if (typeof window !== 'undefined') {
@@ -222,6 +247,39 @@ export class DocumentListComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       window.removeEventListener(COMMERCIAL_REFRESH_EVENT, this.refreshListener);
     }
+  }
+
+  onFilterInput(field: 'search' | 'customer'): void {
+    this.openFilterSuggestions(field);
+    this.onFiltersChanged();
+  }
+
+  openFilterSuggestions(field: 'search' | 'customer'): void {
+    this.openSearchSuggestions = field === 'search';
+    this.openCustomerSuggestions = field === 'customer';
+  }
+
+  selectFilterSuggestion(field: 'search' | 'customer', value: string): void {
+    if (field === 'search') this.filtersForm.patchValue({ search: value });
+    else this.filtersForm.patchValue({ customer: value });
+    this.openSearchSuggestions = false;
+    this.openCustomerSuggestions = false;
+    this.onFiltersChanged();
+  }
+
+  filteredSearchSuggestions(): string[] {
+    return this.filterSuggestionValues(this.searchSuggestions(), this.filtersForm.getRawValue().search);
+  }
+
+  filteredCustomerSuggestions(): string[] {
+    return this.filterSuggestionValues(this.customerSuggestions(), this.filtersForm.getRawValue().customer);
+  }
+
+  private filterSuggestionValues(values: string[], rawQuery: unknown): string[] {
+    const query = String(rawQuery ?? '').trim().toLowerCase();
+    return values
+      .filter(value => !query || value.toLowerCase().includes(query))
+      .slice(0, 40);
   }
 
   onFiltersChanged(): void {

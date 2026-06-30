@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -31,13 +31,27 @@ type DocTypeFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoices';
             <option value="invoices">Facture</option>
           </select>
         </label>
-        <label>
+        <label class="search-box">
           N document
-          <input list="doc-suggestions" [(ngModel)]="docSearch" (input)="noop()" placeholder="Ex: 10258" />
+          <input [(ngModel)]="docSearch" (input)="openDocSearchSuggestions = true" (focus)="openDocSearchSuggestions = true" placeholder="Ex: 10258" />
+          @if (openDocSearchSuggestions && filteredDocSuggestions().length) {
+            <div class="filter-suggestions">
+              @for (s of filteredDocSuggestions(); track s) {
+                <button type="button" (mousedown)="selectDocSuggestion(s)">{{ s }}</button>
+              }
+            </div>
+          }
         </label>
-        <label>
+        <label class="search-box">
           Client
-          <input list="customer-suggestions" [(ngModel)]="customerSearch" (input)="noop()" placeholder="Nom client" />
+          <input [(ngModel)]="customerSearch" (input)="openCustomerSearchSuggestions = true" (focus)="openCustomerSearchSuggestions = true" placeholder="Nom client" />
+          @if (openCustomerSearchSuggestions && filteredCustomerSuggestions().length) {
+            <div class="filter-suggestions">
+              @for (s of filteredCustomerSuggestions(); track s) {
+                <button type="button" (mousedown)="selectCustomerSuggestion(s)">{{ s }}</button>
+              }
+            </div>
+          }
         </label>
         <label>
           Statut
@@ -54,16 +68,6 @@ type DocTypeFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoices';
             <input type="number" [(ngModel)]="salesPersonCode" (change)="load()" min="0" placeholder="0 = toute l'equipe" />
           </label>
         }
-        <datalist id="doc-suggestions">
-          @for (s of docSuggestions(); track s) {
-            <option [value]="s"></option>
-          }
-        </datalist>
-        <datalist id="customer-suggestions">
-          @for (s of customerSuggestions(); track s) {
-            <option [value]="s"></option>
-          }
-        </datalist>
       </div>
 
       @if (loading()) {
@@ -101,6 +105,10 @@ type DocTypeFilter = 'all' | 'quotes' | 'orders' | 'deliverynotes' | 'invoices';
     .back { color: #1d4ed8; text-decoration: none; }
     .filters { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: .7rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .8rem; }
     label { display: grid; gap: .3rem; font-weight: 600; }
+    .search-box { position: relative; }
+    .filter-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .filter-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: #111827; white-space: normal; line-height: 1.25; }
+    .filter-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
     input, select { border: 1px solid #d1d5db; border-radius: 8px; padding: .4rem .55rem; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
     th, td { padding: .55rem; border-bottom: 1px solid #edf0f4; text-align: left; }
@@ -129,6 +137,8 @@ export class DashboardDocumentsComponent implements OnInit {
   type: DocTypeFilter = 'all';
   docSearch = '';
   customerSearch = '';
+  openDocSearchSuggestions = false;
+  openCustomerSearchSuggestions = false;
   statusFilter: 'all' | 'open' | 'closed' | 'cancelled' = 'all';
   salesPersonCode = 0;
 
@@ -149,6 +159,14 @@ export class DashboardDocumentsComponent implements OnInit {
   readonly docSuggestions = computed(() => this.documents().map((d) => String(d.docNum ?? '')).filter(Boolean).slice(0, 80));
   readonly customerSuggestions = computed(() => this.documents().map((d) => String(d.cardName ?? '')).filter(Boolean).slice(0, 80));
 
+  @HostListener('document:click', ['$event'])
+  closeSearchSuggestions(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.search-box')) return;
+    this.openDocSearchSuggestions = false;
+    this.openCustomerSearchSuggestions = false;
+  }
+
   ngOnInit(): void {
     this.isAdminMode.set(['Admin', 'Manager'].includes(this.auth.role()));
     const qMonth = this.route.snapshot.queryParamMap.get('month');
@@ -162,6 +180,31 @@ export class DashboardDocumentsComponent implements OnInit {
 
   onTypeChange(): void {}
   noop(): void {}
+
+  filteredDocSuggestions(): string[] {
+    return this.filterSuggestionValues(this.docSuggestions(), this.docSearch);
+  }
+
+  filteredCustomerSuggestions(): string[] {
+    return this.filterSuggestionValues(this.customerSuggestions(), this.customerSearch);
+  }
+
+  selectDocSuggestion(value: string): void {
+    this.docSearch = value;
+    this.openDocSearchSuggestions = false;
+  }
+
+  selectCustomerSuggestion(value: string): void {
+    this.customerSearch = value;
+    this.openCustomerSearchSuggestions = false;
+  }
+
+  private filterSuggestionValues(values: string[], rawQuery: unknown): string[] {
+    const query = String(rawQuery ?? '').trim().toLowerCase();
+    return [...new Set(values)]
+      .filter(value => !query || value.toLowerCase().includes(query))
+      .slice(0, 80);
+  }
 
   load(): void {
     this.loading.set(true);
