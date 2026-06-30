@@ -1,7 +1,7 @@
 ﻿import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable, throwError, timer } from 'rxjs';
+import { catchError, retry, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +16,10 @@ export class SapApiService {
     const url = this.buildUrl(path);
     this.logRequest('GET', url);
     return this.http.get<T>(url, { params }).pipe(
+      retry({
+        count: 2,
+        delay: (err, retryCount) => this.retryDelay('GET', url, err, retryCount)
+      }),
       tap((response) => this.logResponse('GET', url, response)),
       catchError((err) => this.handleError('GET', url, err))
     );
@@ -88,6 +92,24 @@ export class SapApiService {
     }
 
     return throwError(() => err);
+  }
+
+  private retryDelay(method: string, url: string, err: any, retryCount: number): Observable<number> {
+    if (!this.shouldRetry(err)) {
+      return throwError(() => err);
+    }
+
+    const delayMs = retryCount === 1 ? 3000 : 7000;
+    console.warn(`[SAP API] ${method} ${url} tentative ${retryCount + 1} apres chargement long`, {
+      status: Number(err?.status ?? 0),
+      error: err?.error ?? err
+    });
+    return timer(delayMs);
+  }
+
+  private shouldRetry(err: any): boolean {
+    const status = Number(err?.status ?? 0);
+    return status === 0 || status === 408 || status === 429 || status >= 500;
   }
 }
 
