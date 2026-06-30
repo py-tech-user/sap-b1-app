@@ -55,14 +55,15 @@ type SortDirection = 'none' | 'asc' | 'desc';
           <input
             [ngModel]="selectedClientInput()"
             (ngModelChange)="onClientPickerInput($event)"
-            (focus)="openClientSuggestions.set(true)"
+            (focus)="openClientPanel()"
+            (keydown)="replaceClientSearchOnTyping($event)"
             (blur)="closeClientSuggestionsLater()"
             (keydown.enter)="selectClientIfUnique($event)"
             placeholder="Rechercher et sélectionner client" />
           @if (openClientSuggestions() && clientSuggestions().length) {
             <div class="suggestions">
               @for (client of clientSuggestions(); track client.cardCode) {
-                <button type="button" (mousedown)="selectClient(client)">{{ clientPickerValue(client) }}</button>
+                <button type="button" (mousedown)="selectClient(client)">{{ clientDisplayName(client) }}</button>
               }
             </div>
           }
@@ -236,6 +237,7 @@ export class EncaissementComponent {
   readonly selectedCardCode = signal('');
   readonly selectedClientInput = signal('');
   readonly openClientSuggestions = signal(false);
+  private clientReplaceOnType = false;
   readonly paymentMethodCode = signal('Virement');
   readonly cashSum = signal(0);
   readonly selectedClient = computed(() =>
@@ -248,7 +250,7 @@ export class EncaissementComponent {
         if (!query) return true;
         return this.normalizeSearch(client.cardName).includes(query)
           || this.normalizeSearch(client.cardCode).includes(query)
-          || this.normalizeSearch(this.clientPickerValue(client)).includes(query);
+          || this.normalizeSearch(this.clientDisplayName(client)).includes(query);
       })
       .slice(0, 30);
   });
@@ -309,12 +311,12 @@ export class EncaissementComponent {
       const name = match.cardName.toLowerCase();
       const normalizedTyped = typed.toLowerCase();
       if (normalizedTyped === name || normalizedTyped === code) {
-        this.selectedClientInput.set(typed);
+        this.selectedClientInput.set(this.clientDisplayName(match));
       } else {
-        this.selectedClientInput.set(this.clientPickerValue(match));
+        this.selectedClientInput.set(this.clientDisplayName(match));
       }
     } else {
-      this.selectedClientInput.set(match ? this.clientPickerValue(match) : nextCode);
+      this.selectedClientInput.set(match ? this.clientDisplayName(match) : nextCode);
     }
     this.cashSum.set(0);
     this.error.set('');
@@ -324,7 +326,10 @@ export class EncaissementComponent {
   }
 
   onClientPickerInput(value: string): void {
-    const typed = String(value ?? '').trim();
+    const previousDisplay = this.selectedClientInput();
+    const hadSelection = !!this.selectedCardCode();
+    this.clientReplaceOnType = false;
+    const typed = this.nextSearchValueAfterTyping(value, previousDisplay, hadSelection).trim();
     this.selectedClientInput.set(typed);
     this.openClientSuggestions.set(true);
     if (!typed) {
@@ -345,7 +350,8 @@ export class EncaissementComponent {
 
   selectClient(client: EncaissementClient): void {
     this.openClientSuggestions.set(false);
-    this.onClientChange(client.cardCode, this.clientPickerValue(client));
+    this.clientReplaceOnType = false;
+    this.onClientChange(client.cardCode, this.clientDisplayName(client));
   }
 
   selectClientIfUnique(event: Event): void {
@@ -357,7 +363,60 @@ export class EncaissementComponent {
   }
 
   closeClientSuggestionsLater(): void {
-    setTimeout(() => this.openClientSuggestions.set(false), 120);
+    setTimeout(() => {
+      this.openClientSuggestions.set(false);
+      this.clientReplaceOnType = false;
+    }, 120);
+  }
+
+  openClientPanel(): void {
+    this.clientReplaceOnType = !!this.selectedCardCode();
+    this.openClientSuggestions.set(true);
+  }
+
+  replaceClientSearchOnTyping(event: KeyboardEvent): void {
+    if (!this.clientReplaceOnType || event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      this.selectedClientInput.set('');
+      this.selectedCardCode.set('');
+      this.invoices.set([]);
+      this.selections.set([]);
+      this.openClientSuggestions.set(true);
+      this.clientReplaceOnType = false;
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    this.selectedClientInput.set(event.key);
+    this.selectedCardCode.set('');
+    this.invoices.set([]);
+    this.selections.set([]);
+    this.openClientSuggestions.set(true);
+    this.clientReplaceOnType = false;
+  }
+
+  private nextSearchValueAfterTyping(value: unknown, previousDisplay: string, hadSelection: boolean): string {
+    const nextValue = String(value ?? '');
+    const previousValue = String(previousDisplay ?? '');
+    if (!hadSelection || !previousValue || nextValue === previousValue) return nextValue;
+
+    if (nextValue.startsWith(previousValue)) {
+      return nextValue.slice(previousValue.length).trimStart();
+    }
+
+    if (nextValue.endsWith(previousValue)) {
+      return nextValue.slice(0, nextValue.length - previousValue.length).trimEnd();
+    }
+
+    const previousIndex = nextValue.indexOf(previousValue);
+    if (previousIndex >= 0) {
+      return `${nextValue.slice(0, previousIndex)}${nextValue.slice(previousIndex + previousValue.length)}`.trim();
+    }
+
+    return nextValue;
   }
   onCashSumChange(value: unknown): void {
     this.cashSum.set(Math.max(0, this.toNumber(value)));
@@ -653,10 +712,14 @@ export class EncaissementComponent {
     };
   }
 
-  clientPickerValue(client: EncaissementClient): string {
+  clientDisplayName(client: EncaissementClient): string {
     const code = String(client.cardCode ?? '').trim();
     const name = String(client.cardName ?? '').trim();
-    return name ? `${name} (${code})` : code;
+    return name || code;
+  }
+
+  clientPickerValue(client: EncaissementClient): string {
+    return this.clientDisplayName(client);
   }
 
   private resolveCommittedClientFromInput(input: string): EncaissementClient | null {

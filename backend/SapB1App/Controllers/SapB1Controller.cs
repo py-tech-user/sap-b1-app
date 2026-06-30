@@ -27,6 +27,7 @@ public class SapB1Controller : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<SapB1Controller> _logger;
     private readonly IMemoryCache _cache;
+    private readonly ISapSqlConnectionFactory _sapSqlConnectionFactory;
 
     public SapB1Controller(
         ISapB1Service sapService,
@@ -34,7 +35,8 @@ public class SapB1Controller : ControllerBase
         AppDbContext db,
         IConfiguration configuration,
         ILogger<SapB1Controller> logger,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        ISapSqlConnectionFactory sapSqlConnectionFactory)
     {
         _sapService = sapService;
         _currentUserService = currentUserService;
@@ -42,6 +44,7 @@ public class SapB1Controller : ControllerBase
         _configuration = configuration;
         _logger = logger;
         _cache = cache;
+        _sapSqlConnectionFactory = sapSqlConnectionFactory;
     }
 
     [HttpPost("login")]
@@ -4227,152 +4230,12 @@ WHERE (@openOnly = 0 OR {openCondition})
 
     private string BuildSapSqlConnectionString()
     {
-        var server = _configuration["SapB1:SqlServer"];
-        if (string.IsNullOrWhiteSpace(server))
-            server = _configuration["SapB1:Server"];
-
-        var sqlInstance = _configuration["SapB1:SqlInstance"];
-        var sqlPort = _configuration["SapB1:SqlPort"];
-        var appConn = _configuration.GetConnectionString("DefaultConnection");
-        string? appDataSource = null;
-        if (!string.IsNullOrWhiteSpace(appConn))
-        {
-            try
-            {
-                var appBuilder = new SqlConnectionStringBuilder(appConn);
-                appDataSource = appBuilder.DataSource;
-            }
-            catch
-            {
-            }
-        }
-
-        var hasExplicitInstanceOrPort = !string.IsNullOrWhiteSpace(sqlInstance) || !string.IsNullOrWhiteSpace(sqlPort) ||
-                                       (!string.IsNullOrWhiteSpace(server) && (server.Contains('\\') || server.Contains(',')));
-
-        if (!hasExplicitInstanceOrPort &&
-            !string.IsNullOrWhiteSpace(server) &&
-            !string.IsNullOrWhiteSpace(appDataSource))
-        {
-            var normalizedServer = server.Trim().ToLowerInvariant();
-            if (normalizedServer is "localhost" or "." or "(local)" &&
-                (appDataSource.Contains('\\') || appDataSource.Contains(',')))
-            {
-                server = appDataSource;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(server) &&
-            !string.IsNullOrWhiteSpace(sqlInstance) &&
-            !server.Contains('\\') &&
-            !server.Contains(','))
-        {
-            server = $"{server}\\{sqlInstance}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(server) &&
-            !string.IsNullOrWhiteSpace(sqlPort) &&
-            !server.Contains(',') &&
-            !server.Contains('\\'))
-        {
-            server = $"{server},{sqlPort}";
-        }
-
-        if (string.IsNullOrWhiteSpace(server))
-        {
-            server = appDataSource;
-        }
-
-        var database = _configuration["SapB1:SqlCompanyDB"];
-        if (string.IsNullOrWhiteSpace(database))
-            database = _configuration["SapB1:CompanyDB"];
-        if (string.IsNullOrWhiteSpace(database))
-            database = _configuration["SapB1ServiceLayer:CompanyDB"];
-        var dbUser = _configuration["SapB1:DbUserName"];
-        if (string.IsNullOrWhiteSpace(dbUser))
-            dbUser = _configuration["SapB1:UserName"];
-
-        var dbPassword = _configuration["SapB1:DbPassword"];
-        if (string.IsNullOrWhiteSpace(dbPassword))
-            dbPassword = _configuration["SapB1:Password"];
-        var useTrusted = bool.TryParse(_configuration["SapB1:UseTrusted"], out var trusted) && trusted;
-        var useSqlAuth = !string.IsNullOrWhiteSpace(dbUser);
-        var useIntegratedSecurity = useTrusted && !useSqlAuth;
-
-        if (string.IsNullOrWhiteSpace(server) || string.IsNullOrWhiteSpace(database))
-            return string.Empty;
-
-        var builder = new SqlConnectionStringBuilder
-        {
-            DataSource = server,
-            InitialCatalog = database,
-            TrustServerCertificate = true,
-            Encrypt = false,
-            IntegratedSecurity = useIntegratedSecurity,
-            ConnectTimeout = GetSapSqlConnectTimeoutSeconds(),
-            ConnectRetryCount = 0
-        };
-
-        if (useSqlAuth)
-        {
-            builder.UserID = dbUser;
-            builder.Password = dbPassword;
-        }
-
-        _logger.LogInformation("[HYBRID-MODE] SQL SAP target resolved. DataSource={DataSource}, Database={Database}, AuthMode={AuthMode}", builder.DataSource, builder.InitialCatalog, builder.IntegratedSecurity ? "IntegratedSecurity" : "SqlAuth");
-
-        return builder.ConnectionString;
+        return _sapSqlConnectionFactory.BuildConnectionString();
     }
-
     private async Task<SqlConnection?> OpenSapSqlConnectionAsync(CancellationToken cancellationToken)
     {
-        var baseConnectionString = BuildSapSqlConnectionString();
-        if (string.IsNullOrWhiteSpace(baseConnectionString))
-            return null;
-
-        var baseBuilder = new SqlConnectionStringBuilder(baseConnectionString);
-        var baseDataSource = baseBuilder.DataSource?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(baseDataSource))
-            return null;
-
-        const string workingDataSourceCacheKey = "sap:sql:working-datasource";
-        var candidates = new List<string>();
-        if (_cache.TryGetValue(workingDataSourceCacheKey, out string? cachedDataSource) &&
-            !string.IsNullOrWhiteSpace(cachedDataSource))
-        {
-            candidates.Add(cachedDataSource);
-        }
-
-        candidates.Add(baseDataSource);
-
-        foreach (var dataSource in candidates
-                     .Where(x => !string.IsNullOrWhiteSpace(x))
-                     .Select(x => x.Trim())
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var builder = new SqlConnectionStringBuilder(baseConnectionString)
-            {
-                DataSource = dataSource
-            };
-
-            var conn = new SqlConnection(builder.ConnectionString);
-            try
-            {
-                await conn.OpenAsync(cancellationToken);
-                _logger.LogInformation("[HYBRID-MODE] Connexion SQL ouverte via DataSource={DataSource}", dataSource);
-                _cache.Set(workingDataSourceCacheKey, dataSource, TimeSpan.FromHours(1));
-                return conn;
-            }
-            catch (Exception ex)
-            {
-                await conn.DisposeAsync();
-                _logger.LogWarning("[HYBRID-MODE] Tentative SQL échouée via DataSource={DataSource}. Error={Error}", dataSource, ex.Message);
-            }
-        }
-
-        return null;
+        return await _sapSqlConnectionFactory.OpenConnectionAsync(cancellationToken);
     }
-
     private int GetSapSqlCommandTimeoutSeconds()
     {
         var raw = _configuration["SapB1:SqlCommandTimeoutSeconds"];

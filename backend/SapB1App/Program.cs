@@ -71,6 +71,7 @@ builder.Services.AddScoped<IReturnService, ReturnService>();
 builder.Services.AddScoped<ISapB1Service, SapB1Service>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ISapSqlConnectionFactory, SapSqlConnectionFactory>();
 
 // ─── JWT Authentication ─────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -178,6 +179,15 @@ builder.Services.AddSwaggerGen(c =>
 
 // ─── Build ──────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
+try
+{
+    await app.Services.GetRequiredService<ISapSqlConnectionFactory>().WarmUpAsync(CancellationToken.None);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "[SAP-SQL-WARMUP] Startup warm-up failed. The API will retry on first request.");
+}
 
 // ─── Migrate & Seed ────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())

@@ -1,5 +1,5 @@
-ï»¿import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -32,13 +32,23 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
         <div class="top-grid">
           <div class="field field-client">
             <label>Client *</label>
-            <input formControlName="cardCode" list="customer-options" placeholder="Rechercher et sÃ©lectionner client" [readonly]="isGenerationDraft()" />
-            <datalist id="customer-options">
-              @for (c of customers(); track c.id) {
-                <option [value]="c.cardCode"></option>
-                <option [value]="c.cardName"></option>
-              }
-            </datalist>
+            <input
+              [value]="customerSearch()"
+              (input)="onCustomerSearch($event)"
+              (focus)="openCustomerSuggestions()"
+              (keydown)="replaceCustomerSearchOnTyping($event)"
+              (keydown.enter)="selectCustomerIfUnique($event)"
+              placeholder="Rechercher et sélectionner client"
+              [readonly]="isGenerationDraft()" />
+            @if (openCustomerPanel() && filteredCustomers().length) {
+              <div class="customer-suggestions">
+                @for (c of filteredCustomers(); track c.cardCode) {
+                  <button type="button" (mousedown)="selectCustomer(c)">
+                    {{ customerDisplayName(c) }}
+                  </button>
+                }
+              </div>
+            }
           </div>
 
           <div class="field">
@@ -81,7 +91,7 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
 
         @if (isGenerationDraft()) {
           <p class="lines-hint">
-            Ajustez librement les quantitÃ©s. Pour retirer une ligne, utilisez Suppr. Il faut au moins une ligne pour valider la crÃ©ation.
+            Ajustez librement les quantités. Pour retirer une ligne, utilisez Suppr. Il faut au moins une ligne pour valider la création.
           </p>
         }
 
@@ -119,13 +129,13 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
                 <input
                   formControlName="productLookup"
                   list="product-options"
-                  placeholder="Rechercher et sÃ©lectionner article"
+                  placeholder="Rechercher et sélectionner article"
                   (input)="onProductLookupInput(i, $event)"
                   (blur)="onProductLookupBlur(i)"
                   [readonly]="!canEditItemFields(i)" />
 
                 <span class="mobile-label">Quantite</span>
-                <input type="number" formControlName="quantity" min="1" step="1" placeholder="QtÃ©" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
+                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
                 <span class="mobile-label">Warehouse code</span>
                 <input formControlName="warehouseCode" placeholder="Ex: 01" aria-label="WarehouseCode" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Prix HT</span>
@@ -199,11 +209,16 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     .card { background: #fff; border-radius: 8px; padding: 0.65rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 0.6rem; }
     .top-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.45rem; }
     .field { display: flex; flex-direction: column; gap: 0.25rem; }
-    .field-client { grid-column: span 3; }
+    .field-client { grid-column: span 3; position: relative; }
     .field-comments { grid-column: 1 / span 2; }
     .field-payment { grid-column: 3 / span 1; }
     .field-wide { grid-column: 1 / -1; }
     .field input, .field textarea, .field select { border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.45rem 0.6rem; }
+    .field-client input { border-color: #c9d7e8; border-radius: 10px; background: #fff; box-shadow: inset 0 1px 0 rgba(15,23,42,.02); }
+    .field-client input:focus { outline: 2px solid rgba(37,99,235,.16); border-color: #60a5fa; }
+    .customer-suggestions { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .customer-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; font-weight: 700; color: #111827; white-space: normal; line-height: 1.25; }
+    .customer-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
     .lines-head { display: flex; justify-content: space-between; align-items: center; }
     .lines-hint { margin: 0; color: #555; font-size: 0.86rem; }
     .lines-scroll { overflow-x: auto; padding-bottom: 0.2rem; }
@@ -307,20 +322,20 @@ export class DocumentFormComponent implements OnInit {
   readonly isCompactForm = computed(() => this.isEdit() || this.isGenerationDraft());
   readonly pageTitle = computed(() => {
     if (this.isGenerationDraft()) {
-      return `${this.meta().icon} PrÃ©parer ${this.meta().singular}`;
+      return `${this.meta().icon} Préparer ${this.meta().singular}`;
     }
-    return `${this.meta().icon} ${this.isEdit() ? 'Ã‰diter' : 'CrÃ©er'} ${this.meta().singular}`;
+    return `${this.meta().icon} ${this.isEdit() ? 'Éditer' : 'Créer'} ${this.meta().singular}`;
   });
   readonly submitButtonLabel = computed(() => {
     if (this.saving()) {
-      if (this.isEdit()) return 'Mise Ã  jour...';
-      if (this.isGenerationDraft()) return `Validation de la crÃ©ation du ${this.entityLabel()}...`;
-      return 'CrÃ©ation...';
+      if (this.isEdit()) return 'Mise à jour...';
+      if (this.isGenerationDraft()) return `Validation de la création du ${this.entityLabel()}...`;
+      return 'Création...';
     }
 
-    if (this.isEdit()) return 'Mettre Ã  jour';
-    if (this.isGenerationDraft()) return `Valider la crÃ©ation du ${this.entityLabel()}`;
-    return 'CrÃ©er';
+    if (this.isEdit()) return 'Mettre à jour';
+    if (this.isGenerationDraft()) return `Valider la création du ${this.entityLabel()}`;
+    return 'Créer';
   });
   readonly saving = signal(false);
   readonly error = signal('');
@@ -333,12 +348,17 @@ export class DocumentFormComponent implements OnInit {
   readonly customers = signal<Customer[]>([]);
   readonly products = signal<Product[]>([]);
   readonly customerSearch = signal('');
+  readonly openCustomerPanel = signal(false);
+  private customerReplaceOnType = false;
   private loadedCustomerId: number | null = null;
 
   readonly filteredCustomers = computed(() => {
-    const q = this.customerSearch().trim().toLowerCase();
+    const q = this.normalizeSearch(this.customerSearch());
     if (!q) return this.customers();
-    return this.customers().filter(c => (`${c.cardCode} ${c.cardName}`).toLowerCase().includes(q));
+    return this.customers().filter(c =>
+      this.normalizeSearch(this.customerDisplayName(c)).includes(q) ||
+      this.normalizeSearch(c.cardCode).includes(q)
+    );
   });
 
   readonly form = this.fb.group({
@@ -373,9 +393,84 @@ export class DocumentFormComponent implements OnInit {
     }
   }
 
+  @HostListener('document:click', ['$event'])
+  closeCustomerSuggestions(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.field-client')) return;
+    this.openCustomerPanel.set(false);
+    this.customerReplaceOnType = false;
+  }
+
   onCustomerSearch(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.customerSearch.set(input.value || '');
+    const previousDisplay = this.customerSearch();
+    const hadSelection = !!String(this.form.get('cardCode')?.value ?? '').trim();
+    const nextValue = this.nextSearchValueAfterTyping(input.value || '', previousDisplay, hadSelection);
+    this.customerReplaceOnType = false;
+    this.customerSearch.set(nextValue);
+    this.form.patchValue({ cardCode: '' }, { emitEvent: false });
+    this.openCustomerPanel.set(true);
+  }
+
+  openCustomerSuggestions(): void {
+    this.customerReplaceOnType = !!String(this.form.get('cardCode')?.value ?? '').trim();
+    this.openCustomerPanel.set(true);
+  }
+
+  replaceCustomerSearchOnTyping(event: KeyboardEvent): void {
+    if (!this.customerReplaceOnType || event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      this.customerSearch.set('');
+      this.form.patchValue({ cardCode: '' }, { emitEvent: false });
+      this.openCustomerPanel.set(true);
+      this.customerReplaceOnType = false;
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    this.customerSearch.set(event.key);
+    this.form.patchValue({ cardCode: '' }, { emitEvent: false });
+    this.openCustomerPanel.set(true);
+    this.customerReplaceOnType = false;
+  }
+
+  private nextSearchValueAfterTyping(value: string, previousDisplay: string, hadSelection: boolean): string {
+    const nextValue = String(value ?? '');
+    const previousValue = String(previousDisplay ?? '');
+    if (!hadSelection || !previousValue || nextValue === previousValue) return nextValue;
+
+    if (nextValue.startsWith(previousValue)) {
+      return nextValue.slice(previousValue.length).trimStart();
+    }
+
+    if (nextValue.endsWith(previousValue)) {
+      return nextValue.slice(0, nextValue.length - previousValue.length).trimEnd();
+    }
+
+    const previousIndex = nextValue.indexOf(previousValue);
+    if (previousIndex >= 0) {
+      return `${nextValue.slice(0, previousIndex)}${nextValue.slice(previousIndex + previousValue.length)}`.trim();
+    }
+
+    return nextValue;
+  }
+
+  selectCustomer(customer: Customer): void {
+    this.form.patchValue({ cardCode: String(customer.cardCode ?? '').trim() }, { emitEvent: false });
+    this.customerSearch.set(this.customerDisplayName(customer));
+    this.openCustomerPanel.set(false);
+    this.customerReplaceOnType = false;
+  }
+
+  selectCustomerIfUnique(event: Event): void {
+    const matches = this.filteredCustomers();
+    if (matches.length === 1) {
+      event.preventDefault();
+      this.selectCustomer(matches[0]);
+    }
   }
 
   addLine(line?: Partial<CommercialDocumentLine>): void {
@@ -615,13 +710,13 @@ export class DocumentFormComponent implements OnInit {
     if (!Number.isFinite(quantity) || quantity <= 0) {
       group.patchValue({ quantity: 1 }, { emitEvent: false });
       if (this.isGenerationDraft()) {
-        this.error.set('Une ligne ne peut pas avoir une quantitÃ© Ã  0. Supprimez la ligne si besoin.');
+        this.error.set('Une ligne ne peut pas avoir une quantité à 0. Supprimez la ligne si besoin.');
       }
     } else if (this.shouldCapGeneratedQuantity()) {
       const maxQuantity = Number(group.get('maxQuantity')?.value ?? 0);
       if (Number.isFinite(maxQuantity) && maxQuantity > 0 && quantity > maxQuantity) {
         group.patchValue({ quantity: maxQuantity }, { emitEvent: false });
-        this.error.set('La quantitÃ© du document cible ne peut pas dÃ©passer la quantitÃ© du document source.');
+        this.error.set('La quantité du document cible ne peut pas dépasser la quantité du document source.');
       }
     }
 
@@ -1018,6 +1113,7 @@ export class DocumentFormComponent implements OnInit {
       if (guessed) {
         const customer = items.find(c => c.cardCode === guessed);
         this.form.patchValue({ cardCode: customer ? this.customerPickerValue(customer) : guessed });
+        this.customerSearch.set(customer ? this.customerDisplayName(customer) : guessed);
       }
       return;
     }
@@ -1027,6 +1123,7 @@ export class DocumentFormComponent implements OnInit {
       const customer = items.find(c => String(c.cardCode ?? '').trim().toLowerCase() === code.toLowerCase());
       if (customer) {
         this.form.patchValue({ cardCode: this.customerPickerValue(customer) }, { emitEvent: false });
+        this.customerSearch.set(this.customerDisplayName(customer));
       }
     }
   }
@@ -1058,6 +1155,7 @@ export class DocumentFormComponent implements OnInit {
             comments: d.comments || '',
             paymentMethod: d.paymentMethod || 'Virement'
           });
+          this.customerSearch.set(this.customerDisplayFromCode(d.cardCode || '') || this.documentCardName(d) || d.cardCode || '');
 
           if (!this.canModify()) {
             this.form.disable({ emitEvent: false });
@@ -1081,7 +1179,7 @@ export class DocumentFormComponent implements OnInit {
     const sourceResource = this.sourceResource();
     const sourceDocumentId = this.sourceDocumentId();
     if (!sourceResource || !sourceDocumentId) {
-      this.error.set('Document source introuvable pour prÃ©parer le brouillon.');
+      this.error.set('Document source introuvable pour préparer le brouillon.');
       return;
     }
 
@@ -1109,6 +1207,7 @@ export class DocumentFormComponent implements OnInit {
             comments: '',
             paymentMethod: source.paymentMethod || 'Virement'
           });
+          this.customerSearch.set(this.customerDisplayFromCode(cardCode) || this.documentCardName(source) || cardCode);
 
           this.lines.clear();
           const lines = this.buildDraftLinesFromSource(source);
@@ -1118,7 +1217,7 @@ export class DocumentFormComponent implements OnInit {
           this.syncLineProductsByItemCode();
 
           if (this.lines.length === 0) {
-            this.error.set('Aucune ligne ouverte disponible pour crÃ©er ce document.');
+            this.error.set('Aucune ligne ouverte disponible pour créer ce document.');
           }
         },
         error: () => this.error.set('Erreur lors du chargement du document source.')
@@ -1188,6 +1287,23 @@ export class DocumentFormComponent implements OnInit {
     return cardCode;
   }
 
+  private documentCardName(document: CommercialDocument): string {
+    return String((document as CommercialDocument & { cardName?: string }).cardName ?? '').trim();
+  }
+
+  customerDisplayName(customer: Customer): string {
+    const name = String(customer.cardName ?? '').trim();
+    const code = String(customer.cardCode ?? '').trim();
+    return name || code;
+  }
+
+  private customerDisplayFromCode(cardCode: string): string {
+    const code = String(cardCode ?? '').trim();
+    if (!code) return '';
+    const customer = this.customers().find(c => String(c.cardCode ?? '').trim().toLowerCase() === code.toLowerCase());
+    return customer ? this.customerDisplayName(customer) : '';
+  }
+
   private extractCardCode(value: string): string {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
@@ -1218,6 +1334,10 @@ export class DocumentFormComponent implements OnInit {
     }
 
     return raw;
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
 
   private buildMissingFieldsMessage(): string {
@@ -1441,6 +1561,7 @@ export class DocumentFormComponent implements OnInit {
     return null;
   }
 }
+
 
 
 

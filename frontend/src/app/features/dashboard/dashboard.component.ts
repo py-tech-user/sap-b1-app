@@ -94,6 +94,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
               [ngModel]="dashboardCommercialSearch()"
               (ngModelChange)="onDashboardCommercialInput($event)"
               (focus)="openDashboardCommercialPanel()"
+              (keydown)="replaceDashboardSearchOnTyping($event, 'commercial')"
               (keydown.enter)="selectDashboardCommercialIfUnique($event)"
               placeholder="Rechercher commercial" />
             @if (openDashboardCommercialSuggestions) {
@@ -114,6 +115,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
             [ngModel]="dashboardPartnerSearch()"
             (ngModelChange)="onDashboardPartnerInput($event)"
             (focus)="openDashboardPartnerPanel()"
+            (keydown)="replaceDashboardSearchOnTyping($event, 'partner')"
             (keydown.enter)="selectDashboardPartnerIfUnique($event)"
             placeholder="Rechercher partenaire" />
           @if (openDashboardPartnerSuggestions) {
@@ -154,11 +156,11 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
               
             </div>
             <div class="kpi-card">
+              <h2 class="kpi-label">Taux d'objectif de la période</h2>
               <span class="kpi-value">{{ formatPct(r.kpis.targetAchievementRate) }}</span>
-              <span class="kpi-label">Taux d'objectif de la période</span>
               @if (canEditTarget()) {
                 <label class="target-editor">
-                  Objectif CA mensuel
+                  Objectif CA mensuel par commercial
                   <input type="number" min="0" step="100" [ngModel]="monthlyTargetInput()" (ngModelChange)="monthlyTargetInput.set($event)" (change)="saveMonthlyTarget()" />
                 </label>
                 <span class="kpi-sub">Objectif période: {{ formatMoney(r.kpis.periodTarget) }}</span>
@@ -349,8 +351,8 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           }
         </div>
         @if (filteredPartnerDebts(); as debts) {
-          @if (debts.length) {
-            <div class="table-wrapper debts-table-scroll" (scroll)="onPartnerDebtsScroll($event)">
+          @if (debts.length || isCurrentPartnerDebtPageLoading()) {
+            <div class="table-wrapper debts-table-scroll">
               <table>
                 <thead>
                   <tr>
@@ -371,11 +373,21 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                       <td>{{ formatSignedMoney(row.balance) }}</td>
                     </tr>
                   }
+                  @if (!debts.length && isCurrentPartnerDebtPageLoading()) {
+                    <tr>
+                      <td [attr.colspan]="isAdminMode() ? 5 : 4">Chargement de la page...</td>
+                    </tr>
+                  }
                 </tbody>
               </table>
             </div>
-            @if (canExpandPartnerDebts()) {
-              <p class="loading-more">{{ loadingMorePartnerDebts() ? 'Chargement des partenaires suivants...' : '' }}</p>
+            <div class="debts-pagination">
+              <button type="button" (click)="goToPartnerDebtsPage(partnerDebtsCurrentPage() - 1)" [disabled]="!canGoToPreviousPartnerDebtsPage()">&#8249;</button>
+              <span>{{ partnerDebtsPageSummary() }}</span>
+              <button type="button" (click)="goToPartnerDebtsPage(partnerDebtsCurrentPage() + 1)" [disabled]="!canGoToNextPartnerDebtsPage()">&#8250;</button>
+            </div>
+            @if (isPartnerDebtBackgroundLoading()) {
+              <p class="loading-more">Chargement des autres pages en arriÃ¨re-plan...</p>
             }
           } @else {
             <p class="empty-msg">Aucun partenaire à afficher</p>
@@ -433,6 +445,10 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
     .debts-table-scroll { height: 420px; overflow: auto; }
     .debts-table-scroll thead th { position: sticky; top: 0; z-index: 1; }
     .loading-more { text-align: center; margin: .65rem 0 0; color: #6b7280; font-size: .86rem; }
+    .debts-pagination { display: flex; align-items: center; justify-content: center; gap: .7rem; margin-top: .7rem; color: #475569; font-size: .88rem; }
+    .debts-pagination button { width: 34px; height: 34px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: #111827; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+    .debts-pagination button:hover:not(:disabled) { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .debts-pagination button:disabled { opacity: .45; cursor: not-allowed; }
 
     .debts-filters { margin-bottom: .6rem; display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: .7rem; max-width: 580px; }
     .debts-filters label { display: grid; gap: .3rem; font-weight: 600; color: #374151; }
@@ -495,6 +511,8 @@ export class DashboardComponent implements OnInit {
   openDashboardPartnerSuggestions = false;
   openPartnerDebtSuggestions = false;
   openPartnerDebtCommercialSuggestions = false;
+  private dashboardCommercialReplaceOnType = false;
+  private dashboardPartnerReplaceOnType = false;
   readonly monthlyTargetInput = signal<number | string>(0);
   readonly targetSaving = signal(false);
   readonly targetMessage = signal('');
@@ -505,7 +523,8 @@ export class DashboardComponent implements OnInit {
   readonly partnerDebtCommercialSearch = signal('');
   readonly partnerDebts = signal<PartnerDebtItem[]>([]);
   readonly partnerDebtsTotal = signal(0);
-  readonly visiblePartnerDebtsCount = signal(10);
+  readonly partnerDebtsCurrentPage = signal(1);
+  readonly partnerDebtPagesLoading = signal<Set<number>>(new Set<number>());
   readonly partnerDebtSortKey = signal<PartnerDebtSortKey | null>('balance');
   readonly partnerDebtSortDirection = signal<SortDirection>('desc');
   private readonly partnersPageSize = 10;
@@ -513,6 +532,7 @@ export class DashboardComponent implements OnInit {
   private partnersBackgroundLoading = false;
   private partnerDebtsPage = 1;
   private readonly partnerDebtsPageSize = 50;
+  private partnerDebtPagesLoaded = new Set<number>();
   private partnerDebtSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private partnerDebtRequestVersion = 0;
   private lastPartnerDebtsSalesPersonCode: number | null = null;
@@ -567,9 +587,10 @@ export class DashboardComponent implements OnInit {
     return [...baseRows].sort((a, b) => this.comparePartnerDebt(a, b, key) * d);
   });
 
-  readonly filteredPartnerDebts = computed(() =>
-    this.matchingPartnerDebts().slice(0, this.visiblePartnerDebtsCount())
-  );
+  readonly filteredPartnerDebts = computed(() => {
+    const start = (this.partnerDebtsCurrentPage() - 1) * this.partnerDebtsPageSize;
+    return this.matchingPartnerDebts().slice(start, start + this.partnerDebtsPageSize);
+  });
 
   readonly topPartnerBalances = computed(() =>
     [...this.partnerDebts()]
@@ -588,7 +609,7 @@ export class DashboardComponent implements OnInit {
     const positiveRows = rows
       .filter(row => row.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, this.shouldBreakdownByCommercial() ? 3 : 5);
     const total = positiveRows.reduce((sum, row) => sum + row.revenue, 0);
     return positiveRows.map(row => ({
       ...row,
@@ -597,7 +618,7 @@ export class DashboardComponent implements OnInit {
   });
 
   readonly canExpandPartnerDebts = computed(() =>
-    this.visiblePartnerDebtsCount() < this.matchingPartnerDebts().length ||
+    this.partnerDebtsCurrentPage() < this.partnerDebtsTotalPages() ||
     this.partnerDebts().length < this.partnerDebtsTotal()
   );
 
@@ -712,11 +733,6 @@ export class DashboardComponent implements OnInit {
     return [...map.values()];
   }
 
-  @HostListener('window:scroll')
-  onWindowScroll(): void {
-    this.loadMorePartnerDebtsIfNeeded();
-  }
-
   @HostListener('document:click', ['$event'])
   closeSearchPanels(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
@@ -797,31 +813,15 @@ export class DashboardComponent implements OnInit {
     this.lastPartnerDebtsSalesPersonCode = this.currentDebtSalesPersonCode();
     this.lastPartnerDebtsPartnerCode = this.selectedPartnerCode;
     const requestVersion = ++this.partnerDebtRequestVersion;
-    this.visiblePartnerDebtsCount.set(this.partnerDebtsPageSize);
     this.partnerDebtsPage = 1;
     this.loadingMorePartnerDebts.set(false);
+    this.partnerDebtsCurrentPage.set(1);
+    this.partnerDebtPagesLoaded = new Set<number>();
+    this.partnerDebtPagesLoading.set(new Set<number>());
     this.partnerDebts.set([]);
     this.partnerDebtsTotal.set(0);
     this.resetPartnerDebtsScrollTop();
-    this.reportingApi.getPartnerDebts(
-      this.currentDebtSalesPersonCode() ?? undefined,
-      1, this.partnerDebtsPageSize,
-      this.partnerDebtSearch(),
-      this.isAdminMode() ? this.partnerDebtCommercialSearch() : undefined,
-      this.selectedPartnerCode || undefined
-    ).subscribe({
-      next: (res) => {
-        if (requestVersion !== this.partnerDebtRequestVersion) return;
-        this.partnerDebts.set(res.data ?? []);
-        this.partnerDebtsTotal.set(Number(res.totalCount ?? (res.data?.length ?? 0)));
-        this.ensurePartnerDebtsScrollable();
-      },
-      error: () => {
-        if (requestVersion !== this.partnerDebtRequestVersion) return;
-        this.partnerDebts.set([]);
-        this.partnerDebtsTotal.set(0);
-      }
-    });
+    this.loadPartnerDebtPage(1, requestVersion, { activate: true, foreground: true });
   }
 
   private loadPartnerDebtsIfScopeChanged(): void {
@@ -839,78 +839,114 @@ export class DashboardComponent implements OnInit {
     return this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
   }
 
-  expandPartnerDebts(): void {
-    if (!this.canExpandPartnerDebts() || this.loadingMorePartnerDebts()) return;
-    if (this.visiblePartnerDebtsCount() < this.matchingPartnerDebts().length) {
-      this.visiblePartnerDebtsCount.set(this.visiblePartnerDebtsCount() + this.partnerDebtsPageSize);
-      return;
-    }
+  goToPartnerDebtsPage(page: number): void {
+    const targetPage = Math.max(1, Math.min(page, this.partnerDebtsTotalPages()));
+    if (targetPage === this.partnerDebtsCurrentPage()) return;
+    this.partnerDebtsCurrentPage.set(targetPage);
+    this.partnerDebtsPage = Math.max(this.partnerDebtsPage, targetPage);
+    this.resetPartnerDebtsScrollTop();
+    this.loadPartnerDebtPage(targetPage, this.partnerDebtRequestVersion, { activate: true, foreground: true });
+    this.loadPartnerDebtPage(targetPage + 1, this.partnerDebtRequestVersion, { background: true });
+  }
 
-    this.loadingMorePartnerDebts.set(true);
-    const requestVersion = this.partnerDebtRequestVersion;
-    const nextPage = this.partnerDebtsPage + 1;
+  canGoToPreviousPartnerDebtsPage(): boolean {
+    return this.partnerDebtsCurrentPage() > 1;
+  }
+
+  canGoToNextPartnerDebtsPage(): boolean {
+    return this.partnerDebtsCurrentPage() < this.partnerDebtsTotalPages();
+  }
+
+  partnerDebtsTotalPages(): number {
+    const total = this.partnerDebtsTotal();
+    if (total <= 0) return 1;
+    return Math.max(1, Math.ceil(total / this.partnerDebtsPageSize));
+  }
+
+  partnerDebtsPageSummary(): string {
+    const total = this.partnerDebtsTotal();
+    if (total <= 0) return 'Page 1 / 1';
+    const currentPage = this.partnerDebtsCurrentPage();
+    const start = (currentPage - 1) * this.partnerDebtsPageSize + 1;
+    const end = Math.min(currentPage * this.partnerDebtsPageSize, total);
+    return `Page ${currentPage} / ${this.partnerDebtsTotalPages()} - ${start}-${end} sur ${total}`;
+  }
+
+  isPartnerDebtBackgroundLoading(): boolean {
+    return [...this.partnerDebtPagesLoading()].some(page => page !== this.partnerDebtsCurrentPage());
+  }
+
+  isCurrentPartnerDebtPageLoading(): boolean {
+    return this.partnerDebtPagesLoading().has(this.partnerDebtsCurrentPage());
+  }
+
+  private loadPartnerDebtPage(
+    page: number,
+    requestVersion: number,
+    options: { activate?: boolean; foreground?: boolean; background?: boolean } = {}
+  ): void {
+    if (page < 1) return;
+    const totalPages = this.partnerDebtsTotalPages();
+    if (this.partnerDebtsTotal() > 0 && page > totalPages) return;
+    if (this.partnerDebtPagesLoaded.has(page)) return;
+    if (this.partnerDebtPagesLoading().has(page)) return;
+
+    this.setPartnerDebtPageLoading(page, true);
+    if (options.foreground) this.loadingMorePartnerDebts.set(true);
     this.reportingApi.getPartnerDebts(
       this.currentDebtSalesPersonCode() ?? undefined,
-      nextPage, this.partnerDebtsPageSize,
+      page, this.partnerDebtsPageSize,
       this.partnerDebtSearch(),
       this.isAdminMode() ? this.partnerDebtCommercialSearch() : undefined,
       this.selectedPartnerCode || undefined
     ).subscribe({
       next: (res) => {
         if (requestVersion !== this.partnerDebtRequestVersion) {
-          this.loadingMorePartnerDebts.set(false);
+          this.setPartnerDebtPageLoading(page, false);
+          if (options.foreground) this.loadingMorePartnerDebts.set(false);
           return;
         }
-        this.partnerDebtsPage = nextPage;
-        this.partnerDebts.set([...this.partnerDebts(), ...(res.data ?? [])]);
+        this.partnerDebtsPage = Math.max(this.partnerDebtsPage, page);
+        this.partnerDebtPagesLoaded.add(page);
+        this.partnerDebts.set(this.mergePartnerDebts(this.partnerDebts(), res.data ?? []));
         this.partnerDebtsTotal.set(Number(res.totalCount ?? this.partnerDebtsTotal()));
-        this.visiblePartnerDebtsCount.set(this.visiblePartnerDebtsCount() + this.partnerDebtsPageSize);
-        this.loadingMorePartnerDebts.set(false);
-        this.ensurePartnerDebtsScrollable();
+        this.setPartnerDebtPageLoading(page, false);
+        if (options.foreground) this.loadingMorePartnerDebts.set(false);
+        if (options.activate) this.partnerDebtsCurrentPage.set(page);
+        if (page === 1 || options.background) this.preloadNextPartnerDebtPage(page + 1, requestVersion);
       },
       error: () => {
         if (requestVersion !== this.partnerDebtRequestVersion) {
-          this.loadingMorePartnerDebts.set(false);
+          this.setPartnerDebtPageLoading(page, false);
+          if (options.foreground) this.loadingMorePartnerDebts.set(false);
           return;
         }
-        this.loadingMorePartnerDebts.set(false);
+        this.setPartnerDebtPageLoading(page, false);
+        if (options.foreground) this.loadingMorePartnerDebts.set(false);
       }
     });
   }
 
-  onPartnerDebtsScroll(event: Event): void {
-    const el = event.target as HTMLElement | null;
-    if (!el || !this.canExpandPartnerDebts() || this.loadingMorePartnerDebts()) return;
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceFromBottom <= 80) this.expandPartnerDebts();
+  private preloadNextPartnerDebtPage(page: number, requestVersion: number): void {
+    if (requestVersion !== this.partnerDebtRequestVersion) return;
+    if (this.partnerDebtsTotal() > 0 && page > this.partnerDebtsTotalPages()) return;
+    setTimeout(() => this.loadPartnerDebtPage(page, requestVersion, { background: true }), 80);
   }
 
-  private loadMorePartnerDebtsIfNeeded(): void {
-    if (!this.canExpandPartnerDebts() || this.loadingMorePartnerDebts()) return;
-
-    const table = document.querySelector<HTMLElement>('.debts-table-scroll');
-    if (table) {
-      const tableBottom = table.getBoundingClientRect().bottom;
-      if (tableBottom <= window.innerHeight + 120) {
-        this.expandPartnerDebts();
-      }
-      return;
-    }
-
-    const documentElement = document.documentElement;
-    const distanceFromBottom = documentElement.scrollHeight - window.scrollY - window.innerHeight;
-    if (distanceFromBottom <= 120) this.expandPartnerDebts();
-  }
-
-  private ensurePartnerDebtsScrollable(): void {
-    setTimeout(() => {
-      if (!this.canExpandPartnerDebts() || this.loadingMorePartnerDebts()) return;
-      const table = document.querySelector<HTMLElement>('.debts-table-scroll');
-      if (!table) return;
-      if (table.scrollHeight <= table.clientHeight + 4) {
-        this.expandPartnerDebts();
-      }
+  private mergePartnerDebts(current: PartnerDebtItem[], incoming: PartnerDebtItem[]): PartnerDebtItem[] {
+    const map = new Map<string, PartnerDebtItem>();
+    [...current, ...incoming].forEach(row => {
+      const key = String(row.cardCode ?? '').trim().toLowerCase();
+      if (key) map.set(key, row);
     });
+    return [...map.values()];
+  }
+
+  private setPartnerDebtPageLoading(page: number, loading: boolean): void {
+    const next = new Set(this.partnerDebtPagesLoading());
+    if (loading) next.add(page);
+    else next.delete(page);
+    this.partnerDebtPagesLoading.set(next);
   }
 
   private resetPartnerDebtsScrollTop(): void {
@@ -970,11 +1006,13 @@ export class DashboardComponent implements OnInit {
   onPeriodTypeChange(): void { this.load(); }
 
   onDashboardCommercialInput(value: string): void {
+    this.dashboardCommercialReplaceOnType = false;
     this.dashboardCommercialSearch.set(String(value ?? ''));
     this.openDashboardCommercialSuggestions = true;
   }
 
   openDashboardCommercialPanel(): void {
+    this.dashboardCommercialReplaceOnType = this.selectedSalesPersonCode > 0 || this.dashboardCommercialSearch() === 'Tous les commerciaux';
     this.openDashboardCommercialSuggestions = true;
     this.openDashboardPartnerSuggestions = false;
     this.openPartnerDebtSuggestions = false;
@@ -1000,12 +1038,14 @@ export class DashboardComponent implements OnInit {
   }
 
   onDashboardPartnerInput(value: string): void {
+    this.dashboardPartnerReplaceOnType = false;
     this.dashboardPartnerSearch.set(String(value ?? ''));
     this.selectedPartnerCode = '';
     this.openDashboardPartnerSuggestions = true;
   }
 
   openDashboardPartnerPanel(): void {
+    this.dashboardPartnerReplaceOnType = !!this.selectedPartnerCode || this.dashboardPartnerSearch() === 'Tous les partenaires';
     this.openDashboardCommercialSuggestions = false;
     this.openDashboardPartnerSuggestions = true;
     this.openPartnerDebtSuggestions = false;
@@ -1025,6 +1065,25 @@ export class DashboardComponent implements OnInit {
       event.preventDefault();
       this.selectDashboardPartner(matches[0]);
     }
+  }
+
+  replaceDashboardSearchOnTyping(event: KeyboardEvent, field: 'commercial' | 'partner'): void {
+    const shouldReplace = field === 'commercial'
+      ? this.dashboardCommercialReplaceOnType
+      : this.dashboardPartnerReplaceOnType;
+    if (!shouldReplace || event.ctrlKey || event.metaKey || event.altKey) return;
+
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      if (field === 'commercial') this.onDashboardCommercialInput('');
+      else this.onDashboardPartnerInput('');
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    if (field === 'commercial') this.onDashboardCommercialInput(event.key);
+    else this.onDashboardPartnerInput(event.key);
   }
 
   onPartnerDebtSearchInput(value: string): void {
