@@ -407,9 +407,10 @@ export class ReportingComponent implements OnInit {
   };
 
   readonly estAdmin = computed(() => this.auth.hasRole(['Admin', 'Manager']));
-  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(c =>
-    c.salesPersonCode > 0 && String(c.role ?? '').trim().toLowerCase() === 'commercial'
-  ));
+  readonly commerciaux = computed(() => (this.data()?.teamMembers ?? []).filter(c => {
+    const name = String(c.salesPersonName ?? '').trim().toLowerCase();
+    return c.salesPersonCode > 0 && name !== 'administrateur';
+  }));
 
   @HostListener('document:click', ['$event'])
   fermerSuggestionsSiClicDehors(event: MouseEvent): void {

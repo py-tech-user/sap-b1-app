@@ -1761,9 +1761,9 @@ SELECT
 FROM OCRD BP
 LEFT JOIN OINV I
   ON I.CardCode = BP.CardCode
-  AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+  AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode OR ISNULL(BP.SlpCode, 0) = @salesPersonCode)
 WHERE BP.CardType = 'C'
-  AND (@applyScope = 0 OR BP.SlpCode = @salesPersonCode)
+  AND (@applyScope = 0 OR BP.SlpCode = @salesPersonCode OR I.SlpCode = @salesPersonCode)
 GROUP BY BP.CardCode
 ORDER BY MAX(BP.CardName), BP.CardCode;";
 
@@ -1905,7 +1905,9 @@ SELECT PeriodKey, Revenue, PendingAmount FROM (
   WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo
     AND ISNULL(O.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR O.CardCode = @cardCode)
-    AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode)
+    AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode OR EXISTS (
+      SELECT 1 FROM OCRD BP WHERE BP.CardCode = O.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+    ))
   GROUP BY CONVERT(char({periodKeyLength}), O.DocDate, 120)
   UNION ALL
   SELECT CONVERT(char({periodKeyLength}), D.DocDate, 120) AS PeriodKey, 0 AS Revenue,
@@ -1914,7 +1916,9 @@ SELECT PeriodKey, Revenue, PendingAmount FROM (
   WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo
     AND ISNULL(D.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR D.CardCode = @cardCode)
-    AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode)
+    AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode OR EXISTS (
+      SELECT 1 FROM OCRD BP WHERE BP.CardCode = D.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+    ))
   GROUP BY CONVERT(char({periodKeyLength}), D.DocDate, 120)
 ) src
 ORDER BY PeriodKey;";
@@ -3270,10 +3274,24 @@ ORDER BY C.Revenue DESC;";
             r => Convert.ToDecimal(r[0]));
 
         var pendingRevenueOrders = await ExecAsync("PendingRevenueOrders",
-            "SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)",
+            @"SELECT ISNULL(SUM(O.DocTotal), 0)
+              FROM ORDR O
+              WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo
+                AND ISNULL(O.CANCELED, 'N') <> 'Y'
+                AND ISNULL(O.DocStatus,'O') = 'O'
+                AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode OR EXISTS (
+                  SELECT 1 FROM OCRD BP WHERE BP.CardCode = O.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+                ))",
             r => Convert.ToDecimal(r[0]));
         var pendingRevenueDeliveries = await ExecAsync("PendingRevenueDeliveries",
-            "SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyScope = 0 OR SlpCode = @salesPersonCode)",
+            @"SELECT ISNULL(SUM(D.DocTotal), 0)
+              FROM ODLN D
+              WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo
+                AND ISNULL(D.CANCELED, 'N') <> 'Y'
+                AND ISNULL(D.DocStatus,'O') = 'O'
+                AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode OR EXISTS (
+                  SELECT 1 FROM OCRD BP WHERE BP.CardCode = D.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode
+                ))",
             r => Convert.ToDecimal(r[0]));
         result.PendingRevenue = pendingRevenueOrders + pendingRevenueDeliveries;
 
@@ -3405,8 +3423,8 @@ SELECT
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ORIN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS CreditNotesAmount,
   (SELECT COUNT(1) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsCount,
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsAmount,
-  (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDR WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS PendingRevenueOrders,
-  (SELECT ISNULL(SUM(DocTotal), 0) FROM ODLN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND ISNULL(CANCELED, 'N') <> 'Y' AND ISNULL(DocStatus,'O') = 'O' AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS PendingRevenueDeliveries,
+  (SELECT ISNULL(SUM(O.DocTotal), 0) FROM ORDR O WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND ISNULL(O.CANCELED, 'N') <> 'Y' AND ISNULL(O.DocStatus,'O') = 'O' AND (@applyCard = 0 OR O.CardCode = @cardCode) AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode OR EXISTS (SELECT 1 FROM OCRD BP WHERE BP.CardCode = O.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode))) AS PendingRevenueOrders,
+  (SELECT ISNULL(SUM(D.DocTotal), 0) FROM ODLN D WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND ISNULL(D.CANCELED, 'N') <> 'Y' AND ISNULL(D.DocStatus,'O') = 'O' AND (@applyCard = 0 OR D.CardCode = @cardCode) AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode OR EXISTS (SELECT 1 FROM OCRD BP WHERE BP.CardCode = D.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode))) AS PendingRevenueDeliveries,
   (SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyCard = 0 OR I.CardCode = @cardCode) AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)) AS CollectedRevenue,
   (SELECT COUNT(DISTINCT Q.DocEntry) FROM OQUT Q WHERE Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo AND (@applyCard = 0 OR Q.CardCode = @cardCode) AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM RDR1 WHERE RDR1.BaseType = 23 AND RDR1.BaseEntry = Q.DocEntry)) AS ConvertedQuotesCount,
   (SELECT COUNT(DISTINCT O.DocEntry) FROM ORDR O WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND (@applyCard = 0 OR O.CardCode = @cardCode) AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM DLN1 WHERE DLN1.BaseType = 17 AND DLN1.BaseEntry = O.DocEntry)) AS ConvertedOrdersCount,

@@ -265,6 +265,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
             }
           </div>
 
+          @if (showTopClientsRevenueBlock()) {
           <div class="revenue-block">
             <h2>Top 5 partenaires par chiffre d'affaires</h2>
             @if ((r.topClients ?? []).length) {
@@ -284,6 +285,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
               <p class="empty-msg">Aucun client à afficher sur la période</p>
             }
           </div>
+          }
         </section>
       }
 
@@ -531,7 +533,7 @@ export class DashboardComponent implements OnInit {
   private partnersLoadVersion = 0;
   private partnersBackgroundLoading = false;
   private partnerDebtsPage = 1;
-  private readonly partnerDebtsPageSize = 50;
+  private readonly partnerDebtsPageSize = 15;
   private partnerDebtPagesLoaded = new Set<number>();
   private partnerDebtSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private partnerDebtRequestVersion = 0;
@@ -679,6 +681,10 @@ export class DashboardComponent implements OnInit {
 
   private shouldBreakdownByCommercial(): boolean {
     return this.isAdminMode() && this.selectedSalesPersonCode <= 0 && !this.selectedPartnerCode;
+  }
+
+  showTopClientsRevenueBlock(): boolean {
+    return this.shouldBreakdownByCommercial();
   }
 
   ngOnInit(): void {

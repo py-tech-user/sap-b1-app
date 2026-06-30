@@ -38,7 +38,7 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
               (focus)="openCustomerSuggestions()"
               (keydown)="replaceCustomerSearchOnTyping($event)"
               (keydown.enter)="selectCustomerIfUnique($event)"
-              placeholder="Rechercher et sélectionner client"
+              placeholder="Rechercher et sÃ©lectionner client"
               [readonly]="isGenerationDraft()" />
             @if (openCustomerPanel() && filteredCustomers().length) {
               <div class="customer-suggestions">
@@ -91,7 +91,7 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
 
         @if (isGenerationDraft()) {
           <p class="lines-hint">
-            Ajustez librement les quantités. Pour retirer une ligne, utilisez Suppr. Il faut au moins une ligne pour valider la création.
+            Ajustez librement les quantitÃ©s. Pour retirer une ligne, utilisez Suppr. Il faut au moins une ligne pour valider la crÃ©ation.
           </p>
         }
 
@@ -129,13 +129,13 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
                 <input
                   formControlName="productLookup"
                   list="product-options"
-                  placeholder="Rechercher et sélectionner article"
+                  placeholder="Rechercher et sÃ©lectionner article"
                   (input)="onProductLookupInput(i, $event)"
                   (blur)="onProductLookupBlur(i)"
                   [readonly]="!canEditItemFields(i)" />
 
                 <span class="mobile-label">Quantite</span>
-                <input type="number" formControlName="quantity" min="1" step="1" placeholder="Qté" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
+                <input type="number" formControlName="quantity" min="1" step="1" placeholder="QuantitÃ©" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
                 <span class="mobile-label">Warehouse code</span>
                 <input formControlName="warehouseCode" placeholder="Ex: 01" aria-label="WarehouseCode" [readonly]="!canEditItemFields(i)" />
                 <span class="mobile-label">Prix HT</span>
@@ -322,20 +322,20 @@ export class DocumentFormComponent implements OnInit {
   readonly isCompactForm = computed(() => this.isEdit() || this.isGenerationDraft());
   readonly pageTitle = computed(() => {
     if (this.isGenerationDraft()) {
-      return `${this.meta().icon} Préparer ${this.meta().singular}`;
+      return `${this.meta().icon} PrÃ©parer ${this.meta().singular}`;
     }
-    return `${this.meta().icon} ${this.isEdit() ? 'Éditer' : 'Créer'} ${this.meta().singular}`;
+    return `${this.meta().icon} ${this.isEdit() ? 'Ã‰diter' : 'CrÃ©er'} ${this.meta().singular}`;
   });
   readonly submitButtonLabel = computed(() => {
     if (this.saving()) {
-      if (this.isEdit()) return 'Mise à jour...';
-      if (this.isGenerationDraft()) return `Validation de la création du ${this.entityLabel()}...`;
-      return 'Création...';
+      if (this.isEdit()) return 'Mise Ã  jour...';
+      if (this.isGenerationDraft()) return `Validation de la crÃ©ation du ${this.entityLabel()}...`;
+      return 'CrÃ©ation...';
     }
 
-    if (this.isEdit()) return 'Mettre à jour';
-    if (this.isGenerationDraft()) return `Valider la création du ${this.entityLabel()}`;
-    return 'Créer';
+    if (this.isEdit()) return 'Mettre Ã  jour';
+    if (this.isGenerationDraft()) return `Valider la crÃ©ation du ${this.entityLabel()}`;
+    return 'CrÃ©er';
   });
   readonly saving = signal(false);
   readonly error = signal('');
@@ -710,13 +710,13 @@ export class DocumentFormComponent implements OnInit {
     if (!Number.isFinite(quantity) || quantity <= 0) {
       group.patchValue({ quantity: 1 }, { emitEvent: false });
       if (this.isGenerationDraft()) {
-        this.error.set('Une ligne ne peut pas avoir une quantité à 0. Supprimez la ligne si besoin.');
+        this.error.set('Une ligne ne peut pas avoir une quantitÃ© Ã  0. Supprimez la ligne si besoin.');
       }
     } else if (this.shouldCapGeneratedQuantity()) {
       const maxQuantity = Number(group.get('maxQuantity')?.value ?? 0);
       if (Number.isFinite(maxQuantity) && maxQuantity > 0 && quantity > maxQuantity) {
         group.patchValue({ quantity: maxQuantity }, { emitEvent: false });
-        this.error.set('La quantité du document cible ne peut pas dépasser la quantité du document source.');
+        this.error.set('La quantitÃ© du document cible ne peut pas dÃ©passer la quantitÃ© du document source.');
       }
     }
 
@@ -1179,7 +1179,7 @@ export class DocumentFormComponent implements OnInit {
     const sourceResource = this.sourceResource();
     const sourceDocumentId = this.sourceDocumentId();
     if (!sourceResource || !sourceDocumentId) {
-      this.error.set('Document source introuvable pour préparer le brouillon.');
+      this.error.set('Document source introuvable pour prÃ©parer le brouillon.');
       return;
     }
 
@@ -1217,7 +1217,7 @@ export class DocumentFormComponent implements OnInit {
           this.syncLineProductsByItemCode();
 
           if (this.lines.length === 0) {
-            this.error.set('Aucune ligne ouverte disponible pour créer ce document.');
+            this.error.set('Aucune ligne ouverte disponible pour crÃ©er ce document.');
           }
         },
         error: () => this.error.set('Erreur lors du chargement du document source.')
