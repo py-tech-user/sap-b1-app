@@ -1,7 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
@@ -352,6 +352,7 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   openPartnerSearchSuggestions = false;
   typeInput = '';
   private readonly pageCache = new Map<number, CustomerTableRow[]>();
+  private pendingCreatedCustomer: CustomerTableRow | null = null;
   appliedSearch = signal('');
   appliedType = signal('');
   filteredCustomers = computed(() => {
@@ -405,7 +406,7 @@ export class CustomerListComponent implements OnInit, OnDestroy {
     }
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   @HostListener('document:click', ['$event'])
   closePartnerSearchSuggestions(event: MouseEvent): void {
@@ -443,8 +444,13 @@ export class CustomerListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.pendingCreatedCustomer = this.readCreatedCustomerFromNavigation();
     this.applyFilters();
     this.loadCustomers();
+    if (this.pendingCreatedCustomer) {
+      this.customers.set([this.pendingCreatedCustomer]);
+      this.totalCount.set(Math.max(this.totalCount(), 1));
+    }
     if (typeof window !== 'undefined') {
       window.addEventListener(SAP_REFRESH_EVENT, this.refreshListener);
     }
@@ -494,15 +500,19 @@ export class CustomerListComponent implements OnInit, OnDestroy {
     this.http.get<any>(this.sapEndpoint, { params }).subscribe({
       next: (res) => {
         const payload = this.extractResponseValue(res);
-        const mappedData = payload.map((row) => mapCustomer(row));
+        const loadedData = payload.map((row) => mapCustomer(row));
+        const mappedData = page === 1 ? this.withPendingCreatedCustomer(loadedData) : loadedData;
         this.pageCache.set(page, mappedData);
 
-        const totalCount = Number(
+        let totalCount = Number(
           res?.totalCount ?? res?.TotalCount ??
           res?.data?.totalCount ?? res?.data?.TotalCount ??
           res?.Data?.totalCount ?? res?.Data?.TotalCount ??
           mappedData.length
         );
+        if (page === 1 && this.pendingCreatedCustomer && !this.rowsIncludeCustomer(loadedData, this.pendingCreatedCustomer)) {
+          totalCount += 1;
+        }
         this.totalCount.set(Number.isFinite(totalCount) && totalCount >= 0 ? totalCount : mappedData.length);
 
         if (page === 1) {
@@ -555,6 +565,29 @@ export class CustomerListComponent implements OnInit, OnDestroy {
     }
 
     this.customers.set(Array.from(merged.values()));
+  }
+
+  private readCreatedCustomerFromNavigation(): CustomerTableRow | null {
+    if (typeof window === 'undefined') return null;
+    const state = (this.router.getCurrentNavigation()?.extras.state ?? window.history.state) as { createdCustomer?: SapCustomerResponse };
+    const row = state?.createdCustomer;
+    if (!row || typeof row !== 'object') return null;
+    const mapped = mapCustomer(row);
+    return mapped.code !== '-' || mapped.name !== '-' ? mapped : null;
+  }
+
+  private withPendingCreatedCustomer(rows: CustomerTableRow[]): CustomerTableRow[] {
+    if (!this.pendingCreatedCustomer || this.rowsIncludeCustomer(rows, this.pendingCreatedCustomer)) return rows;
+    return [this.pendingCreatedCustomer, ...rows];
+  }
+
+  private rowsIncludeCustomer(rows: CustomerTableRow[], customer: CustomerTableRow): boolean {
+    const code = (customer.code || '').trim();
+    if (code && code !== '-') {
+      return rows.some(row => (row.code || '').trim().toLowerCase() === code.toLowerCase());
+    }
+    const name = (customer.name || '').trim();
+    return !!name && name !== '-' && rows.some(row => (row.name || '').trim().toLowerCase() === name.toLowerCase());
   }
 
   prev(): void {

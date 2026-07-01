@@ -16,7 +16,30 @@ Chart.register(...registerables);
 type SortDirection = 'none' | 'asc' | 'desc';
 type PartnerDebtSortKey = 'salesPersonName' | 'cardCode' | 'cardName' | 'partnerOwesCompanyAmount' | 'companyOwesPartnerAmount' | 'balance';
 type PeriodeType = 'week' | 'month' | 'quarter' | 'year' | 'custom';
-type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
+type RevenueBreakdownRow = {
+  label: string;
+  revenue: number;
+  collected: number;
+  percent: number;
+  collectedRate: number;
+  revenueWidth: number;
+  collectedWidth: number;
+  referenceLabel: string;
+};
+type DashboardFilterState = {
+  periode?: PeriodeType;
+  selectedMonth?: string;
+  selectedWeek?: string;
+  selectedQuarter?: number;
+  selectedYear?: number;
+  evolutionYear?: number;
+  dateDebut?: string;
+  dateFin?: string;
+  selectedSalesPersonCode?: number;
+  selectedPartnerCode?: string;
+  dashboardCommercialSearch?: string;
+  dashboardPartnerSearch?: string;
+};
 
 @Component({
   selector: 'app-dashboard',
@@ -39,19 +62,19 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
         @if (periode === 'week') {
           <label class="filter-field">
             Semaine
-            <input type="week" [(ngModel)]="selectedWeek" (change)="load()" />
+            <input type="week" [(ngModel)]="selectedWeek" (change)="onDashboardFilterChange()" />
           </label>
         }
         @if (periode === 'month') {
           <label class="filter-field">
             Mois
-            <input type="month" [(ngModel)]="selectedMonth" (change)="load()" />
+            <input type="month" [(ngModel)]="selectedMonth" (change)="onDashboardFilterChange()" />
           </label>
         }
         @if (periode === 'quarter') {
           <label class="filter-field">
             Trimestre
-            <select [(ngModel)]="selectedQuarter" (change)="load()">
+            <select [(ngModel)]="selectedQuarter" (change)="onDashboardFilterChange()">
               <option [ngValue]="1">T1</option>
               <option [ngValue]="2">T2</option>
               <option [ngValue]="3">T3</option>
@@ -60,7 +83,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           </label>
           <label class="filter-field">
             Année
-            <select [(ngModel)]="selectedYear" (change)="load()">
+            <select [(ngModel)]="selectedYear" (change)="onDashboardFilterChange()">
               @for (year of availableYears; track year) {
                 <option [ngValue]="year">{{ year }}</option>
               }
@@ -70,7 +93,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
         @if (periode === 'year') {
           <label class="filter-field">
             Année
-            <select [(ngModel)]="selectedYear" (change)="load()">
+            <select [(ngModel)]="selectedYear" (change)="onDashboardFilterChange()">
               @for (year of availableYears; track year) {
                 <option [ngValue]="year">{{ year }}</option>
               }
@@ -80,11 +103,11 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
         @if (periode === 'custom') {
           <label class="filter-field">
             Début
-            <input type="date" [(ngModel)]="dateDebut" (change)="load()" />
+            <input type="date" [(ngModel)]="dateDebut" (change)="onDashboardFilterChange()" />
           </label>
           <label class="filter-field">
             Fin
-            <input type="date" [(ngModel)]="dateFin" (change)="load()" />
+            <input type="date" [(ngModel)]="dateFin" (change)="onDashboardFilterChange()" />
           </label>
         }
         @if (isAdminMode() && visibleTeamMembers().length) {
@@ -138,18 +161,8 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
             <div class="kpi-card">
               <h2 class="kpi-label">Taux d'objectif de la période</h2>
               <span class="kpi-value">{{ formatPct(r.kpis.targetAchievementRate) }}</span>
-              @if (canEditTarget()) {
-                <label class="target-editor">
-                  Objectif CA mensuel par commercial
-                  <input type="number" min="0" step="100" [ngModel]="monthlyTargetInput()" (ngModelChange)="monthlyTargetInput.set($event)" (change)="saveMonthlyTarget()" />
-                </label>
-                <span class="kpi-sub">Objectif selon la sélection: {{ formatMoney(r.kpis.periodTarget) }}</span>
-              } @else {
-                <span class="kpi-sub">Objectif mensuel: {{ formatMoney(r.kpis.monthlyTarget) }}</span>
-                <span class="kpi-sub">Objectif selon la sélection: {{ formatMoney(r.kpis.periodTarget) }}</span>
-              }
-              @if (targetSaving()) { <span class="kpi-sub">Enregistrement...</span> }
-              @if (targetMessage()) { <span class="kpi-sub">{{ targetMessage() }}</span> }
+              <span class="kpi-sub">Objectif mensuel SAP: {{ formatMoney(r.kpis.monthlyTarget) }}</span>
+              <span class="kpi-sub">Objectif selon la sélection: {{ formatMoney(r.kpis.periodTarget) }}</span>
               <div class="gauge-wrapper">
                 <div class="gauge-bg">
                   <div class="gauge-fill" [style.width.%]="Math.min(r.kpis.targetAchievementRate, 100)" [style.background]="gaugeColor(r.kpis.targetAchievementRate)"></div>
@@ -165,45 +178,66 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           <div class="transform-grid">
             <div class="transform-card">
               <div class="transform-header">
-                <span>Devis → BC</span>
+                <span>Devis</span>
                 <strong>{{ formatPct(r.kpis.quoteToOrderRate || r.kpis.conversionRate) }}</strong>
               </div>
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="Math.min(r.kpis.quoteToOrderRate || r.kpis.conversionRate, 100)"></div>
+              <div class="transform-chart">
+                <canvas baseChart
+                  [data]="transformationChartData('quote')"
+                  [options]="transformationChartOptions"
+                  [type]="'pie'">
+                </canvas>
               </div>
-              <div class="transform-detail">{{ r.kpis.quotesCount }} devis → {{ getConvertedCount('quote') }} BC</div>
+              <div class="transform-detail">
+                <span>{{ getConvertedCount('quote') }} transformés en BC</span>
+                <span>{{ getUnconvertedCount('quote') }} non transformés</span>
+              </div>
             </div>
             <div class="transform-card">
               <div class="transform-header">
-                <span>BC → BL</span>
+                <span>BC</span>
                 <strong>{{ formatPct(r.kpis.orderToDeliveryRate) }}</strong>
               </div>
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="Math.min(r.kpis.orderToDeliveryRate, 100)"></div>
+              <div class="transform-chart">
+                <canvas baseChart
+                  [data]="transformationChartData('order')"
+                  [options]="transformationChartOptions"
+                  [type]="'pie'">
+                </canvas>
               </div>
-              <div class="transform-detail">{{ r.kpis.ordersCount }} BC → {{ getConvertedCount('order') }} BL</div>
+              <div class="transform-detail">
+                <span>{{ getConvertedCount('order') }} transformés en BL</span>
+                <span>{{ getUnconvertedCount('order') }} non transformés</span>
+              </div>
             </div>
             <div class="transform-card">
               <div class="transform-header">
-                <span>BL → Facture</span>
+                <span>BL</span>
                 <strong>{{ formatPct(r.kpis.deliveryToInvoiceRate) }}</strong>
               </div>
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="Math.min(r.kpis.deliveryToInvoiceRate, 100)"></div>
+              <div class="transform-chart">
+                <canvas baseChart
+                  [data]="transformationChartData('delivery')"
+                  [options]="transformationChartOptions"
+                  [type]="'pie'">
+                </canvas>
               </div>
-              <div class="transform-detail">{{ r.kpis.deliveryNotesCount }} BL → {{ getConvertedCount('delivery') }} factures</div>
+              <div class="transform-detail">
+                <span>{{ getConvertedCount('delivery') }} transformés en factures</span>
+                <span>{{ getUnconvertedCount('delivery') }} non transformés</span>
+              </div>
             </div>
           </div>
         </section>
       }
 
-      <!-- 5. Évolution CA net vs CA en attente -->
+      <!-- 5. Courbes d'évolution -->
       <section class="section">
         <div class="section-header">
-          <h2>Évolution CA net vs CA en attente — {{ evolutionYear }}</h2>
+          <h2>Courbes d'évolution — {{ evolutionYear }}</h2>
           <label class="chart-year-field">
             Année
-            <select [(ngModel)]="evolutionYear" (change)="loadEvolution()">
+            <select [(ngModel)]="evolutionYear" (change)="onEvolutionYearChange()">
               @for (year of availableYears; track year) {
                 <option [ngValue]="year">{{ year }}</option>
               }
@@ -211,12 +245,19 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           </label>
         </div>
         @if (evolutionPoints().length) {
-          <div class="chart-container">
-            <canvas baseChart
-              [data]="chartData()"
-              [options]="chartOptions"
-              [type]="'line'">
-            </canvas>
+          <div class="evolution-chart-grid">
+            <div class="evolution-chart-block">
+              <h3>CA net vs Encaissement</h3>
+              <div class="chart-container">
+                <canvas baseChart [data]="revenueCollectionChartData()" [options]="moneyChartOptions" [type]="'line'"></canvas>
+              </div>
+            </div>
+            <div class="evolution-chart-block">
+              <h3>Évolution des documents</h3>
+              <div class="chart-container">
+                <canvas baseChart [data]="documentsEvolutionChartData()" [options]="moneyChartOptions" [type]="'line'"></canvas>
+              </div>
+            </div>
           </div>
         } @else if (!loadingEvolution()) {
           <p class="empty-msg">Aucune donnée d'évolution disponible</p>
@@ -233,9 +274,13 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                   <div class="revenue-row">
                     <div>
                       <strong>{{ row.label }}</strong>
-                      <span>{{ formatPct(row.percent) }}</span>
+                      <span>CA: {{ formatPct(row.percent) }} {{ row.referenceLabel }}</span>
+                      <span class="collected-label">Encaissé: {{ formatMoney(row.collected) }} · {{ formatPct(row.collectedRate) }} {{ row.referenceLabel }}</span>
                     </div>
-                    <div class="revenue-bar"><i [style.width.%]="row.percent"></i></div>
+                    <div class="revenue-meter">
+                      <div class="revenue-bar revenue-bar-primary" title="CA total"><i [style.width.%]="row.revenueWidth"></i></div>
+                      <div class="revenue-bar revenue-bar-collected" title="Montant encaissé"><i [style.width.%]="row.collectedWidth"></i></div>
+                    </div>
                     <b>{{ formatMoney(row.revenue) }}</b>
                   </div>
                 }
@@ -247,7 +292,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
 
           @if (showTopClientsRevenueBlock()) {
           <div class="revenue-block">
-            <h2>Top 5 partenaires par chiffre d'affaires</h2>
+            <h2>Top 5 partenaires</h2>
             @if ((r.topClients ?? []).length) {
               <div class="revenue-breakdown">
                 @for (client of (r.topClients ?? []).slice(0, 5); track client.cardCode) {
@@ -255,8 +300,12 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
                     <div>
                       <strong>{{ client.cardName || client.cardCode }}</strong>
                       <span>{{ client.cardCode }}</span>
+                      <span class="collected-label">Encaissé: {{ formatMoney(clampedCollectedAmount(client.paidAmount, client.revenue)) }} · {{ formatPct(topClientBarWidth(clampedCollectedAmount(client.paidAmount, client.revenue))) }} du Top 1 CA</span>
                     </div>
-                    <div class="revenue-bar"><i [style.width.%]="topClientBarWidth(client.revenue)"></i></div>
+                    <div class="revenue-meter">
+                      <div class="revenue-bar revenue-bar-primary" title="CA total"><i [style.width.%]="topClientBarWidth(client.revenue)"></i></div>
+                      <div class="revenue-bar revenue-bar-collected" title="Montant encaissé"><i [style.width.%]="topClientBarWidth(clampedCollectedAmount(client.paidAmount, client.revenue))"></i></div>
+                    </div>
                     <b>{{ formatMoney(client.revenue) }}</b>
                   </div>
                 }
@@ -268,28 +317,6 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
           }
         </section>
       }
-
-      <section class="section">
-        <h2>Top 5 partenaires par solde</h2>
-        @if (topPartnerBalances().length) {
-          <div class="balance-list">
-            @for (row of topPartnerBalances(); track row.cardCode) {
-              <div class="balance-row">
-                <div>
-                  <strong>{{ row.cardName || row.cardCode }}</strong>
-                  @if (isAdminMode()) { <span>{{ row.salesPersonName || ('#' + row.salesPersonCode) }}</span> }
-                </div>
-                <div class="balance-bar">
-                  <i [style.width.%]="balanceBarWidth(row)"></i>
-                </div>
-                <b>{{ formatSignedMoney(row.balance) }}</b>
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="empty-msg">Aucun solde client à afficher</p>
-        }
-      </section>
 
       <!-- 7. Dettes partenaires -->
       <section class="section">
@@ -369,7 +396,7 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
               <button type="button" (click)="goToPartnerDebtsPage(partnerDebtsCurrentPage() + 1)" [disabled]="!canGoToNextPartnerDebtsPage()">&#8250;</button>
             </div>
             @if (isPartnerDebtBackgroundLoading()) {
-              <p class="loading-more">Chargement des autres pages en arriÃ¨re-plan...</p>
+              <p class="loading-more">Chargement des autres pages en arriÃƒÂ¨re-plan...</p>
             }
           } @else {
             <p class="empty-msg">Aucun partenaire à afficher</p>
@@ -404,15 +431,19 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
     .gauge-fill { height: 100%; border-radius: 4px; transition: width .4s; }
 
     .transform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
-    .transform-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: .7rem; }
+    .transform-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: .7rem; display: grid; gap: .55rem; }
     .transform-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; font-size: .9rem; color: #374151; }
     .transform-header strong { font-size: 1.05rem; color: #111827; }
-    .progress-bar { height: 7px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: .35rem; }
-    .progress-fill { height: 100%; background: #3b82f6; border-radius: 4px; transition: width .4s; }
-    .transform-detail { color: #6b7280; font-size: .82rem; }
+    .transform-chart { height: 150px; position: relative; }
+    .transform-chart canvas { max-height: 150px; }
+    .transform-detail { color: #6b7280; font-size: .82rem; display: grid; gap: .18rem; }
 
     .chart-container { max-height: 320px; position: relative; }
     .chart-container canvas { max-height: 300px; }
+    .evolution-chart-grid { display: grid; gap: 1rem; }
+    .evolution-chart-block { display: grid; gap: .55rem; }
+    .evolution-chart-block + .evolution-chart-block { padding-top: .85rem; border-top: 1px solid #edf0f4; }
+    .evolution-chart-block h3 { margin: 0; color: #111827; font-size: .98rem; }
 
     .table-wrapper { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
@@ -421,8 +452,8 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
     .sort-btn { border: 0; background: transparent; padding: 0; cursor: pointer; color: inherit; font: inherit; font-weight: 700; }
     .section-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: .6rem; }
     .section-header h2 { margin: 0; }
-    .chart-year-field, .target-editor { display: grid; gap: .25rem; font-weight: 600; color: #374151; font-size: .86rem; }
-    .chart-year-field select, .target-editor input { border: 1px solid #d1d5db; border-radius: 8px; padding: .4rem .55rem; background: #fff; }
+    .chart-year-field { display: grid; gap: .25rem; font-weight: 600; color: #374151; font-size: .86rem; }
+    .chart-year-field select { border: 1px solid #d1d5db; border-radius: 8px; padding: .4rem .55rem; background: #fff; }
 
     .debts-table-scroll { height: 420px; overflow: auto; }
     .debts-table-scroll thead th { position: sticky; top: 0; z-index: 1; }
@@ -435,22 +466,20 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
     .debts-filters { margin-bottom: .6rem; display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: .7rem; max-width: 580px; }
     .debts-filters label { display: grid; gap: .3rem; font-weight: 600; color: #374151; }
     .debts-filters input { border: 1px solid #d1d5db; border-radius: 8px; padding: .4rem .6rem; }
-    .balance-list { display: grid; gap: .55rem; }
-    .balance-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 2fr) auto; gap: .75rem; align-items: center; }
-    .balance-row strong, .balance-row span { display: block; }
-    .balance-row span { color: #6b7280; font-size: .8rem; margin-top: .12rem; }
-    .balance-row b { white-space: nowrap; color: #111827; }
-    .balance-bar { height: 9px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
-    .balance-bar i { display: block; height: 100%; background: #3b82f6; border-radius: inherit; }
     .revenue-insights { display: grid; gap: 1rem; }
     .revenue-block + .revenue-block { padding-top: .85rem; border-top: 1px solid #edf0f4; }
     .revenue-breakdown { display: grid; gap: .55rem; }
-    .revenue-row { display: grid; grid-template-columns: minmax(170px, 1.2fr) minmax(120px, 2fr) auto; gap: .75rem; align-items: center; }
+    .revenue-row { display: grid; grid-template-columns: minmax(170px, 1.2fr) minmax(150px, 2fr) auto; gap: .75rem; align-items: center; }
     .revenue-row strong, .revenue-row span { display: block; }
     .revenue-row span { color: #6b7280; font-size: .8rem; margin-top: .12rem; }
+    .revenue-row .collected-label { color: #92400e; font-weight: 600; }
     .revenue-row b { white-space: nowrap; color: #111827; }
+    .revenue-meter { display: grid; gap: .28rem; }
     .revenue-bar { height: 9px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
-    .revenue-bar i { display: block; height: 100%; background: #14b8a6; border-radius: inherit; }
+    .revenue-bar i { display: block; height: 100%; border-radius: inherit; }
+    .revenue-bar-primary i { background: #14b8a6; }
+    .revenue-bar-collected { height: 6px; background: #fef3c7; }
+    .revenue-bar-collected i { background: #d4af37; }
 
     @media (max-width: 900px) {
       .transform-grid { grid-template-columns: 1fr; }
@@ -461,7 +490,6 @@ type RevenueBreakdownRow = { label: string; revenue: number; percent: number };
       .kpi-value { font-size: 1.1rem; }
       .chart-container { max-height: 260px; }
       th, td { padding: .35rem; }
-      .balance-row { grid-template-columns: 1fr; gap: .35rem; }
       .revenue-row { grid-template-columns: 1fr; gap: .35rem; }
     }
   `]
@@ -495,9 +523,6 @@ export class DashboardComponent implements OnInit {
   openPartnerDebtCommercialSuggestions = false;
   private dashboardCommercialReplaceOnType = false;
   private dashboardPartnerReplaceOnType = false;
-  readonly monthlyTargetInput = signal<number | string>(0);
-  readonly targetSaving = signal(false);
-  readonly targetMessage = signal('');
 
   readonly report = signal<CommercialReportingPayload | null>(null);
   readonly partners = signal<PartnerRow[]>([]);
@@ -574,28 +599,40 @@ export class DashboardComponent implements OnInit {
     return this.matchingPartnerDebts().slice(start, start + this.partnerDebtsPageSize);
   });
 
-  readonly topPartnerBalances = computed(() =>
-    [...this.partnerDebts()]
-      .sort((a, b) => Math.abs(Number(b.balance || 0)) - Math.abs(Number(a.balance || 0)))
-      .slice(0, 5)
-  );
-
   readonly revenueBreakdownRows = computed<RevenueBreakdownRow[]>(() => {
     const report = this.report();
     if (!report) return [];
+    const byCommercial = this.shouldBreakdownByCommercial();
     const rows = this.shouldBreakdownByCommercial()
       ? (report.teamPerformances ?? [])
-          .map(row => ({ label: row.salesPersonName || `Commercial #${row.salesPersonCode}`, revenue: Number(row.netRevenue || 0) }))
+          .map(row => {
+            const revenue = Number(row.netRevenue || 0);
+            return {
+              label: row.salesPersonName || `Commercial #${row.salesPersonCode}`,
+              revenue,
+              collected: this.clampedCollectedAmount(row.collectedRevenue, revenue),
+              base: Number(row.periodTarget || 0)
+            };
+          })
       : (report.topClients ?? [])
-          .map(row => ({ label: row.cardName || row.cardCode, revenue: Number(row.revenue || 0) }));
+          .map(row => {
+            const revenue = Number(row.revenue || 0);
+            return {
+              label: row.cardName || row.cardCode,
+              revenue,
+              collected: this.clampedCollectedAmount(row.paidAmount, revenue),
+              base: 0
+            };
+          });
     const positiveRows = rows
       .filter(row => row.revenue > 0)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, this.shouldBreakdownByCommercial() ? 3 : 5);
-    const total = positiveRows.reduce((sum, row) => sum + row.revenue, 0);
+      .slice(0, 5);
+    const topRevenue = Math.max(...positiveRows.map(row => row.revenue), 0);
     return positiveRows.map(row => ({
       ...row,
-      percent: total > 0 ? Math.round((row.revenue * 10000) / total) / 100 : 0
+      ...this.revenueBreakdownMetrics(row, byCommercial ? row.base : topRevenue),
+      referenceLabel: byCommercial ? "de l'objectif" : 'du Top 1 CA'
     }));
   });
 
@@ -627,18 +664,31 @@ export class DashboardComponent implements OnInit {
       : []
   );
 
-  readonly chartData = computed(() => {
+  readonly revenueCollectionChartData = computed(() => {
     const pts = this.evolutionPoints();
     return {
       labels: pts.length ? pts.map(p => p.monthKey) : [],
       datasets: [
-        { label: 'CA net', data: pts.map(p => p.revenue), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .3, pointRadius: 4 },
-        { label: 'CA en attente', data: pts.map(p => p.pendingRevenue), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,.1)', fill: true, tension: .3, pointRadius: 4 },
+        { label: 'CA', data: pts.map(p => Number(p.revenue || 0)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .3, pointRadius: 4 },
+        { label: 'Encaissement', data: pts.map(p => Number(p.collectedRevenue || 0)), borderColor: '#14b8a6', backgroundColor: 'rgba(20,184,166,.1)', fill: true, tension: .3, pointRadius: 4 },
       ]
     } as ChartData<'line', number[], string>;
   });
 
-  readonly chartOptions: any = {
+  readonly documentsEvolutionChartData = computed(() => {
+    const pts = this.evolutionPoints();
+    return {
+      labels: pts.length ? pts.map(p => p.monthKey) : [],
+      datasets: [
+        { label: 'Devis', data: pts.map(p => Number(p.quotesAmount || 0)), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .3, pointRadius: 4 },
+        { label: 'BC', data: pts.map(p => Number(p.ordersAmount || 0)), borderColor: '#eab308', backgroundColor: 'rgba(234,179,8,.1)', fill: true, tension: .3, pointRadius: 4 },
+        { label: 'BL', data: pts.map(p => Number(p.deliveryNotesAmount || 0)), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,.1)', fill: true, tension: .3, pointRadius: 4 },
+        { label: 'Factures', data: pts.map(p => Number(p.invoicesAmount || 0)), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.1)', fill: true, tension: .3, pointRadius: 4 },
+      ]
+    } as ChartData<'line', number[], string>;
+  });
+
+  readonly moneyChartOptions: any = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -650,13 +700,39 @@ export class DashboardComponent implements OnInit {
     }
   };
 
+  readonly transformationChartOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 700 },
+    events: ['mousemove', 'mouseout'],
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => `${ctx.label}: ${ctx.parsed}`
+        }
+      }
+    },
+    transitions: {
+      active: {
+        animation: { duration: 0 }
+      }
+    }
+  };
+
   private convertedCounts = { quote: 0, order: 0, delivery: 0 };
+  private transformationChartCache: Record<'quote' | 'order' | 'delivery', { key: string; data: ChartData<'pie', number[], string> } | null> = {
+    quote: null,
+    order: null,
+    delivery: null
+  };
+  private readonly dashboardFiltersStorageKey = 'sap-b1-dashboard-filters-v1';
   private dashboardRequestVersion = 0;
 
   revenueBreakdownTitle(): string {
     return this.shouldBreakdownByCommercial()
-      ? "Top 3 commerciaux par chiffre d'affaires"
-      : "Top 5 partenaires par chiffre d'affaires";
+      ? "Top 5 commerciaux"
+      : "Top 5 partenaires";
   }
 
   private shouldBreakdownByCommercial(): boolean {
@@ -669,7 +745,81 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.isAdminMode.set(this.auth.hasRole(['Admin', 'Manager']));
+    this.restoreDashboardFilters();
     this.load();
+  }
+
+  onDashboardFilterChange(): void {
+    this.persistDashboardFilters();
+    this.load();
+  }
+
+  private persistDashboardFilters(): void {
+    try {
+      const state: DashboardFilterState = {
+        periode: this.periode,
+        selectedMonth: this.selectedMonth,
+        selectedWeek: this.selectedWeek,
+        selectedQuarter: Number(this.selectedQuarter || 1),
+        selectedYear: Number(this.selectedYear || new Date().getFullYear()),
+        evolutionYear: Number(this.evolutionYear || new Date().getFullYear()),
+        dateDebut: this.dateDebut,
+        dateFin: this.dateFin,
+        selectedSalesPersonCode: Number(this.selectedSalesPersonCode || 0),
+        selectedPartnerCode: this.selectedPartnerCode,
+        dashboardCommercialSearch: this.dashboardCommercialSearch(),
+        dashboardPartnerSearch: this.dashboardPartnerSearch()
+      };
+      localStorage.setItem(this.dashboardFiltersStorageKey, JSON.stringify(state));
+    } catch {
+    }
+  }
+
+  private restoreDashboardFilters(): void {
+    try {
+      const raw = localStorage.getItem(this.dashboardFiltersStorageKey);
+      if (!raw) return;
+      const state = JSON.parse(raw) as DashboardFilterState;
+      if (this.isValidPeriode(state.periode)) this.periode = state.periode;
+      if (this.isValidMonthInput(state.selectedMonth)) this.selectedMonth = state.selectedMonth;
+      if (this.isValidWeekInput(state.selectedWeek)) this.selectedWeek = state.selectedWeek;
+      if (this.isValidQuarter(state.selectedQuarter)) this.selectedQuarter = Number(state.selectedQuarter);
+      if (this.isValidYear(state.selectedYear)) this.selectedYear = Number(state.selectedYear);
+      if (this.isValidYear(state.evolutionYear)) this.evolutionYear = Number(state.evolutionYear);
+      if (this.isValidDateInput(state.dateDebut)) this.dateDebut = state.dateDebut;
+      if (this.isValidDateInput(state.dateFin)) this.dateFin = state.dateFin;
+      this.selectedSalesPersonCode = Number(state.selectedSalesPersonCode || 0);
+      this.selectedPartnerCode = String(state.selectedPartnerCode ?? '').trim();
+      this.dashboardCommercialSearch.set(state.dashboardCommercialSearch || (this.selectedSalesPersonCode > 0 ? String(this.selectedSalesPersonCode) : 'Tous les commerciaux'));
+      this.dashboardPartnerSearch.set(state.dashboardPartnerSearch || (this.selectedPartnerCode || 'Tous les partenaires'));
+    } catch {
+    }
+  }
+
+  private isValidPeriode(value: unknown): value is PeriodeType {
+    return value === 'week' || value === 'month' || value === 'quarter' || value === 'year' || value === 'custom';
+  }
+
+  private isValidMonthInput(value: unknown): value is string {
+    return typeof value === 'string' && /^\d{4}-\d{2}$/.test(value);
+  }
+
+  private isValidWeekInput(value: unknown): value is string {
+    return typeof value === 'string' && /^\d{4}-W\d{2}$/.test(value);
+  }
+
+  private isValidDateInput(value: unknown): value is string {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  }
+
+  private isValidQuarter(value: unknown): boolean {
+    const quarter = Number(value);
+    return Number.isInteger(quarter) && quarter >= 1 && quarter <= 4;
+  }
+
+  private isValidYear(value: unknown): boolean {
+    const year = Number(value);
+    return Number.isInteger(year) && year >= 2000 && year <= 2100;
   }
 
   private loadPartners(): void {
@@ -735,7 +885,6 @@ export class DashboardComponent implements OnInit {
       next: (reporting) => {
         if (requestVersion !== this.dashboardRequestVersion) return;
         this.report.set(reporting.data);
-        this.monthlyTargetInput.set(reporting.data?.kpis?.monthlyTarget ?? 0);
         this.computeConvertedCounts(reporting.data);
         this.loading.set(false);
         this.loadPartnerDebtsIfScopeChanged();
@@ -757,7 +906,6 @@ export class DashboardComponent implements OnInit {
       next: (reporting) => {
         if (requestVersion !== this.dashboardRequestVersion) return;
         this.report.set(reporting.data);
-        this.monthlyTargetInput.set(reporting.data?.kpis?.monthlyTarget ?? 0);
         this.computeConvertedCounts(reporting.data);
       },
       error: () => {}
@@ -769,14 +917,54 @@ export class DashboardComponent implements OnInit {
     const k = r.kpis;
     const qRate = k.quoteToOrderRate ?? k.conversionRate ?? 0;
     this.convertedCounts = {
-      quote: k.quotesCount > 0 ? Math.round(k.quotesCount * qRate / 100) : 0,
-      order: k.ordersCount > 0 ? Math.round(k.ordersCount * (k.orderToDeliveryRate ?? 0) / 100) : 0,
-      delivery: k.deliveryNotesCount > 0 ? Math.round(k.deliveryNotesCount * (k.deliveryToInvoiceRate ?? 0) / 100) : 0,
+      quote: this.clampConvertedCount(k.quotesCount, qRate),
+      order: this.clampConvertedCount(k.ordersCount, k.orderToDeliveryRate ?? 0),
+      delivery: this.clampConvertedCount(k.deliveryNotesCount, k.deliveryToInvoiceRate ?? 0),
     };
+  }
+
+  private clampConvertedCount(total: number, rate: number): number {
+    const safeTotal = Math.max(0, Number(total || 0));
+    const converted = Math.round(safeTotal * Math.max(0, Number(rate || 0)) / 100);
+    return Math.min(safeTotal, converted);
   }
 
   getConvertedCount(type: 'quote' | 'order' | 'delivery'): number {
     return this.convertedCounts[type];
+  }
+
+  getUnconvertedCount(type: 'quote' | 'order' | 'delivery'): number {
+    return Math.max(0, this.getTransformationTotal(type) - this.getConvertedCount(type));
+  }
+
+  transformationChartData(type: 'quote' | 'order' | 'delivery'): ChartData<'pie', number[], string> {
+    const converted = this.getConvertedCount(type);
+    const unconverted = this.getUnconvertedCount(type);
+    const key = `${converted}:${unconverted}`;
+    const cached = this.transformationChartCache[type];
+    if (cached?.key === key) return cached.data;
+
+    const hasData = converted + unconverted > 0;
+    const data: ChartData<'pie', number[], string> = {
+      labels: hasData ? ['Transformés', 'Non transformés'] : ['Aucun document'],
+      datasets: [{
+        data: hasData ? [converted, unconverted] : [1],
+        backgroundColor: hasData ? ['#14b8a6', '#e5e7eb'] : ['#f3f4f6'],
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    };
+    this.transformationChartCache[type] = { key, data };
+    return data;
+  }
+
+  private getTransformationTotal(type: 'quote' | 'order' | 'delivery'): number {
+    const k = this.report()?.kpis;
+    if (!k) return 0;
+    if (type === 'quote') return Number(k.quotesCount || 0);
+    if (type === 'order') return Number(k.ordersCount || 0);
+    return Number(k.deliveryNotesCount || 0);
   }
 
   loadEvolution(): void {
@@ -948,7 +1136,7 @@ export class DashboardComponent implements OnInit {
   formatSignedMoney(value: number): string {
     const numeric = Number(value || 0);
     if (Math.abs(numeric) < 0.0001) return this.formatMoney(0);
-    const sign = numeric > 0 ? '+' : '−';
+    const sign = numeric > 0 ? '+' : 'âˆ’';
     return `${sign}${this.formatMoney(Math.abs(numeric))}`;
   }
 
@@ -962,33 +1150,12 @@ export class DashboardComponent implements OnInit {
     return '#ef4444';
   }
 
-  canEditTarget(): boolean {
-    return this.auth.hasRole(['Admin', 'Manager']);
-  }
+  onPeriodTypeChange(): void { this.onDashboardFilterChange(); }
 
-  saveMonthlyTarget(): void {
-    if (!this.canEditTarget() || this.targetSaving()) return;
-    const monthlyTarget = Math.max(0, Number(this.monthlyTargetInput() || 0));
-    this.monthlyTargetInput.set(monthlyTarget);
-    this.targetSaving.set(true);
-    this.targetMessage.set('');
-    this.reportingApi.updateMonthlyTarget({
-      monthlyTarget,
-      salesPersonCode: this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined
-    }).subscribe({
-      next: () => {
-        this.targetSaving.set(false);
-        this.targetMessage.set('Objectif enregistré.');
-        this.load();
-      },
-      error: () => {
-        this.targetSaving.set(false);
-        this.targetMessage.set("Impossible d'enregistrer l'objectif.");
-      }
-    });
+  onEvolutionYearChange(): void {
+    this.persistDashboardFilters();
+    this.loadEvolution();
   }
-
-  onPeriodTypeChange(): void { this.load(); }
 
   onDashboardCommercialInput(value: string): void {
     this.dashboardCommercialReplaceOnType = false;
@@ -1011,7 +1178,7 @@ export class DashboardComponent implements OnInit {
     if (this.selectedPartnerCode && !this.visiblePartners().some(partner => this.partnerCode(partner) === this.selectedPartnerCode)) {
       this.selectDashboardPartner(null, false);
     }
-    this.load();
+    this.onDashboardFilterChange();
   }
 
   selectDashboardCommercialIfUnique(event: Event): void {
@@ -1027,6 +1194,7 @@ export class DashboardComponent implements OnInit {
     this.dashboardPartnerSearch.set(String(value ?? ''));
     this.selectedPartnerCode = '';
     this.openDashboardPartnerSuggestions = true;
+    this.persistDashboardFilters();
   }
 
   openDashboardPartnerPanel(): void {
@@ -1041,6 +1209,7 @@ export class DashboardComponent implements OnInit {
     this.selectedPartnerCode = partner ? this.partnerCode(partner) : '';
     this.dashboardPartnerSearch.set(partner ? this.partnerName(partner) : 'Tous les partenaires');
     this.openDashboardPartnerSuggestions = false;
+    this.persistDashboardFilters();
     if (reload) this.load();
   }
 
@@ -1166,14 +1335,44 @@ export class DashboardComponent implements OnInit {
     return Number(b || 0) - Number(a || 0);
   }
 
-  balanceBarWidth(row: PartnerDebtItem): number {
-    const max = Math.max(...this.topPartnerBalances().map(item => Math.abs(Number(item.balance || 0))), 1);
-    return Math.max(4, Math.min(100, Math.abs(Number(row.balance || 0)) * 100 / max));
-  }
-
   topClientBarWidth(value: number): number {
     const max = Math.max(...(this.report()?.topClients ?? []).slice(0, 5).map(item => Number(item.revenue || 0)), 1);
-    return Math.max(4, Math.min(100, Number(value || 0) * 100 / max));
+    return this.metricBarWidth(value, max);
+  }
+
+  collectedRate(collected: number, revenue: number): number {
+    const base = Math.max(0, Number(revenue || 0));
+    if (base <= 0) return 0;
+    const safeCollected = this.clampedCollectedAmount(collected, revenue);
+    return Math.max(0, Math.min(100, Math.round(safeCollected * 10000 / base) / 100));
+  }
+
+  clampedCollectedAmount(collected: number, revenue: number): number {
+    const safeRevenue = Math.max(0, Number(revenue || 0));
+    return Math.max(0, Math.min(Number(collected || 0), safeRevenue));
+  }
+
+  private revenueBreakdownMetrics(row: { revenue: number; collected: number }, baseValue: number) {
+    const fallback = Math.max(row.revenue, row.collected, 1);
+    const base = Number(baseValue || 0) > 0 ? Number(baseValue || 0) : fallback;
+    return {
+      percent: this.metricRate(row.revenue, base),
+      collectedRate: this.metricRate(row.collected, base),
+      revenueWidth: this.metricBarWidth(row.revenue, base),
+      collectedWidth: this.metricBarWidth(row.collected, base)
+    };
+  }
+
+  private metricRate(value: number, base: number): number {
+    const safeBase = Math.max(0, Number(base || 0));
+    if (safeBase <= 0) return 0;
+    return Math.max(0, Math.round(Number(value || 0) * 10000 / safeBase) / 100);
+  }
+
+  private metricBarWidth(value: number, base: number): number {
+    const safeValue = Math.max(0, Number(value || 0));
+    if (safeValue <= 0) return 0;
+    return Math.max(4, Math.min(100, this.metricRate(safeValue, base)));
   }
 
   partnerCode(row: PartnerRow): string {

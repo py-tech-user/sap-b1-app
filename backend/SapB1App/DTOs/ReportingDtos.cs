@@ -70,6 +70,8 @@ public class CommercialSalesPersonPerformanceDto
     public int CreditNotesCount { get; set; }
     public decimal CreditNotesAmount { get; set; }
     public decimal NetRevenue { get; set; } // CA realise = Factures - Avoirs
+    public decimal CollectedRevenue { get; set; }
+    public decimal PeriodTarget { get; set; }
     public decimal PendingRevenue { get; set; } // BC open + BL open
     public int UnpaidInvoicesCount { get; set; }
     public decimal UnpaidInvoicesAmount { get; set; }
@@ -147,6 +149,15 @@ public class ReportingMonthlyRevenuePointDto
 {
     public string MonthKey { get; set; } = string.Empty;
     public decimal Revenue { get; set; }
+}
+
+public class ReportingRevenueBreakdownRowDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public decimal Revenue { get; set; }
+    public decimal Quantity { get; set; }
+    public int DocumentsCount { get; set; }
 }
 
 public class ReportingTopProductDto
@@ -338,6 +349,14 @@ public class ReportingEvolutionPointDto
     public string MonthKey { get; set; } = string.Empty;
     public decimal Revenue { get; set; }
     public decimal PendingRevenue { get; set; }
+    public decimal CollectedRevenue { get; set; }
+    public int QuotesCount { get; set; }
+    public int OrdersCount { get; set; }
+    public int DeliveryNotesCount { get; set; }
+    public decimal QuotesAmount { get; set; }
+    public decimal OrdersAmount { get; set; }
+    public decimal DeliveryNotesAmount { get; set; }
+    public decimal InvoicesAmount { get; set; }
 }
 
 public class QuoteToRelaunchDto
@@ -351,16 +370,4 @@ public class QuoteToRelaunchDto
     public int DaysSinceQuote { get; set; }
     public int SalesPersonCode { get; set; }
     public string SalesPersonName { get; set; } = string.Empty;
-}
-
-public class MonthlyTargetRequestDto
-{
-    public decimal MonthlyTarget { get; set; }
-    public int? SalesPersonCode { get; set; }
-}
-
-public class MonthlyTargetResponseDto
-{
-    public decimal MonthlyTarget { get; set; }
-    public int? SalesPersonCode { get; set; }
 }

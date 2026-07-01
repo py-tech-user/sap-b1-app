@@ -54,6 +54,8 @@ export interface ReportingSalesPerson {
   creditNotesCount: number;
   creditNotesAmount: number;
   netRevenue: number;
+  collectedRevenue: number;
+  periodTarget: number;
   pendingRevenue: number;
   unpaidInvoicesCount: number;
   unpaidInvoicesAmount: number;
@@ -269,6 +271,16 @@ export interface AdvancedReportingPayload {
   partnerReport?: PartnerFocusedReport | null;
 }
 
+export type ReportingRevenueBreakdownType = 'family' | 'article' | 'client';
+
+export interface ReportingRevenueBreakdownRow {
+  code: string;
+  name: string;
+  revenue: number;
+  quantity: number;
+  documentsCount: number;
+}
+
 export interface AdminCommercialSummary {
   salesPersonCode: number;
   salesPersonName: string;
@@ -317,15 +329,18 @@ export interface ReportingEvolutionPoint {
   monthKey: string;
   revenue: number;
   pendingRevenue: number;
+  collectedRevenue: number;
+  quotesCount: number;
+  ordersCount: number;
+  deliveryNotesCount: number;
+  quotesAmount: number;
+  ordersAmount: number;
+  deliveryNotesAmount: number;
+  invoicesAmount: number;
 }
 
 export interface ReportingEvolution {
   points: ReportingEvolutionPoint[];
-}
-
-export interface MonthlyTargetPayload {
-  monthlyTarget: number;
-  salesPersonCode?: number;
 }
 
 export interface AdminDashboardPayload {
@@ -442,6 +457,32 @@ export class ReportingApiService {
     return this.api.get<ApiResponse<AdvancedReportingPayload>>(`reporting/advanced?${query.toString()}`);
   }
 
+  getRevenueBreakdown(params: {
+    type: ReportingRevenueBreakdownType;
+    periodType: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+    month?: string;
+    quarter?: number;
+    year?: number;
+    startDate?: string;
+    endDate?: string;
+    salesPersonCode?: number;
+    cardCode?: string;
+    limit?: number;
+  }): Observable<ApiResponse<ReportingRevenueBreakdownRow[]>> {
+    const query = new URLSearchParams();
+    query.set('type', params.type);
+    query.set('periodType', params.periodType);
+    if (params.month) query.set('month', params.month);
+    if (params.quarter) query.set('quarter', String(params.quarter));
+    if (params.year) query.set('year', String(params.year));
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.salesPersonCode && params.salesPersonCode > 0) query.set('salesPersonCode', String(params.salesPersonCode));
+    if (params.cardCode && params.cardCode.trim()) query.set('cardCode', params.cardCode.trim());
+    if (params.limit) query.set('limit', String(params.limit));
+    return this.api.get<ApiResponse<ReportingRevenueBreakdownRow[]>>(`reporting/revenue-breakdown?${query.toString()}`);
+  }
+
   getAdminDashboard(month?: string): Observable<ApiResponse<AdminDashboardPayload>> {
     const query = new URLSearchParams();
     if (month) query.set('month', month);
@@ -518,7 +559,4 @@ export class ReportingApiService {
     return this.api.get<ApiResponse<ReportingEvolution>>(`reporting/evolution?${query.toString()}`);
   }
 
-  updateMonthlyTarget(payload: MonthlyTargetPayload): Observable<ApiResponse<{ monthlyTarget: number; salesPersonCode?: number }>> {
-    return this.api.put<ApiResponse<{ monthlyTarget: number; salesPersonCode?: number }>>('reporting/monthly-target', payload);
-  }
 }

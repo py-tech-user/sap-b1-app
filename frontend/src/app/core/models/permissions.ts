@@ -6,8 +6,9 @@ export const MANAGER_UP: AppRole[] = ['Admin', 'Manager'];
 export interface RoleNavItem {
   label: string;
   icon: string;
-  route: string;
+  route?: string;
   roles: AppRole[];
+  children?: RoleNavItem[];
 }
 
 export const ROLE_NAV_ITEMS: RoleNavItem[] = [
@@ -21,7 +22,16 @@ export const ROLE_NAV_ITEMS: RoleNavItem[] = [
   { label: 'Avoir', icon: '', route: '/creditnotes', roles: ALL_ROLES },
   { label: 'Retour', icon: '', route: '/returns', roles: ALL_ROLES },
   { label: 'Catalogue', icon: '', route: '/products', roles: ALL_ROLES },
-  { label: 'Reporting', icon: '', route: '/reporting', roles: ALL_ROLES }
+  {
+    label: 'Reporting',
+    icon: '',
+    roles: ALL_ROLES,
+    children: [
+      { label: 'CA par famille', icon: '', route: '/reporting/ca-par-famille', roles: ALL_ROLES },
+      { label: 'CA par article', icon: '', route: '/reporting/ca-par-article', roles: ALL_ROLES },
+      { label: 'CA par client', icon: '', route: '/reporting/ca-par-client', roles: ALL_ROLES }
+    ]
+  }
 ];
 
 

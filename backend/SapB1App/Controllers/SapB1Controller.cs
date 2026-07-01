@@ -85,13 +85,6 @@ public class SapB1Controller : ControllerBase
         if (string.IsNullOrWhiteSpace(request.CardName))
             return BadRequest(SapError("La Raison sociale est obligatoire."));
 
-        var nextCardCode = await GetNextBusinessPartnerCardCodeAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(nextCardCode))
-            return BadRequest(SapError("Impossible de generer automatiquement le code partenaire."));
-
-        request.CardCode = nextCardCode;
-        _logger.LogInformation("Creation partenaire SAP: CardCode genere automatiquement = {CardCode}", request.CardCode);
-
         var payload = BuildBusinessPartnerPayload(request);
         _logger.LogInformation("Creation partenaire SAP: payload BusinessPartners envoye au Service Layer = {Payload}",
             JsonSerializer.Serialize(payload));
@@ -1610,37 +1603,6 @@ ORDER BY CardName, CardCode;";
         return Ok(new ApiResponse<CommercialReportingResponseDto>(true, null, response));
     }
 
-    [HttpPut("reporting/monthly-target")]
-    [Authorize(Policy = Policies.ManagerOrAdmin)]
-    public async Task<ActionResult<ApiResponse<MonthlyTargetResponseDto>>> UpdateMonthlyTarget(
-        [FromBody] MonthlyTargetRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var targetSalesPersonCode = request.SalesPersonCode.GetValueOrDefault(0);
-        var monthlyTarget = Math.Max(0m, request.MonthlyTarget);
-
-        await EnsureSalesTargetsTableAsync(cancellationToken);
-
-        await using var conn = new SqlConnection(_db.Database.GetConnectionString());
-        await conn.OpenAsync(cancellationToken);
-        const string sql = @"
-MERGE dbo.SalesTargets AS target
-USING (SELECT @salesPersonCode AS SalesPersonCode, @monthlyTarget AS MonthlyTarget) AS source
-ON target.SalesPersonCode = source.SalesPersonCode
-WHEN MATCHED THEN UPDATE SET MonthlyTarget = source.MonthlyTarget, UpdatedAt = SYSUTCDATETIME()
-WHEN NOT MATCHED THEN INSERT (SalesPersonCode, MonthlyTarget, UpdatedAt) VALUES (source.SalesPersonCode, source.MonthlyTarget, SYSUTCDATETIME());";
-        await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = targetSalesPersonCode });
-        cmd.Parameters.Add(new SqlParameter("@monthlyTarget", SqlDbType.Decimal) { Precision = 18, Scale = 4, Value = monthlyTarget });
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
-
-        return Ok(new ApiResponse<MonthlyTargetResponseDto>(true, "Objectif CA enregistré.", new MonthlyTargetResponseDto
-        {
-            MonthlyTarget = monthlyTarget,
-            SalesPersonCode = targetSalesPersonCode > 0 ? targetSalesPersonCode : null
-        }));
-    }
-
     [HttpGet("reporting/partners-activity")]
     [Authorize]
     public async Task<ActionResult<ApiResponse<List<CommercialPartnerActivityDto>>>> GetPartnersActivity(
@@ -1770,6 +1732,7 @@ ORDER BY MAX(BP.CardName), BP.CardCode;";
             var rows = new List<PartnerDebtDto>();
             await using var cmd = new SqlCommand(sql, conn);
             AddReportingScopeParameters(cmd, scopedSalesPersonCode);
+            AddReportingPartnerParameters(cmd, cardCode);
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -1881,7 +1844,18 @@ ORDER BY MAX(BP.CardName), BP.CardCode;";
             var points = new List<ReportingEvolutionPointDto>();
 
             var sql = $@"
-SELECT PeriodKey, Revenue, PendingAmount FROM (
+SELECT PeriodKey,
+       SUM(Revenue) AS Revenue,
+       SUM(PendingAmount) AS PendingAmount,
+       SUM(CollectedRevenue) AS CollectedRevenue,
+       SUM(QuotesCount) AS QuotesCount,
+       SUM(OrdersCount) AS OrdersCount,
+       SUM(DeliveryNotesCount) AS DeliveryNotesCount,
+       SUM(QuotesAmount) AS QuotesAmount,
+       SUM(OrdersAmount) AS OrdersAmount,
+       SUM(DeliveryNotesAmount) AS DeliveryNotesAmount,
+       SUM(InvoicesAmount) AS InvoicesAmount
+FROM (
   SELECT CONVERT(char({periodKeyLength}), I.DocDate, 120) AS PeriodKey,
     ISNULL(SUM(I.DocTotal),0) - ISNULL((
       SELECT SUM(ISNULL(ORIN.DocTotal,0))
@@ -1891,16 +1865,74 @@ SELECT PeriodKey, Revenue, PendingAmount FROM (
         AND (@applyCard = 0 OR ORIN.CardCode = @cardCode)
         AND (@applyScope = 0 OR ORIN.SlpCode = @salesPersonCode)
     ),0) AS Revenue,
-    0 AS PendingAmount
+    0 AS PendingAmount,
+    0 AS CollectedRevenue,
+    0 AS QuotesCount,
+    0 AS OrdersCount,
+    0 AS DeliveryNotesCount,
+    0 AS QuotesAmount,
+    0 AS OrdersAmount,
+    0 AS DeliveryNotesAmount,
+    ISNULL(SUM(I.DocTotal),0) AS InvoicesAmount
   FROM OINV I
   WHERE I.DocDate >= @dateFrom AND I.DocDate < @dateTo
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   GROUP BY CONVERT(char({periodKeyLength}), I.DocDate, 120)
   UNION ALL
-  SELECT CONVERT(char({periodKeyLength}), O.DocDate, 120) AS PeriodKey, 0 AS Revenue,
-    ISNULL(SUM(CASE WHEN ISNULL(O.DocStatus,'O') = 'O' AND ISNULL(O.CANCELED,'N') <> 'Y' THEN O.DocTotal ELSE 0 END),0) AS PendingAmount
+  SELECT CONVERT(char({periodKeyLength}), P.DocDate, 120) AS PeriodKey,
+    0 AS Revenue,
+    0 AS PendingAmount,
+    ISNULL(SUM(ISNULL(R2.SumApplied, 0)),0) AS CollectedRevenue,
+    0 AS QuotesCount,
+    0 AS OrdersCount,
+    0 AS DeliveryNotesCount,
+    0 AS QuotesAmount,
+    0 AS OrdersAmount,
+    0 AS DeliveryNotesAmount,
+    0 AS InvoicesAmount
+  FROM ORCT P
+  INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13
+  INNER JOIN OINV I ON I.DocEntry = R2.DocEntry
+  WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo
+    AND ISNULL(P.Canceled, 'N') <> 'Y'
+    AND ISNULL(I.CANCELED, 'N') <> 'Y'
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
+    AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
+  GROUP BY CONVERT(char({periodKeyLength}), P.DocDate, 120)
+  UNION ALL
+  SELECT CONVERT(char({periodKeyLength}), Q.DocDate, 120) AS PeriodKey,
+    0 AS Revenue,
+    0 AS PendingAmount,
+    0 AS CollectedRevenue,
+    COUNT(1) AS QuotesCount,
+    0 AS OrdersCount,
+    0 AS DeliveryNotesCount,
+    ISNULL(SUM(Q.DocTotal),0) AS QuotesAmount,
+    0 AS OrdersAmount,
+    0 AS DeliveryNotesAmount,
+    0 AS InvoicesAmount
+  FROM OQUT Q
+  WHERE Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo
+    AND ISNULL(Q.CANCELED,'N') <> 'Y'
+    AND (@applyCard = 0 OR Q.CardCode = @cardCode)
+    AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode)
+  GROUP BY CONVERT(char({periodKeyLength}), Q.DocDate, 120)
+  UNION ALL
+  SELECT CONVERT(char({periodKeyLength}), O.DocDate, 120) AS PeriodKey,
+    0 AS Revenue,
+    ISNULL(SUM(CASE WHEN ISNULL(O.DocStatus,'O') = 'O' AND ISNULL(O.CANCELED,'N') <> 'Y' THEN O.DocTotal ELSE 0 END),0) AS PendingAmount,
+    0 AS CollectedRevenue,
+    0 AS QuotesCount,
+    COUNT(1) AS OrdersCount,
+    0 AS DeliveryNotesCount,
+    0 AS QuotesAmount,
+    ISNULL(SUM(O.DocTotal),0) AS OrdersAmount,
+    0 AS DeliveryNotesAmount,
+    0 AS InvoicesAmount
   FROM ORDR O
   WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo
     AND ISNULL(O.CANCELED,'N') <> 'Y'
@@ -1910,8 +1942,17 @@ SELECT PeriodKey, Revenue, PendingAmount FROM (
     ))
   GROUP BY CONVERT(char({periodKeyLength}), O.DocDate, 120)
   UNION ALL
-  SELECT CONVERT(char({periodKeyLength}), D.DocDate, 120) AS PeriodKey, 0 AS Revenue,
-    ISNULL(SUM(CASE WHEN ISNULL(D.DocStatus,'O') = 'O' AND ISNULL(D.CANCELED,'N') <> 'Y' THEN D.DocTotal ELSE 0 END),0) AS PendingAmount
+  SELECT CONVERT(char({periodKeyLength}), D.DocDate, 120) AS PeriodKey,
+    0 AS Revenue,
+    ISNULL(SUM(CASE WHEN ISNULL(D.DocStatus,'O') = 'O' AND ISNULL(D.CANCELED,'N') <> 'Y' THEN D.DocTotal ELSE 0 END),0) AS PendingAmount,
+    0 AS CollectedRevenue,
+    0 AS QuotesCount,
+    0 AS OrdersCount,
+    COUNT(1) AS DeliveryNotesCount,
+    0 AS QuotesAmount,
+    0 AS OrdersAmount,
+    ISNULL(SUM(D.DocTotal),0) AS DeliveryNotesAmount,
+    0 AS InvoicesAmount
   FROM ODLN D
   WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo
     AND ISNULL(D.CANCELED,'N') <> 'Y'
@@ -1921,8 +1962,8 @@ SELECT PeriodKey, Revenue, PendingAmount FROM (
     ))
   GROUP BY CONVERT(char({periodKeyLength}), D.DocDate, 120)
 ) src
+GROUP BY PeriodKey
 ORDER BY PeriodKey;";
-
             await using var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.Add(new SqlParameter("@dateFrom", SqlDbType.DateTime) { Value = queryStart.Date });
             cmd.Parameters.Add(new SqlParameter("@dateTo", SqlDbType.DateTime) { Value = queryEnd.Date });
@@ -1930,16 +1971,24 @@ ORDER BY PeriodKey;";
             AddReportingPartnerParameters(cmd, cardCode);
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-            var periodData = new Dictionary<string, (decimal Revenue, decimal Pending)>();
+            var periodData = new Dictionary<string, (decimal Revenue, decimal Pending, decimal Collected, int Quotes, int Orders, int Deliveries, decimal QuotesAmount, decimal OrdersAmount, decimal DeliveriesAmount, decimal InvoicesAmount)>();
             while (await reader.ReadAsync(cancellationToken))
             {
                 var key = reader["PeriodKey"]?.ToString() ?? string.Empty;
                 var rev = Convert.ToDecimal(reader["Revenue"]);
                 var pend = Convert.ToDecimal(reader["PendingAmount"]);
+                var collected = Convert.ToDecimal(reader["CollectedRevenue"]);
+                var quotes = Convert.ToInt32(reader["QuotesCount"]);
+                var orders = Convert.ToInt32(reader["OrdersCount"]);
+                var deliveries = Convert.ToInt32(reader["DeliveryNotesCount"]);
+                var quotesAmount = Convert.ToDecimal(reader["QuotesAmount"]);
+                var ordersAmount = Convert.ToDecimal(reader["OrdersAmount"]);
+                var deliveriesAmount = Convert.ToDecimal(reader["DeliveryNotesAmount"]);
+                var invoicesAmount = Convert.ToDecimal(reader["InvoicesAmount"]);
                 if (periodData.TryGetValue(key, out var existing))
-                    periodData[key] = (existing.Revenue + rev, existing.Pending + pend);
+                    periodData[key] = (existing.Revenue + rev, existing.Pending + pend, existing.Collected + collected, existing.Quotes + quotes, existing.Orders + orders, existing.Deliveries + deliveries, existing.QuotesAmount + quotesAmount, existing.OrdersAmount + ordersAmount, existing.DeliveriesAmount + deliveriesAmount, existing.InvoicesAmount + invoicesAmount);
                 else
-                    periodData[key] = (rev, pend);
+                    periodData[key] = (rev, pend, collected, quotes, orders, deliveries, quotesAmount, ordersAmount, deliveriesAmount, invoicesAmount);
             }
 
             if (groupEvolutionByDay)
@@ -1948,9 +1997,9 @@ ORDER BY PeriodKey;";
                 {
                     var key = cursor.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                     if (periodData.TryGetValue(key, out var data))
-                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = data.Revenue, PendingRevenue = data.Pending });
+                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = data.Revenue, PendingRevenue = data.Pending, CollectedRevenue = data.Collected, QuotesCount = data.Quotes, OrdersCount = data.Orders, DeliveryNotesCount = data.Deliveries, QuotesAmount = data.QuotesAmount, OrdersAmount = data.OrdersAmount, DeliveryNotesAmount = data.DeliveriesAmount, InvoicesAmount = data.InvoicesAmount });
                     else
-                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = 0, PendingRevenue = 0 });
+                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = 0, PendingRevenue = 0, CollectedRevenue = 0, QuotesCount = 0, OrdersCount = 0, DeliveryNotesCount = 0, QuotesAmount = 0, OrdersAmount = 0, DeliveryNotesAmount = 0, InvoicesAmount = 0 });
                 }
             }
             else
@@ -1959,9 +2008,9 @@ ORDER BY PeriodKey;";
                 {
                     var key = $"{cursor.Year:D4}-{cursor.Month:D2}";
                     if (periodData.TryGetValue(key, out var data))
-                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = data.Revenue, PendingRevenue = data.Pending });
+                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = data.Revenue, PendingRevenue = data.Pending, CollectedRevenue = data.Collected, QuotesCount = data.Quotes, OrdersCount = data.Orders, DeliveryNotesCount = data.Deliveries, QuotesAmount = data.QuotesAmount, OrdersAmount = data.OrdersAmount, DeliveryNotesAmount = data.DeliveriesAmount, InvoicesAmount = data.InvoicesAmount });
                     else
-                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = 0, PendingRevenue = 0 });
+                        points.Add(new ReportingEvolutionPointDto { MonthKey = key, Revenue = 0, PendingRevenue = 0, CollectedRevenue = 0, QuotesCount = 0, OrdersCount = 0, DeliveryNotesCount = 0, QuotesAmount = 0, OrdersAmount = 0, DeliveryNotesAmount = 0, InvoicesAmount = 0 });
                 }
             }
 
@@ -2293,6 +2342,155 @@ ORDER BY InvoicesAmount DESC;";
         return Ok(new ApiResponse<AdminDashboardDto>(true, null, response));
     }
 
+    [HttpGet("reporting/revenue-breakdown")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<List<ReportingRevenueBreakdownRowDto>>>> GetReportingRevenueBreakdown(
+        [FromQuery] string type = "family",
+        [FromQuery] string periodType = "month",
+        [FromQuery] string? month = null,
+        [FromQuery] int? quarter = null,
+        [FromQuery] int? year = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] int? salesPersonCode = null,
+        [FromQuery] string? cardCode = null,
+        [FromQuery] int limit = 200,
+        CancellationToken cancellationToken = default)
+    {
+        type = (type ?? "family").Trim().ToLowerInvariant();
+        if (type != "family" && type != "article" && type != "client")
+            return BadRequest(SapError("Type de reporting invalide."));
+
+        limit = Math.Clamp(limit, 10, 500);
+        var (periodStart, periodEnd, _) = ResolveReportingPeriod(periodType, month, quarter, year, startDate, endDate);
+        var isAdmin = _currentUserService.IsAdmin();
+        var currentSalesPerson = _currentUserService.GetSapSalesPersonCode();
+        cardCode = string.IsNullOrWhiteSpace(cardCode) ? null : cardCode.Trim();
+        var scopedSalesPersonCode = isAdmin ? (string.IsNullOrWhiteSpace(cardCode) ? salesPersonCode : null) : currentSalesPerson;
+        if (!isAdmin && scopedSalesPersonCode <= 0) return Forbid();
+
+        var cacheKey = $"reporting:revenue-breakdown:v1:{type}:{periodType}:{periodStart:yyyyMMdd}:{periodEnd:yyyyMMdd}:{scopedSalesPersonCode?.ToString() ?? "none"}:{(cardCode ?? string.Empty).ToLowerInvariant()}:{limit}:{isAdmin}";
+        if (_cache.TryGetValue(cacheKey, out List<ReportingRevenueBreakdownRowDto>? cached) && cached is not null)
+            return Ok(new ApiResponse<List<ReportingRevenueBreakdownRowDto>>(true, null, cached));
+
+        var conn = await OpenSapSqlConnectionAsync(cancellationToken);
+        if (conn is null)
+            return StatusCode(500, SapError("Connexion SQL impossible."));
+
+        await using (conn)
+        {
+            var sql = type switch
+            {
+                "client" => @"
+SELECT TOP (@limit)
+  X.Code,
+  MAX(X.Name) AS Name,
+  ISNULL(SUM(X.Revenue),0) AS Revenue,
+  CAST(0 AS decimal(18,4)) AS Quantity,
+  COUNT(1) AS DocumentsCount
+FROM (
+  SELECT I.CardCode AS Code, I.CardName AS Name, ISNULL(I.DocTotal,0) AS Revenue
+  FROM OINV I
+  WHERE I.DocDate >= @dateFrom AND I.DocDate < @dateTo
+    AND ISNULL(I.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
+  UNION ALL
+  SELECT C.CardCode AS Code, C.CardName AS Name, -ISNULL(C.DocTotal,0) AS Revenue
+  FROM ORIN C
+  WHERE C.DocDate >= @dateFrom AND C.DocDate < @dateTo
+    AND ISNULL(C.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
+) X
+GROUP BY X.Code
+HAVING ABS(ISNULL(SUM(X.Revenue),0)) > 0.0001
+ORDER BY Revenue DESC;",
+                "article" => @"
+SELECT TOP (@limit)
+  X.Code,
+  MAX(X.Name) AS Name,
+  ISNULL(SUM(X.Revenue),0) AS Revenue,
+  ISNULL(SUM(X.Quantity),0) AS Quantity,
+  COUNT(DISTINCT X.DocumentKey) AS DocumentsCount
+FROM (
+  SELECT L.ItemCode AS Code, ISNULL(M.ItemName, L.Dscription) AS Name, ISNULL(L.LineTotal,0) AS Revenue, ISNULL(L.Quantity,0) AS Quantity, CONCAT('I-', I.DocEntry) AS DocumentKey
+  FROM INV1 L
+  INNER JOIN OINV I ON I.DocEntry = L.DocEntry
+  LEFT JOIN OITM M ON M.ItemCode = L.ItemCode
+  WHERE I.DocDate >= @dateFrom AND I.DocDate < @dateTo
+    AND ISNULL(I.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
+  UNION ALL
+  SELECT L.ItemCode AS Code, ISNULL(M.ItemName, L.Dscription) AS Name, -ISNULL(L.LineTotal,0) AS Revenue, -ISNULL(L.Quantity,0) AS Quantity, CONCAT('C-', C.DocEntry) AS DocumentKey
+  FROM RIN1 L
+  INNER JOIN ORIN C ON C.DocEntry = L.DocEntry
+  LEFT JOIN OITM M ON M.ItemCode = L.ItemCode
+  WHERE C.DocDate >= @dateFrom AND C.DocDate < @dateTo
+    AND ISNULL(C.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
+) X
+GROUP BY X.Code
+HAVING ABS(ISNULL(SUM(X.Revenue),0)) > 0.0001
+ORDER BY Revenue DESC;",
+                _ => @"
+SELECT TOP (@limit)
+  X.Code,
+  MAX(X.Name) AS Name,
+  ISNULL(SUM(X.Revenue),0) AS Revenue,
+  ISNULL(SUM(X.Quantity),0) AS Quantity,
+  COUNT(DISTINCT X.DocumentKey) AS DocumentsCount
+FROM (
+  SELECT CONVERT(nvarchar(50), ISNULL(G.ItmsGrpCod,0)) AS Code, ISNULL(G.ItmsGrpNam, 'Sans categorie') AS Name, ISNULL(L.LineTotal,0) AS Revenue, ISNULL(L.Quantity,0) AS Quantity, CONCAT('I-', I.DocEntry) AS DocumentKey
+  FROM INV1 L
+  INNER JOIN OINV I ON I.DocEntry = L.DocEntry
+  LEFT JOIN OITM M ON M.ItemCode = L.ItemCode
+  LEFT JOIN OITB G ON G.ItmsGrpCod = M.ItmsGrpCod
+  WHERE I.DocDate >= @dateFrom AND I.DocDate < @dateTo
+    AND ISNULL(I.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
+  UNION ALL
+  SELECT CONVERT(nvarchar(50), ISNULL(G.ItmsGrpCod,0)) AS Code, ISNULL(G.ItmsGrpNam, 'Sans categorie') AS Name, -ISNULL(L.LineTotal,0) AS Revenue, -ISNULL(L.Quantity,0) AS Quantity, CONCAT('C-', C.DocEntry) AS DocumentKey
+  FROM RIN1 L
+  INNER JOIN ORIN C ON C.DocEntry = L.DocEntry
+  LEFT JOIN OITM M ON M.ItemCode = L.ItemCode
+  LEFT JOIN OITB G ON G.ItmsGrpCod = M.ItmsGrpCod
+  WHERE C.DocDate >= @dateFrom AND C.DocDate < @dateTo
+    AND ISNULL(C.CANCELED,'N') <> 'Y'
+    AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
+) X
+GROUP BY X.Code
+HAVING ABS(ISNULL(SUM(X.Revenue),0)) > 0.0001
+ORDER BY Revenue DESC;"
+            };
+
+            var result = new List<ReportingRevenueBreakdownRowDto>();
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.Add(new SqlParameter("@limit", SqlDbType.Int) { Value = limit });
+            AddReportingPeriodParameters(cmd, periodStart, periodEnd);
+            AddReportingScopeParameters(cmd, scopedSalesPersonCode);
+            AddReportingPartnerParameters(cmd, cardCode);
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(new ReportingRevenueBreakdownRowDto
+                {
+                    Code = reader["Code"]?.ToString() ?? string.Empty,
+                    Name = reader["Name"]?.ToString() ?? string.Empty,
+                    Revenue = Convert.ToDecimal(reader["Revenue"]),
+                    Quantity = Convert.ToDecimal(reader["Quantity"]),
+                    DocumentsCount = Convert.ToInt32(reader["DocumentsCount"])
+                });
+            }
+
+            _cache.Set(cacheKey, result, TimeSpan.FromSeconds(120));
+            return Ok(new ApiResponse<List<ReportingRevenueBreakdownRowDto>>(true, null, result));
+        }
+    }
     [HttpGet("reporting/advanced")]
     [Authorize]
     public async Task<ActionResult<ApiResponse<AdvancedReportingResponseDto>>> GetAdvancedReporting(
@@ -2461,6 +2659,7 @@ OUTER APPLY (
   WHERE I.CardCode = C.CardCode
     AND ISNULL(I.CANCELED, 'N') <> 'Y'
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
 ) Inv
 OUTER APPLY (
   SELECT ISNULL(SUM(ISNULL(N.DocTotal, 0)), 0) AS CreditNotes
@@ -2471,7 +2670,8 @@ OUTER APPLY (
 ) Cn
 WHERE C.CardCode = @cardCode
   AND C.CardType = 'C'
-  AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode);";
+  AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode);";
 
         await using (var cmd = new SqlCommand(summarySql, conn))
         {
@@ -2548,6 +2748,7 @@ WHERE I.CardCode = @cardCode
   AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo
   AND ISNULL(I.CANCELED, 'N') <> 'Y'
   AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
 GROUP BY L.ItemCode
 ORDER BY SUM(ISNULL(L.LineTotal, 0)) DESC, SUM(ISNULL(L.Quantity, 0)) DESC;";
 
@@ -2587,6 +2788,7 @@ WHERE I.CardCode = @cardCode
   AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo
   AND ISNULL(I.CANCELED, 'N') <> 'Y'
   AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
 GROUP BY ISNULL(G.ItmsGrpCod, 0), ISNULL(G.ItmsGrpNam, 'Sans categorie')
 ORDER BY SUM(ISNULL(L.LineTotal, 0)) DESC;";
 
@@ -2762,6 +2964,7 @@ WITH Base AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@itemCode = '' OR L.ItemCode = @itemCode)
 ), Agg AS (
   SELECT ItemCode, MAX(ItemName) AS ItemName,
@@ -2822,6 +3025,7 @@ WITH Base AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@cardCode = '' OR I.CardCode = @cardCode)
 ), L AS (
   SELECT I.CardCode, COUNT(DISTINCT L.ItemCode) AS ProductsCount
@@ -2831,6 +3035,7 @@ WITH Base AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@cardCode = '' OR I.CardCode = @cardCode)
   GROUP BY I.CardCode
 )
@@ -2892,6 +3097,7 @@ WITH Q AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   GROUP BY I.CardCode
 )
 SELECT TOP ({limit})
@@ -2906,6 +3112,7 @@ LEFT JOIN P ON P.CardCode = C.CardCode
 LEFT JOIN Q ON Q.CardCode = C.CardCode
 WHERE C.CardType = 'C'
   AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
 ORDER BY ISNULL(P.Revenue,0) DESC, ISNULL(Q.QuotesCount,0) DESC;";
 
         var result = new List<ReportingTopPartnerDto>();
@@ -2943,6 +3150,7 @@ LEFT JOIN INV1 L ON L.DocEntry = I.DocEntry AND L.LineNum = 0
 WHERE ISNULL(I.CANCELED,'N') <> 'Y'
   AND (ISNULL(I.DocTotal,0) - ISNULL(I.PaidToDate,0)) > 0.0001
   AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
 ORDER BY ISNULL(I.DocDate, ISNULL(I.DocDueDate, GETDATE())) DESC, DueAmount DESC;";
 
         var result = new List<ReportingUnpaidDto>();
@@ -2980,6 +3188,7 @@ WITH Cur AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@itemCode = '' OR L.ItemCode = @itemCode)
   GROUP BY L.ItemCode
 ), Prev AS (
@@ -2990,6 +3199,7 @@ WITH Cur AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@itemCode = '' OR L.ItemCode = @itemCode)
   GROUP BY L.ItemCode
 )
@@ -3007,6 +3217,7 @@ OUTER APPLY (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND L.ItemCode = C.ItemCode
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   GROUP BY I.CardName
   ORDER BY SUM(ISNULL(L.LineTotal,0)) DESC
 ) TopClient
@@ -3048,6 +3259,7 @@ WITH Base AS (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
     AND (@cardCode = '' OR I.CardCode = @cardCode)
 )
 SELECT TOP ({limit})
@@ -3067,6 +3279,7 @@ OUTER APPLY (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND I.CardCode = B.CardCode
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
 ) P
 OUTER APPLY (
   SELECT TOP 1 ISNULL(L.Dscription, L.ItemCode) AS ItemName, SUM(ISNULL(L.LineTotal,0)) AS Revenue
@@ -3076,6 +3289,7 @@ OUTER APPLY (
     AND ISNULL(I.CANCELED,'N') <> 'Y'
     AND I.CardCode = B.CardCode
     AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   GROUP BY ISNULL(L.Dscription, L.ItemCode)
   ORDER BY SUM(ISNULL(L.LineTotal,0)) DESC
 ) F
@@ -3120,15 +3334,19 @@ WITH Cur AS (
          (SELECT COUNT(DISTINCT I3.SlpCode) FROM OINV I3 WHERE I3.CardCode = C.CardCode AND I3.DocDate >= @dateFrom AND I3.DocDate < @dateTo AND ISNULL(I3.CANCELED,'N') <> 'Y' AND (@applyScope = 0 OR I3.SlpCode = @salesPersonCode)) AS SalesPeopleCount
   FROM OCRD C
   LEFT JOIN OINV I ON I.CardCode = C.CardCode AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo AND ISNULL(I.CANCELED,'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   WHERE C.CardType = 'C'
     AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
   GROUP BY C.CardCode, C.CardName
 ), Prev AS (
   SELECT C.CardCode, ISNULL(SUM(I.DocTotal),0) AS Revenue
   FROM OCRD C
   LEFT JOIN OINV I ON I.CardCode = C.CardCode AND I.DocDate >= @prevFrom AND I.DocDate < @prevTo AND ISNULL(I.CANCELED,'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)
   WHERE C.CardType = 'C'
     AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
   GROUP BY C.CardCode
 )
 SELECT TOP ({limit})
@@ -3300,21 +3518,25 @@ ORDER BY C.Revenue DESC;";
             result.ActivePartnersCount = await ExecAsync("ActivePartnersCount",
             @"SELECT COUNT(1) FROM OCRD C
               WHERE C.CardType = 'C' AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
                 AND (
                   EXISTS (SELECT 1 FROM OQUT Q WHERE Q.CardCode = C.CardCode AND Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo AND ISNULL(Q.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode))
                   OR EXISTS (SELECT 1 FROM ORDR O WHERE O.CardCode = C.CardCode AND O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND ISNULL(O.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode))
                   OR EXISTS (SELECT 1 FROM ODLN D WHERE D.CardCode = C.CardCode AND D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND ISNULL(D.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode))
-                  OR EXISTS (SELECT 1 FROM OINV I WHERE I.CardCode = C.CardCode AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode))
+                  OR EXISTS (SELECT 1 FROM OINV I WHERE I.CardCode = C.CardCode AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode))
                 )",
             r => Convert.ToInt32(r[0]));
         result.InactivePartnersCount = await ExecAsync("InactivePartnersCount",
             @"SELECT COUNT(1) FROM OCRD C
               WHERE C.CardType = 'C' AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR C.CardCode = @cardCode)
                 AND NOT (
                   EXISTS (SELECT 1 FROM OQUT Q WHERE Q.CardCode = C.CardCode AND Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo AND ISNULL(Q.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode))
                   OR EXISTS (SELECT 1 FROM ORDR O WHERE O.CardCode = C.CardCode AND O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND ISNULL(O.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode))
                   OR EXISTS (SELECT 1 FROM ODLN D WHERE D.CardCode = C.CardCode AND D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND ISNULL(D.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode))
-                  OR EXISTS (SELECT 1 FROM OINV I WHERE I.CardCode = C.CardCode AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode))
+                  OR EXISTS (SELECT 1 FROM OINV I WHERE I.CardCode = C.CardCode AND I.DocDate >= @dateFrom AND I.DocDate < @dateTo AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode))
                 )",
             r => Convert.ToInt32(r[0]));
 
@@ -3340,7 +3562,7 @@ ORDER BY C.Revenue DESC;";
 
         // Nouveaux KPIs (peuvent echouer si certaines tables SAP n'existent pas)
         result.CollectedRevenue = await ExecAsync("CollectedRevenue",
-            "SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)",
+            "SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode) AND (@applyCard = 0 OR I.CardCode = @cardCode)",
             r => Convert.ToDecimal(r[0]));
 
         if (!lightweight)
@@ -3350,7 +3572,7 @@ ORDER BY C.Revenue DESC;";
             r => Convert.ToDecimal(r[0]));
 
         result.NewActivePartnersCount = await ExecAsync("NewActivePartnersCount",
-            "SELECT COUNT(1) FROM OCRD C WHERE C.CardType = 'C' AND C.CreateDate >= @dateFrom AND C.CreateDate < @dateTo AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode)",
+            "SELECT COUNT(1) FROM OCRD C WHERE C.CardType = 'C' AND C.CreateDate >= @dateFrom AND C.CreateDate < @dateTo AND (@applyScope = 0 OR C.SlpCode = @salesPersonCode) AND (@applyCard = 0 OR C.CardCode = @cardCode)",
             r => Convert.ToInt32(r[0]));
 
         result.OpenPipelineAmount = await ExecAsync("OpenPipelineAmount",
@@ -3359,7 +3581,7 @@ ORDER BY C.Revenue DESC;";
 
         // Dso
         result.Dso = await ExecAsync("Dso",
-            "SELECT ISNULL(AVG(DATEDIFF(day, I.DocDate, P.DocDate)), 0) FROM OINV I INNER JOIN RCT2 R2 ON R2.DocEntry = I.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN ORCT P ON P.DocEntry = R2.DocNum WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)",
+            "SELECT ISNULL(AVG(DATEDIFF(day, I.DocDate, P.DocDate)), 0) FROM OINV I INNER JOIN RCT2 R2 ON R2.DocEntry = I.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN ORCT P ON P.DocEntry = R2.DocNum WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode) AND (@applyCard = 0 OR I.CardCode = @cardCode)",
             r => Convert.ToDecimal(r[0]));
 
         }
@@ -3394,9 +3616,8 @@ ORDER BY C.Revenue DESC;";
         result.AverageQuoteAmount = quotesCount <= 0 ? 0 : Math.Round(quotesAmount / quotesCount, 2);
         result.SalesCycleDays = Math.Round(quoteValidationDays + dso, 1);
 
-        var monthlyTarget = await GetMonthlyTargetAsync(salesPersonCode, cancellationToken);
-        var targetCommercialCount = await ResolveTargetCommercialCountAsync(salesPersonCode, cancellationToken);
-        var periodTarget = Math.Round(monthlyTarget * targetCommercialCount * ResolveTargetMultiplier(start, end), 2);
+        var monthlyTarget = await GetMonthlyTargetAsync(conn, salesPersonCode, cancellationToken);
+        var periodTarget = Math.Round(monthlyTarget * ResolveTargetMultiplier(start, end), 2);
         result.MonthlyTarget = monthlyTarget;
         result.PeriodTarget = periodTarget;
         result.TargetAchievementRate = periodTarget > 0 ? Math.Round(collectedRevenue / periodTarget * 100, 2) : 0;
@@ -3425,7 +3646,8 @@ SELECT
   (SELECT ISNULL(SUM(DocTotal), 0) FROM ORDN WHERE DocDate >= @dateFrom AND DocDate < @dateTo AND (@applyCard = 0 OR CardCode = @cardCode) AND (@applyScope = 0 OR SlpCode = @salesPersonCode)) AS ReturnsAmount,
   (SELECT ISNULL(SUM(O.DocTotal), 0) FROM ORDR O WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND ISNULL(O.CANCELED, 'N') <> 'Y' AND ISNULL(O.DocStatus,'O') = 'O' AND (@applyCard = 0 OR O.CardCode = @cardCode) AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode OR EXISTS (SELECT 1 FROM OCRD BP WHERE BP.CardCode = O.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode))) AS PendingRevenueOrders,
   (SELECT ISNULL(SUM(D.DocTotal), 0) FROM ODLN D WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND ISNULL(D.CANCELED, 'N') <> 'Y' AND ISNULL(D.DocStatus,'O') = 'O' AND (@applyCard = 0 OR D.CardCode = @cardCode) AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode OR EXISTS (SELECT 1 FROM OCRD BP WHERE BP.CardCode = D.CardCode AND ISNULL(BP.SlpCode, 0) = @salesPersonCode))) AS PendingRevenueDeliveries,
-  (SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyCard = 0 OR I.CardCode = @cardCode) AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)) AS CollectedRevenue,
+  (SELECT ISNULL(SUM(ISNULL(R2.SumApplied, 0)), 0) FROM ORCT P INNER JOIN RCT2 R2 ON R2.DocNum = P.DocEntry AND ISNULL(R2.InvType, 13) = 13 INNER JOIN OINV I ON I.DocEntry = R2.DocEntry WHERE P.DocDate >= @dateFrom AND P.DocDate < @dateTo AND ISNULL(P.Canceled, 'N') <> 'Y' AND ISNULL(I.CANCELED, 'N') <> 'Y' AND (@applyCard = 0 OR I.CardCode = @cardCode) AND (@applyScope = 0 OR I.SlpCode = @salesPersonCode)
+    AND (@applyCard = 0 OR I.CardCode = @cardCode)) AS CollectedRevenue,
   (SELECT COUNT(DISTINCT Q.DocEntry) FROM OQUT Q WHERE Q.DocDate >= @dateFrom AND Q.DocDate < @dateTo AND (@applyCard = 0 OR Q.CardCode = @cardCode) AND (@applyScope = 0 OR Q.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM RDR1 WHERE RDR1.BaseType = 23 AND RDR1.BaseEntry = Q.DocEntry)) AS ConvertedQuotesCount,
   (SELECT COUNT(DISTINCT O.DocEntry) FROM ORDR O WHERE O.DocDate >= @dateFrom AND O.DocDate < @dateTo AND (@applyCard = 0 OR O.CardCode = @cardCode) AND (@applyScope = 0 OR O.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM DLN1 WHERE DLN1.BaseType = 17 AND DLN1.BaseEntry = O.DocEntry)) AS ConvertedOrdersCount,
   (SELECT COUNT(DISTINCT D.DocEntry) FROM ODLN D WHERE D.DocDate >= @dateFrom AND D.DocDate < @dateTo AND (@applyCard = 0 OR D.CardCode = @cardCode) AND (@applyScope = 0 OR D.SlpCode = @salesPersonCode) AND EXISTS (SELECT 1 FROM INV1 WHERE INV1.BaseType = 15 AND INV1.BaseEntry = D.DocEntry)) AS ConvertedDeliveryCount;";
@@ -3471,9 +3693,8 @@ SELECT
         result.SalesCycleDays = 0;
 
         var targetSw = Stopwatch.StartNew();
-        var monthlyTarget = await GetMonthlyTargetAsync(salesPersonCode, cancellationToken);
-        var targetCommercialCount = await ResolveTargetCommercialCountAsync(salesPersonCode, cancellationToken);
-        var periodTarget = Math.Round(monthlyTarget * targetCommercialCount * ResolveTargetMultiplier(start, end), 2);
+        var monthlyTarget = await GetMonthlyTargetAsync(conn, salesPersonCode, cancellationToken);
+        var periodTarget = Math.Round(monthlyTarget * ResolveTargetMultiplier(start, end), 2);
         targetSw.Stop();
         _logger.LogInformation("[REPORTING][Commercial][KPI] Label=LightweightTarget ElapsedMs={ElapsedMs} SalesPersonCode={SalesPersonCode}", targetSw.ElapsedMilliseconds, salesPersonCode);
 
@@ -3512,52 +3733,39 @@ SELECT
         return cursor == end ? months : 0;
     }
 
-    private async Task EnsureSalesTargetsTableAsync(CancellationToken cancellationToken)
-    {
-        await using var conn = new SqlConnection(_db.Database.GetConnectionString());
-        await conn.OpenAsync(cancellationToken);
-        const string sql = @"
-IF OBJECT_ID(N'dbo.SalesTargets', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.SalesTargets
-    (
-        SalesPersonCode INT NOT NULL CONSTRAINT PK_SalesTargets PRIMARY KEY,
-        MonthlyTarget DECIMAL(18,4) NOT NULL CONSTRAINT DF_SalesTargets_MonthlyTarget DEFAULT(0),
-        UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_SalesTargets_UpdatedAt DEFAULT(SYSUTCDATETIME())
-    );
-END";
-        await using var cmd = new SqlCommand(sql, conn);
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private async Task<int> ResolveTargetCommercialCountAsync(int? salesPersonCode, CancellationToken cancellationToken)
+    private async Task<decimal> GetMonthlyTargetAsync(SqlConnection conn, int? salesPersonCode, CancellationToken cancellationToken)
     {
         if (salesPersonCode.HasValue && salesPersonCode.Value > 0)
-            return 1;
+        {
+            const string singleSql = @"
+SELECT ISNULL(U_ObjectifMensuel, 0)
+FROM OSLP
+WHERE SlpCode = @salesPersonCode;";
+            await using var singleCmd = new SqlCommand(singleSql, conn);
+            singleCmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = salesPersonCode.Value });
+            var singleValue = await singleCmd.ExecuteScalarAsync(cancellationToken);
+            return singleValue is null or DBNull ? 0m : Convert.ToDecimal(singleValue);
+        }
 
-        var count = await _db.Users
+        var commercialCodes = await _db.Users
             .AsNoTracking()
             .Where(u => u.IsActive && u.SapSalesPersonCode > 0 && u.Role == Roles.Commercial)
             .Select(u => u.SapSalesPersonCode)
             .Distinct()
-            .CountAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        return Math.Max(1, count);
-    }
-    private async Task<decimal> GetMonthlyTargetAsync(int? salesPersonCode, CancellationToken cancellationToken)
-    {
-        await EnsureSalesTargetsTableAsync(cancellationToken);
-        await using var conn = new SqlConnection(_db.Database.GetConnectionString());
-        await conn.OpenAsync(cancellationToken);
+        if (commercialCodes.Count == 0)
+            return 0m;
 
-        const string sql = @"
-SELECT TOP 1 MonthlyTarget
-FROM dbo.SalesTargets
-WHERE SalesPersonCode = @salesPersonCode
-   OR (@salesPersonCode > 0 AND SalesPersonCode = 0)
-ORDER BY CASE WHEN SalesPersonCode = @salesPersonCode THEN 0 ELSE 1 END;";
+        var parameterNames = commercialCodes.Select((_, index) => $"@salesPersonCode{index}").ToArray();
+        var sql = $@"
+SELECT ISNULL(SUM(ISNULL(U_ObjectifMensuel, 0)), 0)
+FROM OSLP
+WHERE SlpCode IN ({string.Join(", ", parameterNames)});";
         await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.Add(new SqlParameter("@salesPersonCode", SqlDbType.Int) { Value = salesPersonCode.GetValueOrDefault(0) });
+        for (var i = 0; i < commercialCodes.Count; i++)
+            cmd.Parameters.Add(new SqlParameter(parameterNames[i], SqlDbType.Int) { Value = commercialCodes[i] });
+
         var value = await cmd.ExecuteScalarAsync(cancellationToken);
         return value is null or DBNull ? 0m : Convert.ToDecimal(value);
     }
@@ -3590,6 +3798,7 @@ WITH Q AS (
   SELECT SlpCode,
          COUNT(1) AS Cnt,
          ISNULL(SUM(DocTotal),0) AS Amt,
+         ISNULL(SUM(CASE WHEN ISNULL(PaidToDate,0) > ISNULL(DocTotal,0) THEN ISNULL(DocTotal,0) ELSE ISNULL(PaidToDate,0) END),0) AS PaidAmt,
          SUM(CASE WHEN (ISNULL(DocTotal,0) - ISNULL(PaidToDate,0)) > 0.0001 AND ISNULL(CANCELED,'N') <> 'Y' THEN 1 ELSE 0 END) AS UnpaidCnt,
          ISNULL(SUM(CASE WHEN (ISNULL(DocTotal,0) - ISNULL(PaidToDate,0)) > 0.0001 AND ISNULL(CANCELED,'N') <> 'Y' THEN (ISNULL(DocTotal,0) - ISNULL(PaidToDate,0)) ELSE 0 END),0) AS UnpaidAmt
   FROM OINV
@@ -3634,6 +3843,7 @@ WITH Q AS (
 )
 SELECT
   COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.SlpCode, C.SlpCode, PO.SlpCode, PD.SlpCode, CQ.SlpCode, CO.SlpCode, CD.SlpCode) AS SlpCode,
+  ISNULL(SLP.U_ObjectifMensuel,0) AS MonthlyTarget,
   ISNULL(Q.Cnt,0) AS QuotesCount,
   ISNULL(Q.Amt,0) AS QuotesAmount,
   ISNULL(O.Cnt,0) AS OrdersCount,
@@ -3644,6 +3854,7 @@ SELECT
   ISNULL(I.Amt,0) AS InvoicesAmount,
   ISNULL(C.Cnt,0) AS CreditNotesCount,
   ISNULL(C.Amt,0) AS CreditNotesAmount,
+  ISNULL(I.PaidAmt,0) AS CollectedRevenue,
   ISNULL(PO.Amt,0) + ISNULL(PD.Amt,0) AS PendingRevenue,
   ISNULL(I.UnpaidCnt,0) AS UnpaidInvoicesCount,
   ISNULL(I.UnpaidAmt,0) AS UnpaidInvoicesAmount,
@@ -3660,6 +3871,7 @@ FULL OUTER JOIN PD ON PD.SlpCode = COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.S
 FULL OUTER JOIN CQ ON CQ.SlpCode = COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.SlpCode, C.SlpCode, PO.SlpCode, PD.SlpCode)
 FULL OUTER JOIN CO ON CO.SlpCode = COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.SlpCode, C.SlpCode, PO.SlpCode, PD.SlpCode, CQ.SlpCode)
 FULL OUTER JOIN CD ON CD.SlpCode = COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.SlpCode, C.SlpCode, PO.SlpCode, PD.SlpCode, CQ.SlpCode, CO.SlpCode)
+LEFT JOIN OSLP SLP ON SLP.SlpCode = COALESCE(Q.SlpCode, O.SlpCode, D.SlpCode, I.SlpCode, C.SlpCode, PO.SlpCode, PD.SlpCode, CQ.SlpCode, CO.SlpCode, CD.SlpCode)
 ORDER BY SlpCode;";
 
         var result = new List<CommercialSalesPersonPerformanceDto>();
@@ -3682,6 +3894,7 @@ ORDER BY SlpCode;";
             var deliveryToInvoice = deliveryCount <= 0 ? 0 : Math.Round((decimal)convertedDeliveries * 100m / deliveryCount, 2);
             var invoicesAmount = Convert.ToDecimal(reader["InvoicesAmount"]);
             var creditNotesAmount = Convert.ToDecimal(reader["CreditNotesAmount"]);
+            var periodTarget = Math.Round(Convert.ToDecimal(reader["MonthlyTarget"]) * ResolveTargetMultiplier(start, end), 2);
             result.Add(new CommercialSalesPersonPerformanceDto
             {
                 SalesPersonCode = reader["SlpCode"] == DBNull.Value ? 0 : Convert.ToInt32(reader["SlpCode"]),
@@ -3697,6 +3910,8 @@ ORDER BY SlpCode;";
                 CreditNotesCount = Convert.ToInt32(reader["CreditNotesCount"]),
                 CreditNotesAmount = creditNotesAmount,
                 NetRevenue = invoicesAmount - creditNotesAmount,
+                CollectedRevenue = Convert.ToDecimal(reader["CollectedRevenue"]),
+                PeriodTarget = periodTarget,
                 PendingRevenue = Convert.ToDecimal(reader["PendingRevenue"]),
                 UnpaidInvoicesCount = Convert.ToInt32(reader["UnpaidInvoicesCount"]),
                 UnpaidInvoicesAmount = Convert.ToDecimal(reader["UnpaidInvoicesAmount"]),
@@ -5670,11 +5885,14 @@ WHERE DocEntry = @docEntry AND LineNum = @lineNum;", conn))
 
         var payload = new Dictionary<string, object?>
         {
-            ["CardCode"] = request.CardCode,
+            ["Series"] = 68,
             ["CardName"] = request.CardName,
             ["CardType"] = ResolveBusinessPartnerType(request),
             ["Currency"] = NormalizeBusinessPartnerCurrency(request.Currency)
         };
+
+        if (!request.Automatic && !string.IsNullOrWhiteSpace(request.CardCode))
+            payload["CardCode"] = request.CardCode.Trim();
 
         if (scopedSalesPersonCode.HasValue && scopedSalesPersonCode.Value > 0)
             payload["SalesPersonCode"] = scopedSalesPersonCode.Value;
@@ -5717,45 +5935,6 @@ WHERE DocEntry = @docEntry AND LineNum = @lineNum;", conn))
         }
 
         return payload;
-    }
-
-    private async Task<string?> GetNextBusinessPartnerCardCodeAsync(CancellationToken cancellationToken)
-    {
-        var conn = await OpenSapSqlConnectionAsync(cancellationToken);
-        if (conn is null)
-            return null;
-
-        await using (conn)
-        await using (var cmd = new SqlCommand(@"
-SELECT CardCode
-FROM OCRD
-WHERE CardCode LIKE 'C[0-9][0-9][0-9][0-9][0-9][0-9]'
-ORDER BY CardCode ASC;", conn))
-        {
-            cmd.CommandTimeout = GetSapSqlCommandTimeoutSeconds();
-            var usedNumbers = new HashSet<int>();
-
-            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                var rawCode = reader["CardCode"]?.ToString()?.Trim() ?? string.Empty;
-                if (rawCode.Length == 7 &&
-                    rawCode.StartsWith("C", StringComparison.OrdinalIgnoreCase) &&
-                    int.TryParse(rawCode[1..], out var parsedNumber) &&
-                    parsedNumber > 0)
-                {
-                    usedNumbers.Add(parsedNumber);
-                }
-            }
-
-            for (var candidate = 1; candidate <= 999999; candidate++)
-            {
-                if (!usedNumbers.Contains(candidate))
-                    return $"C{candidate:000000}";
-            }
-        }
-
-        return null;
     }
 
     private static string ResolveBusinessPartnerType(CreateSapClientRequest request)

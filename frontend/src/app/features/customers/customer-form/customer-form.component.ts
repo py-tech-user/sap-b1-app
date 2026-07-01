@@ -384,7 +384,8 @@ export class CustomerFormComponent implements OnInit {
         this.notifications.showSuccess(this.successMsg);
         this.loading = false;
         this.cdr.markForCheck();
-        this.refreshSapCustomers();
+        const createdCustomer = this.extractCreatedCustomer(res);
+        this.router.navigate(['/customers'], { state: { createdCustomer } });
       },
       error: (err) => {
         this.errorMsg = err.status === 0
@@ -501,6 +502,11 @@ export class CustomerFormComponent implements OnInit {
     if (Array.isArray(res.data?.items)) return res.data.items;
     if (Array.isArray(res.items)) return res.items;
     return [];
+  }
+  private extractCreatedCustomer(res: any): any {
+    const data = res?.data ?? res?.Data ?? res?.value ?? res?.Value ?? res;
+    if (Array.isArray(data)) return data[0] ?? null;
+    return data && typeof data === 'object' ? data : null;
   }
 }
 

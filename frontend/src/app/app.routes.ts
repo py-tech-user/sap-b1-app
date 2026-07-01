@@ -57,9 +57,33 @@ export const routes: Routes = [
       },
       {
         path: 'reporting',
+        redirectTo: 'reporting/ca-par-famille',
+        pathMatch: 'full'
+      },
+      {
+        path: 'reporting/ca-par-famille',
         loadComponent: () =>
           import('./features/reporting/reporting.component')
             .then(m => m.ReportingComponent),
+        data: { roles: ALL, reportingView: 'family' }
+      },
+      {
+        path: 'reporting/ca-par-article',
+        loadComponent: () =>
+          import('./features/reporting/reporting.component')
+            .then(m => m.ReportingComponent),
+        data: { roles: ALL, reportingView: 'article' }
+      },
+      {
+        path: 'reporting/ca-par-client',
+        loadComponent: () =>
+          import('./features/reporting/reporting.component')
+            .then(m => m.ReportingComponent),
+        data: { roles: ALL, reportingView: 'client' }
+      },
+      {
+        path: 'reporting/**',
+        redirectTo: 'reporting/ca-par-famille',
         data: { roles: ALL }
       },
       // a”€a”€ Customers a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€

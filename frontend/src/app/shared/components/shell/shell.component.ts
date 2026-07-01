@@ -1,13 +1,13 @@
 ﻿import { Component, inject, signal, computed } from '@angular/core';
-import { Router, RouterOutlet, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
+import { ROLE_NAV_ITEMS, RoleNavItem } from '../../../core/models/permissions';
 
 @Component({
   selector:   'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLinkActive],
+  imports: [RouterOutlet],
   template: `
     <div class="shell-container">
       @if (sidenavOpen()) {
@@ -22,14 +22,31 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
           </div>
 
           <nav class="nav-list">
-            @for (item of visibleNavItems(); track item.route) {
-              <button type="button"
-                      (click)="onNavItemClick(item.route)"
-                      routerLinkActive="active-link"
-                      [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-                      class="nav-item nav-btn">
-                <span>{{ item.label }}</span>
-              </button>
+            @for (item of visibleNavItems(); track item.label) {
+              @if (item.children?.length) {
+                <div class="nav-group">
+                  <div class="nav-item nav-parent">
+                    <span>{{ item.label }}</span>
+                  </div>
+                  <div class="nav-submenu">
+                    @for (child of visibleChildren(item); track child.route) {
+                      <button type="button"
+                              (click)="onNavItemClick(child.route!)"
+                              [class.active-link]="isRouteActive(child.route!)"
+                              class="nav-item nav-btn nav-subitem">
+                        <span>{{ child.label }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <button type="button"
+                        (click)="onNavItemClick(item.route!)"
+                        [class.active-link]="isRouteActive(item.route!)"
+                        class="nav-item nav-btn">
+                  <span>{{ item.label }}</span>
+                </button>
+              }
             }
           </nav>
 
@@ -148,6 +165,29 @@ import { ROLE_NAV_ITEMS } from '../../../core/models/permissions';
     .nav-item.active-link {
       background: #1976d2;
       color: white;
+    }
+    .nav-group {
+      display: grid;
+      gap: 1px;
+      flex-shrink: 0;
+    }
+    .nav-parent {
+      color: rgba(255,255,255,0.62);
+      cursor: default;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .nav-parent:hover { background: transparent; }
+    .nav-submenu {
+      display: grid;
+      gap: 1px;
+      padding-left: 10px;
+    }
+    .nav-subitem {
+      font-size: 13px;
+      padding-left: 18px;
     }
 
     .sidenav-footer {
@@ -316,12 +356,26 @@ export class ShellComponent {
     return ROLE_NAV_ITEMS.filter(item => item.roles.includes(currentRole));
   });
 
+  visibleChildren(item: RoleNavItem): RoleNavItem[] {
+    const currentRole = this.auth.role();
+    return (item.children ?? []).filter(child => child.roles.includes(currentRole));
+  }
+
   onNavItemClick(route: string): void {
     this.showUserMenu = false;
     if (typeof window !== 'undefined' && window.innerWidth <= 900) {
       this.sidenavOpen.set(false);
     }
     this.router.navigateByUrl(route);
+  }
+
+  isRouteActive(route: string): boolean {
+    return this.router.isActive(route, {
+      paths: route === '/dashboard' ? 'exact' : 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored'
+    });
   }
 
   closeSidenav(): void {
