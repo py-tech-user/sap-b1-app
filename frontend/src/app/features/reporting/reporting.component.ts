@@ -38,7 +38,10 @@ type ReportingFilterState = {
           <h1>{{ config().title }}</h1>
           <p>{{ config().subtitle }}</p>
         </div>
-        <strong>{{ money(totalRevenue()) }}</strong>
+        <div class="total-summary">
+          <span>TOTAL</span>
+          <strong>{{ money(totalRevenue()) }}</strong>
+        </div>
       </header>
 
       <section class="filters">
@@ -205,7 +208,19 @@ type ReportingFilterState = {
     }
     h1 { margin: 0; font-size: 1.6rem; }
     p { margin: .25rem 0 0; color: #64748b; }
-    .page-header strong { font-size: 1.4rem; color: #0f766e; white-space: nowrap; }
+    .total-summary {
+      display: grid;
+      justify-items: end;
+      gap: .15rem;
+      white-space: nowrap;
+    }
+    .total-summary span {
+      color: #64748b;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .total-summary strong { font-size: 1.4rem; color: #0f766e; }
     .filters {
       display: grid;
       grid-template-columns: repeat(6, minmax(140px, 1fr));
@@ -281,6 +296,7 @@ type ReportingFilterState = {
 
     @media (max-width: 700px) {
       .page-header { align-items: start; flex-direction: column; }
+      .total-summary { justify-items: start; }
       .filters { grid-template-columns: 1fr; }
     }
   `]
@@ -320,12 +336,12 @@ export class ReportingComponent implements OnInit {
   readonly config = computed(() => {
     const view = this.view();
     if (view === 'article') {
-      return { title: 'CA par article', subtitle: "Chiffre d'affaires net par article", nameLabel: 'Article' };
+      return { title: 'CA par article', subtitle: "", nameLabel: 'Article' };
     }
     if (view === 'client') {
-      return { title: 'CA par client', subtitle: "Chiffre d'affaires net par client", nameLabel: 'Client' };
+      return { title: 'CA par client', subtitle: "", nameLabel: 'Client' };
     }
-    return { title: 'CA par famille', subtitle: "Chiffre d'affaires net par famille article", nameLabel: 'Famille' };
+    return { title: 'CA par famille d\'article', subtitle: "", nameLabel: 'Famille' };
   });
 
   readonly filteredRows = computed(() => {

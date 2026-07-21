@@ -116,23 +116,55 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
             @for (line of lines.controls; track $index; let i = $index) {
               <div [formGroupName]="i" class="line-row">
                 <span class="mobile-label">Code</span>
-                <input
-                  formControlName="itemCode"
-                  list="product-code-options"
-                  placeholder="Ex: A00001"
-                  aria-label="ItemCode"
-                  (input)="onItemCodeInput(i, $event)"
-                  (blur)="onItemCodeBlur(i)"
-                  [readonly]="!canEditItemFields(i)" />
+                <div class="product-lookup-cell">
+                  <input
+                    formControlName="itemCode"
+                    placeholder="Rechercher code article"
+                    aria-label="ItemCode"
+                    (input)="onItemCodeInput(i, $event)"
+                    (focus)="openProductSuggestions(i, 'code')"
+                    (keydown)="replaceProductSearchOnTyping(i, $event)"
+                    (keydown.enter)="selectProductIfUnique(i, $event)"
+                    (blur)="onItemCodeBlur(i)"
+                    [readonly]="!canEditItemFields(i)" />
+                  @if (isProductPanelOpen(i, 'code')) {
+                    <div class="product-suggestions">
+                      @for (p of filteredProductsForLine(i); track p.itemCode) {
+                        <button type="button" (mousedown)="selectProduct(i, p)">
+                          <strong>{{ p.itemCode }}</strong>
+                          <small>{{ productLookupLabel(p) }} - {{ productPriceLabel(p) }}</small>
+                        </button>
+                      } @empty {
+                        <div class="product-suggestion-empty">{{ productSuggestionEmptyLabel() }}</div>
+                      }
+                    </div>
+                  }
+                </div>
 
                 <span class="mobile-label">Designation</span>
-                <input
-                  formControlName="productLookup"
-                  list="product-options"
-                  placeholder="Rechercher et sélectionner article"
-                  (input)="onProductLookupInput(i, $event)"
-                  (blur)="onProductLookupBlur(i)"
-                  [readonly]="!canEditItemFields(i)" />
+                <div class="product-lookup-cell">
+                  <input
+                    formControlName="productLookup"
+                    placeholder="Rechercher et selectionner article"
+                    (input)="onProductLookupInput(i, $event)"
+                    (focus)="openProductSuggestions(i, 'name')"
+                    (keydown)="replaceProductSearchOnTyping(i, $event)"
+                    (keydown.enter)="selectProductIfUnique(i, $event)"
+                    (blur)="onProductLookupBlur(i)"
+                    [readonly]="!canEditItemFields(i)" />
+                  @if (isProductPanelOpen(i, 'name')) {
+                    <div class="product-suggestions">
+                      @for (p of filteredProductsForLine(i); track p.itemCode) {
+                        <button type="button" (mousedown)="selectProduct(i, p)">
+                          <strong>{{ productLookupLabel(p) }}</strong>
+                          <small>{{ p.itemCode }} - {{ productPriceLabel(p) }}</small>
+                        </button>
+                      } @empty {
+                        <div class="product-suggestion-empty">{{ productSuggestionEmptyLabel() }}</div>
+                      }
+                    </div>
+                  }
+                </div>
 
                 <span class="mobile-label">Quantite</span>
                 <input type="number" formControlName="quantity" min="1" step="1" placeholder="Quantité" aria-label="Quantite" (input)="onQuantityInput(i)" (blur)="onQuantityBlur(i)" [readonly]="!canEditQuantity(i)" />
@@ -157,16 +189,6 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
               <p class="empty">Aucune ligne.</p>
             }
           </div>
-          <datalist id="product-options">
-            @for (p of products(); track p.id) {
-              <option [value]="productLookupLabel(p)"></option>
-            }
-          </datalist>
-          <datalist id="product-code-options">
-            @for (p of products(); track p.id) {
-              <option [value]="p.itemCode"></option>
-            }
-          </datalist>
         </div>
 
         <div class="totals-row" aria-label="Totaux du document">
@@ -222,11 +244,20 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
     .lines-head { display: flex; justify-content: space-between; align-items: center; }
     .lines-hint { margin: 0; color: #555; font-size: 0.86rem; }
     .lines-scroll { overflow-x: auto; padding-bottom: 0.2rem; }
-    .line-row { display: grid; min-width: 1380px; grid-template-columns: 130px 220px 85px 100px 100px 85px 105px 90px 110px 100px 84px; gap: 0.4rem; margin-bottom: 0.4rem; align-items: center; }
+    .line-row { display: grid; min-width: 1380px; grid-template-columns: 130px 220px 85px 100px 100px 85px 105px 90px 110px 100px 84px; gap: 0.4rem; margin-bottom: 0.4rem; align-items: start; }
     .line-row-header { margin-bottom: 0.25rem; color: #666; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
     .line-row-header span { padding: 0.1rem 0.2rem; }
     .mobile-label { display: none; }
     .line-row input, .line-row select { width: 100%; border: 1px solid #d7d7d7; border-radius: 6px; padding: 0.38rem 0.5rem; box-sizing: border-box; font-size: 0.9rem; }
+    .product-lookup-cell { position: relative; min-width: 0; }
+    .product-lookup-cell input { border-color: #c9d7e8; border-radius: 10px; background: #fff; box-shadow: inset 0 1px 0 rgba(15,23,42,.02); }
+    .product-lookup-cell input:focus { outline: 2px solid rgba(37,99,235,.16); border-color: #60a5fa; }
+    .product-suggestions { position: static; z-index: 30; margin-top: 4px; min-width: 340px; display: grid; gap: .15rem; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 18px 38px rgba(15,23,42,.16); padding: .35rem; }
+    .product-suggestions button { width: 100%; border: 0; background: #fff; text-align: left; padding: .58rem .7rem; border-radius: 8px; cursor: pointer; color: #111827; display: grid; gap: .16rem; }
+    .product-suggestions button:hover { background: #eff6ff; color: #1d4ed8; }
+    .product-suggestions strong { font-size: .9rem; line-height: 1.2; }
+    .product-suggestions small { color: #64748b; font-weight: 700; line-height: 1.2; }
+    .product-suggestion-empty { padding: .58rem .7rem; color: #64748b; font-weight: 700; font-size: .86rem; }
     .totals-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
     .total-box { border: 1px solid #d7d7d7; border-radius: 8px; padding: 0.65rem 0.8rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.2rem; }
     .total-label { font-size: 0.78rem; color: #666; letter-spacing: 0.02em; }
@@ -288,6 +319,7 @@ const BACKGROUND_PRODUCTS_PAGE_SIZE = 2000;
         border-radius: 8px;
         padding: 0.55rem;
       }
+      .product-suggestions { min-width: min(340px, 88vw); }
       .line-row .btn-outline.danger { grid-column: 1 / -1; }
       .draft-action-bar { align-items: stretch; flex-direction: column; }
       .draft-action-bar .btn-primary { width: 100%; }
@@ -349,7 +381,10 @@ export class DocumentFormComponent implements OnInit {
   readonly products = signal<Product[]>([]);
   readonly customerSearch = signal('');
   readonly openCustomerPanel = signal(false);
+  readonly openProductPanelIndex = signal<number | null>(null);
+  readonly openProductPanelField = signal<'code' | 'name'>('name');
   private customerReplaceOnType = false;
+  private productReplaceOnTypeIndex: number | null = null;
   private loadedCustomerId: number | null = null;
 
   readonly filteredCustomers = computed(() => {
@@ -396,9 +431,14 @@ export class DocumentFormComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   closeCustomerSuggestions(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('.field-client')) return;
-    this.openCustomerPanel.set(false);
-    this.customerReplaceOnType = false;
+    if (!target?.closest('.field-client')) {
+      this.openCustomerPanel.set(false);
+      this.customerReplaceOnType = false;
+    }
+    if (!target?.closest('.product-lookup-cell')) {
+      this.openProductPanelIndex.set(null);
+      this.productReplaceOnTypeIndex = null;
+    }
   }
 
   onCustomerSearch(event: Event): void {
@@ -527,22 +567,123 @@ export class DocumentFormComponent implements OnInit {
     return String(product.itemName || product.itemCode || '').trim();
   }
 
+  productPriceLabel(product: Product): string {
+    const price = Number((product as any).price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return 'Prix non renseigne';
+    return `${price.toFixed(2)} HT`;
+  }
+
+  productSuggestionEmptyLabel(): string {
+    return this.products().length === 0
+      ? 'Chargement des articles...'
+      : 'Aucun article trouve';
+  }
+
+  filteredProductsForLine(index: number): Product[] {
+    const group = this.lines.at(index);
+    const activeField = this.openProductPanelField();
+    const queryValue = activeField === 'code'
+      ? group?.get('itemCode')?.value
+      : group?.get('productLookup')?.value;
+    const query = this.normalizeSearch(queryValue ?? '');
+    const products = this.products();
+
+    if (!query) return products.slice(0, 80);
+
+    return products
+      .filter((product) => {
+        const code = this.normalizeSearch(product.itemCode);
+        const name = this.normalizeSearch(product.itemName);
+        return code.includes(query) || name.includes(query);
+      })
+      .slice(0, 80);
+  }
+
+  isProductPanelOpen(index: number, field: 'code' | 'name'): boolean {
+    return this.openProductPanelIndex() === index && this.openProductPanelField() === field;
+  }
+
+  openProductSuggestions(index: number, field: 'code' | 'name'): void {
+    if (!this.canEditItemFields(index)) return;
+    const group = this.lines.at(index);
+    this.productReplaceOnTypeIndex = group?.get('productId')?.value ? index : null;
+    this.openProductPanelField.set(field);
+    this.openProductPanelIndex.set(index);
+  }
+
+  replaceProductSearchOnTyping(index: number, event: KeyboardEvent): void {
+    if (this.productReplaceOnTypeIndex !== index || event.ctrlKey || event.metaKey || event.altKey) return;
+
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      group.patchValue({ productId: null, itemCode: '', productLookup: '' }, { emitEvent: false });
+      this.openProductPanelIndex.set(index);
+      this.productReplaceOnTypeIndex = null;
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    if (this.openProductPanelField() === 'code') {
+      group.patchValue({ productId: null, itemCode: event.key, productLookup: '' }, { emitEvent: false });
+    } else {
+      group.patchValue({ productId: null, itemCode: '', productLookup: event.key }, { emitEvent: false });
+    }
+    this.openProductPanelIndex.set(index);
+    this.productReplaceOnTypeIndex = null;
+  }
+
+  selectProductIfUnique(index: number, event: Event): void {
+    const matches = this.filteredProductsForLine(index);
+    if (matches.length === 1) {
+      event.preventDefault();
+      this.selectProduct(index, matches[0]);
+    }
+  }
+
+  selectProduct(index: number, product: Product): void {
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    group.patchValue({
+      productId: Number(product.id ?? 0),
+      itemCode: String(product.itemCode ?? '').trim(),
+      productLookup: this.productLookupLabel(product)
+    }, { emitEvent: false });
+
+    this.openProductPanelIndex.set(null);
+    this.productReplaceOnTypeIndex = null;
+    this.onProductSelected(index);
+  }
+
   onProductLookupInput(index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = String(input.value ?? '').trim();
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    const previousDisplay = String(group.get('productLookup')?.value ?? '');
+    const hadSelection = !!Number(group.get('productId')?.value ?? 0);
+    const value = this.nextSearchValueAfterTyping(input.value || '', previousDisplay, hadSelection).trim();
+
+    group.patchValue({
+      productId: null,
+      itemCode: '',
+      productLookup: value
+    }, { emitEvent: false });
+    this.openProductPanelField.set('name');
+    this.openProductPanelIndex.set(index);
+    this.productReplaceOnTypeIndex = null;
+
     if (!value) return;
 
     const product = this.findProductByCodeOrName(value);
 
     if (!product) return;
 
-    const group = this.lines.at(index);
-    group.patchValue({
-      productId: Number(product.id ?? 0),
-      productLookup: this.productLookupLabel(product)
-    }, { emitEvent: false });
-
-    this.onProductSelected(index);
+    this.selectProduct(index, product);
   }
 
   onProductLookupBlur(index: number): void {
@@ -552,12 +693,16 @@ export class DocumentFormComponent implements OnInit {
     const value = String(group.get('productLookup')?.value ?? '').trim();
     if (!value) {
       this.restoreSelectedProductLabel(index);
+      this.openProductPanelIndex.set(null);
+      this.productReplaceOnTypeIndex = null;
       return;
     }
 
     const product = this.findProductByCodeOrName(value);
     if (!product) {
       this.restoreSelectedProductLabel(index);
+      this.openProductPanelIndex.set(null);
+      this.productReplaceOnTypeIndex = null;
       return;
     }
 
@@ -566,11 +711,26 @@ export class DocumentFormComponent implements OnInit {
       itemCode: String(product.itemCode ?? '').trim(),
       productLookup: this.productLookupLabel(product)
     }, { emitEvent: false });
+    this.openProductPanelIndex.set(null);
+    this.productReplaceOnTypeIndex = null;
+    this.onProductSelected(index);
   }
 
   onItemCodeInput(index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = String(input.value ?? '').trim();
+    const group = this.lines.at(index);
+    if (!group) return;
+
+    group.patchValue({
+      productId: null,
+      itemCode: value,
+      productLookup: ''
+    }, { emitEvent: false });
+    this.openProductPanelField.set('code');
+    this.openProductPanelIndex.set(index);
+    this.productReplaceOnTypeIndex = null;
+
     if (!value) return;
 
     const normalized = value.toLowerCase();
@@ -579,14 +739,7 @@ export class DocumentFormComponent implements OnInit {
     );
     if (!product) return;
 
-    const group = this.lines.at(index);
-    group.patchValue({
-      productId: Number(product.id ?? 0),
-      itemCode: String(product.itemCode ?? '').trim(),
-      productLookup: this.productLookupLabel(product)
-    }, { emitEvent: false });
-
-    this.onProductSelected(index);
+    this.selectProduct(index, product);
   }
 
   onItemCodeBlur(index: number): void {
@@ -596,6 +749,8 @@ export class DocumentFormComponent implements OnInit {
     const value = String(group.get('itemCode')?.value ?? '').trim();
     if (!value) {
       this.restoreSelectedProductCode(index);
+      this.openProductPanelIndex.set(null);
+      this.productReplaceOnTypeIndex = null;
       return;
     }
 
@@ -605,6 +760,8 @@ export class DocumentFormComponent implements OnInit {
 
     if (!product) {
       this.restoreSelectedProductCode(index);
+      this.openProductPanelIndex.set(null);
+      this.productReplaceOnTypeIndex = null;
       return;
     }
 
@@ -613,6 +770,9 @@ export class DocumentFormComponent implements OnInit {
       itemCode: String(product.itemCode ?? '').trim(),
       productLookup: this.productLookupLabel(product)
     }, { emitEvent: false });
+    this.openProductPanelIndex.set(null);
+    this.productReplaceOnTypeIndex = null;
+    this.onProductSelected(index);
   }
 
   onProductSelected(index: number): void {
@@ -1561,7 +1721,3 @@ export class DocumentFormComponent implements OnInit {
     return null;
   }
 }
-
-
-
-
