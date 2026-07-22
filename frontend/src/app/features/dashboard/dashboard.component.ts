@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReportingApiService, CommercialReportingPayload,
@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { PartnerApiService, PartnerRow } from '../../core/services/partner-api.service';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, registerables, ChartData } from 'chart.js';
+import { Subscription } from 'rxjs';
 Chart.register(...registerables);
 
 type SortDirection = 'none' | 'asc' | 'desc';
@@ -299,7 +300,7 @@ type DashboardFilterState = {
                   <div class="revenue-row">
                     <div>
                       <strong>{{ client.cardName || client.cardCode }}</strong>
-                      <span>{{ client.cardCode }}</span>
+                      <span>CA: {{ formatMoney(client.revenue) }}</span>
                       <span class="collected-label">Encaissé: {{ formatMoney(clampedCollectedAmount(client.paidAmount, client.revenue)) }} · {{ formatPct(topClientBarWidth(clampedCollectedAmount(client.paidAmount, client.revenue))) }} du Top 1 CA</span>
                     </div>
                     <div class="revenue-meter">
@@ -494,7 +495,7 @@ type DashboardFilterState = {
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   readonly Math = Math;
   private readonly reportingApi = inject(ReportingApiService);
   private readonly auth = inject(AuthService);
@@ -728,6 +729,8 @@ export class DashboardComponent implements OnInit {
   };
   private readonly dashboardFiltersStorageKey = 'sap-b1-dashboard-filters-v1';
   private dashboardRequestVersion = 0;
+  private dashboardSubscription: Subscription | null = null;
+  private evolutionSubscription: Subscription | null = null;
 
   revenueBreakdownTitle(): string {
     return this.shouldBreakdownByCommercial()
@@ -747,6 +750,12 @@ export class DashboardComponent implements OnInit {
     this.isAdminMode.set(this.auth.hasRole(['Admin', 'Manager']));
     this.restoreDashboardFilters();
     this.load();
+  }
+
+  ngOnDestroy(): void {
+    this.dashboardSubscription?.unsubscribe();
+    this.evolutionSubscription?.unsubscribe();
+    if (this.partnerDebtSearchTimer) clearTimeout(this.partnerDebtSearchTimer);
   }
 
   onDashboardFilterChange(): void {
@@ -880,35 +889,24 @@ export class DashboardComponent implements OnInit {
 
   load(): void {
     const requestVersion = ++this.dashboardRequestVersion;
+    this.dashboardSubscription?.unsubscribe();
     this.loading.set(true);
-    this.reportingApi.getCommercialReporting(this.buildReportingParams({ includeTeamPerformance: false })).subscribe({
+    this.loadPartnerDebtsIfScopeChanged();
+    const evolutionSalesPersonCode = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
+    const evolutionPeriodKey = this.evolutionPeriodKey();
+    if (!this.evolutionPoints().length || this.lastEvolutionSalesPersonCode !== evolutionSalesPersonCode || this.lastEvolutionPartnerCode !== '' || this.lastEvolutionPeriodKey !== evolutionPeriodKey) {
+      this.loadEvolution();
+    }
+    this.dashboardSubscription = this.reportingApi.getCommercialReporting(this.buildReportingParams({ includeTeamPerformance: true })).subscribe({
       next: (reporting) => {
         if (requestVersion !== this.dashboardRequestVersion) return;
         this.report.set(reporting.data);
         this.computeConvertedCounts(reporting.data);
         this.loading.set(false);
-        this.loadPartnerDebtsIfScopeChanged();
-        const evolutionSalesPersonCode = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
-        const evolutionPeriodKey = this.evolutionPeriodKey();
-        if (!this.evolutionPoints().length || this.lastEvolutionSalesPersonCode !== evolutionSalesPersonCode || this.lastEvolutionPartnerCode !== '' || this.lastEvolutionPeriodKey !== evolutionPeriodKey) {
-          this.loadEvolution();
-        }
-        setTimeout(() => this.loadDashboardInBackground(requestVersion));
       },
       error: () => {
         if (requestVersion === this.dashboardRequestVersion) this.loading.set(false);
       }
-    });
-  }
-
-  private loadDashboardInBackground(requestVersion: number): void {
-    this.reportingApi.getCommercialReporting(this.buildReportingParams({ includeTeamPerformance: true })).subscribe({
-      next: (reporting) => {
-        if (requestVersion !== this.dashboardRequestVersion) return;
-        this.report.set(reporting.data);
-        this.computeConvertedCounts(reporting.data);
-      },
-      error: () => {}
     });
   }
 
@@ -968,11 +966,12 @@ export class DashboardComponent implements OnInit {
   }
 
   loadEvolution(): void {
+    this.evolutionSubscription?.unsubscribe();
     this.loadingEvolution.set(true);
     this.lastEvolutionSalesPersonCode = this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : null;
     this.lastEvolutionPartnerCode = '';
     this.lastEvolutionPeriodKey = this.evolutionPeriodKey();
-    this.reportingApi.getReportingEvolution({
+    this.evolutionSubscription = this.reportingApi.getReportingEvolution({
       ...this.buildEvolutionParams(),
       salesPersonCode: this.isAdminMode() && this.selectedSalesPersonCode > 0 ? this.selectedSalesPersonCode : undefined,
       cardCode: undefined
@@ -1086,7 +1085,6 @@ export class DashboardComponent implements OnInit {
         this.setPartnerDebtPageLoading(page, false);
         if (options.foreground) this.loadingMorePartnerDebts.set(false);
         if (options.activate) this.partnerDebtsCurrentPage.set(page);
-        if (page === 1 || options.background) this.preloadNextPartnerDebtPage(page + 1, requestVersion);
       },
       error: () => {
         if (requestVersion !== this.partnerDebtRequestVersion) {

@@ -69,6 +69,13 @@ public class SapB1Controller : ControllerBase
         return Ok(new ApiResponse<object>(true, "Connexion OK", new { ok = true }));
     }
 
+    [HttpGet("config")]
+    [AllowAnonymous]
+    public ActionResult<object> GetConfig()
+    {
+        return Ok(new { isDemoMode = _configuration.GetValue<bool>("IsDemoMode") });
+    }
+
     [HttpGet("clients")]
     [Authorize]
     public Task<ActionResult<ApiResponse<IReadOnlyList<DocumentViewDto>>>> GetClients(

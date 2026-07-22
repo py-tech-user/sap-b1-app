@@ -72,6 +72,7 @@ builder.Services.AddScoped<ISapB1Service, SapB1Service>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ISapSqlConnectionFactory, SapSqlConnectionFactory>();
+builder.Services.AddHostedService<SapSqlKeepAliveService>();
 
 // ─── JWT Authentication ─────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

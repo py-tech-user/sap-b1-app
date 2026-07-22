@@ -112,7 +112,7 @@ public class SapSqlConnectionFactory : ISapSqlConnectionFactory
             ConnectTimeout = GetConnectTimeoutSeconds(),
             ConnectRetryCount = 0,
             Pooling = true,
-            MinPoolSize = 1
+            MinPoolSize = GetMinPoolSize()
         };
 
         if (useSqlAuth)
@@ -241,29 +241,47 @@ public class SapSqlConnectionFactory : ISapSqlConnectionFactory
             builder.MinPoolSize,
             builder.ConnectTimeout);
 
-        await using var conn = await OpenConnectionAsync(cancellationToken);
-        if (conn is null)
+        var warmConnectionCount = Math.Max(1, GetMinPoolSize());
+        var connections = new List<SqlConnection>(warmConnectionCount);
+        try
         {
+            for (var i = 0; i < warmConnectionCount; i++)
+            {
+                var conn = await OpenConnectionAsync(cancellationToken);
+                if (conn is null)
+                {
+                    totalSw.Stop();
+                    _logger.LogWarning("[SAP-SQL-WARMUP] Failed to open SAP SQL connection #{Index}. ElapsedMs={ElapsedMs}", i + 1, totalSw.ElapsedMilliseconds);
+                    return;
+                }
+
+                connections.Add(conn);
+            }
+
+            var selectSw = Stopwatch.StartNew();
+            foreach (var conn in connections)
+            {
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT 1";
+                cmd.CommandTimeout = 5;
+                await cmd.ExecuteScalarAsync(cancellationToken);
+            }
+            selectSw.Stop();
             totalSw.Stop();
-            _logger.LogWarning("[SAP-SQL-WARMUP] Failed to open SAP SQL connection. ElapsedMs={ElapsedMs}", totalSw.ElapsedMilliseconds);
-            return;
+
+            _logger.LogInformation(
+                "[SAP-SQL-WARMUP] Completed. DataSource={DataSource}, Database={Database}, WarmConnections={WarmConnections}, OpenAndSelectElapsedMs={ElapsedMs}, SelectElapsedMs={SelectElapsedMs}",
+                connections[0].DataSource,
+                connections[0].Database,
+                connections.Count,
+                totalSw.ElapsedMilliseconds,
+                selectSw.ElapsedMilliseconds);
         }
-
-        var selectSw = Stopwatch.StartNew();
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT 1";
-        cmd.CommandTimeout = 5;
-        await cmd.ExecuteScalarAsync(cancellationToken);
-        selectSw.Stop();
-        totalSw.Stop();
-
-        _logger.LogInformation(
-            "[SAP-SQL-WARMUP] Completed. DataSource={DataSource}, Database={Database}, OpenAndSelectElapsedMs={ElapsedMs}, SelectElapsedMs={SelectElapsedMs}, ClientConnectionId={ClientConnectionId}",
-            conn.DataSource,
-            conn.Database,
-            totalSw.ElapsedMilliseconds,
-            selectSw.ElapsedMilliseconds,
-            conn.ClientConnectionId);
+        finally
+        {
+            foreach (var conn in connections)
+                await conn.DisposeAsync();
+        }
     }
 
     private int GetConnectTimeoutSeconds()
@@ -273,5 +291,14 @@ public class SapSqlConnectionFactory : ISapSqlConnectionFactory
             timeout = 5;
 
         return Math.Clamp(timeout, 5, 60);
+    }
+
+    private int GetMinPoolSize()
+    {
+        var raw = _configuration["SapB1:SqlMinPoolSize"];
+        if (!int.TryParse(raw, out var minPoolSize))
+            minPoolSize = 5;
+
+        return Math.Clamp(minPoolSize, 1, 20);
     }
 }
